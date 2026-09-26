@@ -1,48 +1,92 @@
 import {useEffect,useRef,useState} from 'react';
-import {Palette,NotebookPen,Check} from 'lucide-react';
+import {Palette,NotebookPen,Check,CalendarPlus} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
+import {calendarFile} from '../lib/calendar.mjs';
 
 // name, label, scheme, swatch colours (background, lecture, now)
 export const THEMES = [
-  ['onyx','Оникс','dark',['#0d0d0f','#c9a96e','#ece7de']], ['pearl','Жемчуг','light',['#f6f3ed','#9a7738','#16151a']],
-  ['night','Ночь','dark',['#15130f','#e8b923','#ff6a48']], ['graphite','Графит','dark',['#111214','#b8f34a','#ff4f8b']],
-  ['msu','МГУ','dark',['#0a0e27','#e3bd55','#2a3aa8']], ['winter','Зима','dark',['#0b1220','#6ea8ff','#ff6b9a']],
-  ['autumn','Осень','dark',['#17100b','#ea7a36','#ff5e3a']], ['paper','Бумага','light',['#f3efe6','#f5c518','#ff5a36']],
+  ['snow','Снег','light',['#f6f7f9','#3b6fe0','#e5484d']], ['fog','Туман','light',['#e9edf1','#5b7896','#d9735b']],
+  ['mint','Мята','light',['#edf5f1','#2e9a74','#e0604e']], ['lavender','Лаванда','light',['#f3f1f9','#7b66d6','#df5a86']],
+  ['pearl','Жемчуг','light',['#f6f3ed','#9a7738','#16151a']], ['paper','Бумага','light',['#f3efe6','#f5c518','#ff5a36']],
   ['spring','Весна','light',['#f1f5ec','#6dbb5a','#ea4f8a']], ['summer','Лето','light',['#fff6e3','#ffae1f','#ff4e2e']],
+  ['msu','МГУ','dark',['#0a0e27','#e3bd55','#2a3aa8']], ['midnight','Полночь','dark',['#111120','#9f8cff','#ff7eb0']],
+  ['ocean','Океан','dark',['#0b161b','#4cc2c4','#ff8a73']], ['forest','Лес','dark',['#0e1512','#74c98f','#ffae6b']],
+  ['steel','Сталь','dark',['#17181b','#7aa7ff','#ff7a7a']], ['onyx','Оникс','dark',['#0d0d0f','#c9a96e','#ece7de']],
+  ['night','Ночь','dark',['#15130f','#e8b923','#ff6a48']], ['graphite','Графит','dark',['#111214','#b8f34a','#ff4f8b']],
+  ['winter','Зима','dark',['#0b1220','#6ea8ff','#ff6b9a']], ['autumn','Осень','dark',['#17100b','#ea7a36','#ff5e3a']],
 ] as const;
-const themeKey='vmk114-theme';
+// Layout and type, independent of the colour theme.
+export const STYLES = [
+  ['atelier','Журнал','Антиква и тонкие линейки'],
+  ['minimal','Минимал','Время, предмет, аудитория'],
+  ['timeline','Лента','Шкала времени и карточки'],
+  ['cards','Карточки','Как в приложениях iOS'],
+] as const;
+const themeKey='vmk114-theme',styleKey='vmk114-style';
+const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'atelier';}catch{return 'atelier';}};
 // Older versions stored plain "light"/"dark".
 const legacy=(value:string|null)=>value==='light'?'paper':value==='dark'?'night':value;
-export function applyTheme(choice:string){
-  const name=choice==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'night':'paper'):choice;
+export function applyTheme(choice:string,style=loadStyle()){
+  const name=choice==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'midnight':'snow'):choice;
   const theme=THEMES.find(t=>t[0]===name)||THEMES.find(t=>t[0]==='paper')!;
   document.documentElement.dataset.theme=theme[0];
   document.documentElement.dataset.scheme=theme[2];
-  // Every theme uses the editorial layout; themes differ in colour only.
-  document.documentElement.dataset.style='atelier';
+  document.documentElement.dataset.style=style;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme[3][0]);
 }
 export function ThemeButton() {
   // MSU is the default look; anyone can switch.
   const [choice,setChoice]=useState(()=>{try{return legacy(localStorage.getItem(themeKey))||'msu';}catch{return 'msu';}});
-  const [open,setOpen]=useState(false);
+  const [style,setStyle]=useState(loadStyle);
+  const [open,setOpen]=useState(false),[section,setSection]=useState<'style'|'theme'>('style');
   useEffect(()=>{
-    applyTheme(choice);
+    applyTheme(choice,style);
     if(choice!=='auto')return;
-    const media=matchMedia('(prefers-color-scheme: dark)'),follow=()=>applyTheme('auto');
+    const media=matchMedia('(prefers-color-scheme: dark)'),follow=()=>applyTheme('auto',style);
     media.addEventListener('change',follow);return()=>media.removeEventListener('change',follow);
-  },[choice]);
+  },[choice,style]);
   function pick(name:string){setChoice(name);try{localStorage.setItem(themeKey,name);}catch{}}
+  function pickStyle(name:string){setStyle(name);try{localStorage.setItem(styleKey,name);}catch{}}
   return <>
-    <button className="icon-button" aria-label="Тема оформления" title="Тема оформления" onClick={()=>setOpen(true)}><Palette size={18}/></button>
-    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>Тема</DialogTitle><DialogDescription>Сохраняется на этом устройстве.</DialogDescription>
-      <div className="theme-grid">
-        <button aria-pressed={choice==='auto'} onClick={()=>pick('auto')}><span className="swatch auto"/>Как в системе</button>
-        {THEMES.map(([name,label,,colors])=><button key={name} aria-pressed={choice===name} onClick={()=>pick(name)}>
-          <span className="swatch" style={{background:colors[0]}}><i style={{background:colors[1]}}/><i style={{background:colors[2]}}/></span>{label}</button>)}
+    <button className="icon-button" aria-label="Оформление" title="Оформление" onClick={()=>setOpen(true)}><Palette size={18}/></button>
+    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>Оформление</DialogTitle><DialogDescription>Сохраняется на этом устройстве.</DialogDescription>
+      <div className="segmented" role="tablist" aria-label="Что настраивать">
+        <button role="tab" aria-selected={section==='style'} onClick={()=>setSection('style')}>Стиль</button>
+        <button role="tab" aria-selected={section==='theme'} onClick={()=>setSection('theme')}>Тема</button>
       </div>
+      {section==='style' ? <div className="style-grid">{STYLES.map(([name,label,hint])=><button key={name} aria-pressed={style===name} onClick={()=>pickStyle(name)}>
+        <span className={'style-preview '+name} aria-hidden="true"><b>Aa</b><i/><i/><i/></span><strong>{label}</strong><small>{hint}</small></button>)}</div>
+      : (['light','dark'] as const).map(scheme=><div key={scheme}>
+        <h4 className="theme-section">{scheme==='light'?'Светлые':'Тёмные'}</h4>
+        <div className="theme-grid">
+          {scheme==='light' && <button aria-pressed={choice==='auto'} onClick={()=>pick('auto')}><span className="swatch auto"/>Как в системе</button>}
+          {THEMES.filter(t=>t[2]===scheme).map(([name,label,,colors])=><button key={name} aria-pressed={choice===name} onClick={()=>pick(name)}>
+            <span className="swatch" style={{background:colors[0]}}><i style={{background:colors[1]}}/><i style={{background:colors[2]}}/></span>{label}</button>)}
+        </div>
+      </div>)}
     </DialogContent></Dialog>
   </>;
+}
+
+// All classes of the group as an .ics file: the phone's calendar imports them with weekly repeats.
+export function useCalendarExport(schedule:{group:number;year:number;lessons:unknown[]},subgroups:Record<string,string>){
+  const [open,setOpen]=useState(false),[done,setDone]=useState(false);
+  function download(){
+    const url=URL.createObjectURL(new Blob([calendarFile(schedule,subgroups)],{type:'text/calendar;charset=utf-8'}));
+    const link=Object.assign(document.createElement('a'),{href:url,download:`vmk-${schedule.group}.ics`});
+    document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);setDone(true);
+  }
+  const chosen=Object.values(subgroups).filter(Boolean).length;
+  return {button:<button onClick={()=>{setDone(false);setOpen(true);}}>В календарь</button>,
+    dialog:<Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>В календарь телефона</DialogTitle>
+      <DialogDescription>Все пары группы {schedule.group} до 31 декабря — с аудиториями и преподавателями, повторяются каждую неделю.</DialogDescription>
+      <ul className="calendar-notes">
+        <li>{chosen?`Учтена твоя подгруппа (${chosen} ${chosen===1?'предмет':chosen<5?'предмета':'предметов'}).`:'Подгруппа не выбрана — в парах будут все преподаватели.'}</li>
+        <li>iPhone: открой файл и нажми «Добавить все». Android: открой файл в Google Календаре.</li>
+        <li>Если ВМК поменяет расписание, скачай файл заново — старые события обновятся.</li>
+      </ul>
+      <button className="save-task" onClick={download}><CalendarPlus size={16}/> {done?'Скачать ещё раз':'Скачать .ics'}</button>
+    </DialogContent></Dialog>};
 }
 
 export type Task={id:string;date:string;subject:string;text:string;done:boolean;group?:string};

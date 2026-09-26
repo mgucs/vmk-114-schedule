@@ -34,6 +34,9 @@ PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium no
 | `scripts/sync-schedule.mjs`, `scripts/source-check.mjs` | проверка сайта ВМК, история изменений |
 | `public/parser.mjs` | разбор PDF по границам ячеек |
 | `app/page.tsx` | интерфейс расписания |
+| `lib/search.mjs`, `components/search.tsx` | поиск по всем группам: преподаватель, предмет, аудитория, группа |
+| `lib/calendar.mjs` | экспорт пар группы в `.ics` для календаря телефона |
+| `app/globals.css` | цвета тем и стили оформления (`data-style`: журнал, минимал, лента, карточки) |
 | `components/campus-map.tsx`, `components/map-scene.ts` | карта корпуса (three.js) |
 | `tools/build_map.py` | разметка кабинетов по планам этажей из `tools/floor-plans.pdf` |
 | `tools/build-map-models.mjs` | объёмные модели этажей из разметки (см. `tools/map-models.md`) |

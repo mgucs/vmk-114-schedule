@@ -1,8 +1,9 @@
 import React, {Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type TouchEvent} from 'react';
-import {ArrowUpRight, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, WifiOff, X} from 'lucide-react';
+import {ArrowUpRight, CalendarDays, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
-import {ThemeButton,HomeworkButton,HomeworkEditor,useHomework,type Task} from '@/components/personal';
+import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,type Task} from '@/components/personal';
+import {useSearch} from '@/components/search';
 import {useSubgroups} from '@/components/subgroups';
 import {dayGlance, duration, focusDate, minutes, roomFor} from '@/lib/day-glance.mjs';
 import {findRoom} from '@/lib/map-route.mjs';
@@ -108,7 +109,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
   const missingTeacher = !!preferredTeacher && allRows.length>0 && lesson.type!=='lecture' && !matched.length;
   const note = lesson.rule?.dates ? 'Только '+lesson.rule.dates.map(d=>formatDate(d,{day:'numeric',month:'short'})).join(', ') : lesson.rule?.from ? 'С '+formatDate(lesson.rule.from) : '';
   const label = now ? `идёт, ещё ${duration(left)}` : next ? `через ${duration(left)}` : '';
-  return <LessonAt.Provider value={{date,start:lesson.start}}><article className={`lesson ${lesson.type} ${now?'current':''} ${past?'past':''}`}>
+  return <LessonAt.Provider value={{date,start:lesson.start}}><article className={`lesson ${lesson.type} ${now?'current':''} ${past?'past':''}`} onClick={event=>{if(!hw.editing && !(event.target as HTMLElement).closest('button,a,textarea,input,label'))hw.open();}}>
     <div className="lesson-time">
       <span className="range">{lesson.start}<span><i> – </i>{lesson.end}</span></span>
       {typeNames[lesson.type] && <span className="tag">{typeNames[lesson.type]}</span>}
@@ -150,6 +151,10 @@ export default function Home() {
   const groupHistory = history.filter(h=>h.changes[groupName]?.length || !Object.keys(h.changes).length);
   const subgroups=useSubgroups(data.lessons,groupName);
   const homework=useHomework(groupName,(date)=>{setView('day');go(date);});
+  const calendar=useCalendarExport(data,subgroups.selected);
+  // Search looks at the current teaching week; on Sunday that is the coming one.
+  const searchWeek=Array.from({length:6},(_,i)=>addDays(today,i-weekday(today)+(weekday(today)===6?7:0)));
+  const search=useSearch({table,dates:searchWeek,today,clock,group:groupName,room:(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>});
   function setGroup(name:string){setGroupState(name);setGroupsOpen(false);setMessage('');try{localStorage.setItem(groupKey,name);}catch{}}
   const focus = focusDate(data,today,clock) as string;
   const selected = pinned ?? focus;
@@ -160,8 +165,11 @@ export default function Home() {
   const selectedLessons = data.lessons.filter(l=>isDisplayedLesson(l) && l.day===weekday(selected) && active(l,selected));
   const status = verification(saved.snapshot);
   const glance = view==='day' && (selected===today || selected===focus) ? dayGlance(data,today,clock,subgroups.selected) : null;
-  // Short enough for one line: "Завтра, 28 сентября", "Вс, 4 октября".
-  const relative = selected===today ? 'Сегодня' : selected===addDays(today,1) ? 'Завтра' : selected===addDays(today,-1) ? 'Вчера' : shortDays[weekday(selected)];
+  // The strip already names the weekday and the number; the heading says only what the strip does not.
+  const near = selected===today ? 'Сегодня' : selected===addDays(today,1) ? 'Завтра' : selected===addDays(today,-1) ? 'Вчера' : '';
+  const monthOf = (iso:string) => { const m=new Date(iso+'T12:00:00Z').toLocaleDateString('ru-RU',{month:'long',timeZone:'Europe/Moscow'}); return m[0].toUpperCase()+m.slice(1); };
+  const months = view==='day' ? monthOf(selected) : [...new Set([monthOf(monday),monthOf(week[6])])].join(' — ');
+  const dayStart = selectedLessons.reduce((s,l)=>!s||l.start<s?l.start:s,''), dayEnd = selectedLessons.reduce((e,l)=>l.end>e?l.end:e,'');
   const checkedAgo = ago(saved.snapshot.checkedAt || null);
   const statusText = !online ? 'Без интернета' : busy ? 'Обновляем…' : syncError ? 'Не удалось получить обновления'
     : saved.snapshot.status==='error' ? 'Не удалось проверить ВМК' : checkedAgo ? `Сверено ${checkedAgo}` : status.title;
@@ -277,33 +285,46 @@ export default function Home() {
   }
   function renderDay(date:string,weekly=false) {
     const list=data.lessons.filter(l=>isDisplayedLesson(l) && l.day===weekday(date) && active(l,date)).sort((a,b)=>a.start.localeCompare(b.start));
+    const items:React.ReactNode[]=[];
+    let until='';
+    for (const l of list) {
+      const gap=until ? minutes(l.start)-minutes(until) : 0;
+      if (gap>=30) {
+        const now=date===today && !!clock && clock>=until && clock<l.start;
+        items.push(<div key={'gap'+l.id} className={`gap ${now?'now':''}`}><span>Окно</span><b>{now?`ещё ${duration(minutes(l.start)-minutes(clock))}`:duration(gap)}</b><small>{until}–{l.start}</small></div>);
+      }
+      items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={list.filter(o=>o.id.split('-').slice(0,2).join('-')===l.id.split('-').slice(0,2).join('-')).length>1}/>);
+      if (l.end>until) until=l.end;
+    }
     const density = weekly ? 'compact' : list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
     return <section className={weekly?'week-day':'day'} key={date} aria-label={formatDate(date)}>
       {weekly && <div className="day-title"><h2>{dayNames[weekday(date)]}<span> · {formatDate(date,{day:'numeric',month:'short'})}</span></h2><span>{lessonCount(list.length)}</span></div>}
-      {list.length ? <div className={`list ${density} ${weekly?'':'fill'}`}>{list.map(l=><LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={list.filter(o=>o.id.split('-').slice(0,2).join('-')===l.id.split('-').slice(0,2).join('-')).length>1}/>)}</div> : <div className="empty"><CalendarDays size={22}/><p>Пар нет — отдыхай</p></div>}
+      {list.length ? <div className={`list ${density} ${weekly?'':'fill'}`}>{items}</div> : <div className="empty"><CalendarDays size={22}/><p>Пар нет — отдыхай</p></div>}
     </section>;
   }
 
   return <OpenRoom.Provider value={openRoom}><div className="shell">
     <MsuDecor/>
     <header className="topbar">
-      <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><strong>{groupName} группа <ChevronDown size={14}/></strong><small>Расписание · МГУ</small></span></button>
+      <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
       <div className="header-actions">
-        <a className="vmk-link" href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a>
+        <a className="vmk-link" href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer" aria-label="Расписание на сайте ВМК">ВМК<ArrowUpRight size={13}/></a>
+        {search.button}
         <ThemeButton/>
       </div>
     </header>
 
-    <nav className="tabs" aria-label="Разделы"><button aria-pressed={tab==='schedule'} onClick={()=>setTab('schedule')}>Расписание</button><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}>Карта</button></nav>
+    <nav className="tabs" aria-label="Разделы"><button aria-pressed={tab==='schedule'} onClick={()=>setTab('schedule')}><CalendarDays/><span>Расписание</span></button><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}><MapIcon/><span>Карта</span></button></nav>
 
     {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
     </CampusMap></Suspense> : <>
-    <div className="heading">
+    <div className={`heading ${view}`}>
       <div className="heading-text">
-        <h1>{view==='day'?<>{relative}, {formatDate(selected)}</>:`${formatDate(monday,{day:'numeric',month:'short'})} — ${formatDate(week[6],{day:'numeric',month:'short'})}`}</h1>
+        <h1><span className="h-lead">{view==='day' && near || months}</span><span className="h-month">{months}</span></h1>
         <p className="eyebrow">
-          {view==='day' && <span className="count">{lessonCount(selectedLessons.length)}</span>}
+          {view==='day' && near && <span className="e-rel">{near}</span>}
+          {view==='day' && <span className="count">{lessonCount(selectedLessons.length)}{dayStart && <span className="day-end"> · {dayStart}–{dayEnd}</span>}</span>}
           {pinned!==null && <button className="text-button" onClick={()=>go(focus,focus>selected?1:-1)}>{focus===today?'Сегодня':'К ближайшим'}</button>}
           <button className={`status ${tone}`} onClick={()=>setStatusOpen(true)} aria-label={`Статус проверки: ${statusText}`}>
             <span className="status-icon">{!online?<WifiOff size={12}/>:busy?<RefreshCw size={12} className="spin"/>:<span className="status-dot"/>}</span>
@@ -316,7 +337,7 @@ export default function Home() {
 
     <nav className="date-navigation" aria-label="Выбрать день">
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
-      <div className="days">{week.map((date,i)=><button key={date} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date,date>selected?1:date<selected?-1:0);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong></button>)}</div>
+      <div className="days">{week.map((date,i)=><button key={date} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date,date>selected?1:date<selected?-1:0);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}</div>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>
 
@@ -332,7 +353,7 @@ export default function Home() {
     </main>
 
     <footer className="footer">
-      <div className="footer-links">{homework.listButton}{subgroups.button}<button onClick={()=>setChangesOpen(true)}>Изменения</button>{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
+      <div className="footer-links">{subgroups.button}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
     </footer>
     </>}
 
@@ -351,11 +372,13 @@ export default function Home() {
       </dl>
       {pdfError && <p className="personal-hint">{pdfError}</p>}
       <button className="save-task" onClick={()=>refresh(true)} disabled={busy || !online}><RefreshCw size={15} className={busy?'spin':''}/> {busy?'Обновляем…':'Обновить'}</button>
-      <div className="source-links"><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>
+      <div className="source-links"><button className="text-button" onClick={()=>{setStatusOpen(false);setChangesOpen(true);}}>История изменений</button><a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>
     {pdfOpen && pdfUrl && <PdfViewer url={pdfUrl} onClose={closePdf}/>}
     {homework.dialogs}
     {subgroups.dialog}
+    {calendar.dialog}
+    {search.dialog}
     <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog"><DialogTitle>Изменения · группа {groupName}</DialogTitle><DialogDescription>Сервер сравнивает каждую новую версию PDF с предыдущей и записывает, что поменялось.</DialogDescription>
       {groupHistory.length ? groupHistory.map(entry=><section className="history-entry" key={entry.detectedAt}>
         <h4>Расписание от {entry.date}{entry.previousDate && entry.previousDate!==entry.date?` (было от ${entry.previousDate})`:''}</h4>
