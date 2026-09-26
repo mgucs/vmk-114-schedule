@@ -16,7 +16,7 @@ export function readMetadata(html) {
   return {date, url:url.href};
 }
 
-async function download(fetcher, url, accept, limit) {
+export async function download(fetcher, url, accept, limit) {
   const signal = AbortSignal.timeout(45000);
   for (let redirects = 0; redirects < 5; redirects++) {
     const response = await fetcher(url, {redirect:'manual', headers:{Accept:accept, 'User-Agent':'VMK114-Schedule/2.0'}, signal});

@@ -4,7 +4,7 @@ const clean = s => s.replace(/\s+/g,' ').replace(/\s+([,.])/g,'$1').trim();
 const transformPoint = (m,x,y) => [m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
 const multiply = (a,b) => [a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];
 
-function borders(op,OPS,height) {
+export function borders(op,OPS,height) {
   let matrix=[1,0,0,1,0,0],stack=[],path=[],segments=[];
   const paint=new Set([OPS.stroke,OPS.closeStroke,OPS.fillStroke,OPS.eoFillStroke,OPS.closeFillStroke,OPS.closeEOFillStroke,OPS.fill,OPS.eoFill]);
   const segment=(x,y,u,v)=>{const a=transformPoint(matrix,x,y),b=transformPoint(matrix,u,v);path.push({x0:Math.min(a[0],b[0]),x1:Math.max(a[0],b[0]),y0:height-Math.max(a[1],b[1]),y1:height-Math.min(a[1],b[1])});};

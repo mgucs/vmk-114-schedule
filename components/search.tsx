@@ -1,21 +1,21 @@
 import {useMemo,useState,type ReactNode} from 'react';
 import {Search,X} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
-import {searchIndex,searchLessons} from '../lib/search.mjs';
+import {occursOn,searchIndex,searchLessons} from '../lib/search.mjs';
 
-type Row={key:string;day:number;start:string;end:string;title:string;type:string;teacher:string;room:string;rule:{from?:string;dates?:string[]}|null;groups:string[]};
+type Row={key:string;day:number;start:string;end:string;title:string;type:string;teacher:string;room:string;rule:{from?:string;dates?:string[]}|null;week:''|'odd'|'even';groups:string[]};
 const shortDays=['Пн','Вт','Ср','Чт','Пт','Сб'];
 const typeNames:Record<string,string>={lecture:'Лекция',consultation:'Конс.',sport:'Спорт'};
 const examples=['Ким','анализ','606','118'];
 
 // Where and when any class of the first course happens: by teacher, subject, room or group.
 // `dates` holds this week's date for every weekday, so one-off classes are shown only on their day.
-export function useSearch({table,dates,today,clock,group,room}:{table:any;dates:string[];today:string;clock:string;group:string;room:(name:string,date:string,start:string)=>ReactNode}){
+export function useSearch({table,term,dates,today,clock,group,room}:{table:any;term:{start:string;end:string;odd:boolean}[]|null;dates:string[];today:string;clock:string;group:string;room:(name:string,date:string,start:string)=>ReactNode}){
   const index=useMemo(()=>searchIndex(table) as Row[],[table]);
   const todayDay=dates.indexOf(today);
   const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[day,setDay]=useState<number|null>(null);
   const shownDay=day ?? (todayDay>=0&&todayDay<6?todayDay:0);
-  const onDate=(row:Row)=>{const date=dates[row.day];return !row.rule||((!row.rule.from||date>=row.rule.from)&&(!row.rule.dates||row.rule.dates.includes(date)));};
+  const onDate=(row:Row)=>occursOn(row,dates[row.day],term);
   const results=(searchLessons(index,query,shownDay) as Row[]).filter(onDate);
   const button=<button className="icon-button" aria-label="Поиск по всем группам" title="Поиск: преподаватель, предмет, аудитория" onClick={()=>{setDay(null);setOpen(true);}}><Search size={18}/></button>;
   const dialog=<Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog search-dialog">

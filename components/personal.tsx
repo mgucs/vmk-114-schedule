@@ -69,7 +69,8 @@ export function ThemeButton() {
 }
 
 // All classes of the group as an .ics file: the phone's calendar imports them with weekly repeats.
-export function useCalendarExport(schedule:{group:number;year:number;lessons:unknown[]},subgroups:Record<string,string>){
+export function useCalendarExport(schedule:{group:number;year:number;lessons:unknown[];term?:{end:string}[]|null},subgroups:Record<string,string>){
+  const end=new Date((schedule.term?.at(-1)?.end||`${schedule.year}-12-31`)+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'long',timeZone:'UTC'});
   const [open,setOpen]=useState(false),[done,setDone]=useState(false);
   function download(){
     const url=URL.createObjectURL(new Blob([calendarFile(schedule,subgroups)],{type:'text/calendar;charset=utf-8'}));
@@ -79,7 +80,7 @@ export function useCalendarExport(schedule:{group:number;year:number;lessons:unk
   const chosen=Object.values(subgroups).filter(Boolean).length;
   return {button:<button onClick={()=>{setDone(false);setOpen(true);}}>В календарь</button>,
     dialog:<Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>В календарь телефона</DialogTitle>
-      <DialogDescription>Все пары группы {schedule.group} до 31 декабря — с аудиториями и преподавателями, повторяются каждую неделю.</DialogDescription>
+      <DialogDescription>Все пары группы {schedule.group} до {end}, когда кончаются занятия, — с аудиториями и преподавателями, без праздников. Повторяются каждую неделю.</DialogDescription>
       <ul className="calendar-notes">
         <li>{chosen?`Учтена твоя подгруппа (${chosen} ${chosen===1?'предмет':chosen<5?'предмета':'предметов'}).`:'Подгруппа не выбрана — в парах будут все преподаватели.'}</li>
         <li>iPhone: открой файл и нажми «Добавить все». Android: открой файл в Google Календаре.</li>

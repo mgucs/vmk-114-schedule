@@ -27,9 +27,10 @@ export function useSubgroups(lessons:{title:string;detail:string}[],group:string
     const names=subjects.get(title)||new Set<string>();
     rows.forEach(row=>names.add(row.teacher));subjects.set(title,names);
   }
+  function store(value:Selection){try{localStorage.setItem(storageKey,JSON.stringify(value));setSelected(value);return true;}catch{return false;}}
   function save(){
-    try{localStorage.setItem(storageKey,JSON.stringify(draft));setSelected(draft);setOpen(false);setError('');}
-    catch{setError('Не удалось сохранить выбор на устройстве. Попробуй ещё раз.');}
+    if(store(draft)){setOpen(false);setError('');}
+    else setError('Не удалось сохранить выбор на устройстве. Попробуй ещё раз.');
   }
   const button=<button onClick={()=>{setDraft({...selected});setError('');setOpen(true);}}>Подгруппа</button>;
   const dialog=<Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>Моя подгруппа</DialogTitle><DialogDescription>Выбери преподавателей — в расписании останутся только твои аудитории. Выбор сохраняется на этом устройстве.</DialogDescription>
@@ -38,5 +39,5 @@ export function useSubgroups(lessons:{title:string;detail:string}[],group:string
     <p className="personal-hint">Общие лекции остаются. Если выбранного преподавателя нет в новом PDF, покажем все варианты и предупредим.</p>
     {error&&<p role="alert">{error}</p>}<button className="save-task" onClick={save}>Сохранить выбор</button>
   </DialogContent></Dialog>;
-  return {selected,button,dialog};
+  return {selected,button,dialog,subjects,store};
 }

@@ -36,7 +36,19 @@ test('calendar file repeats weekly classes and keeps one-off dates',()=>{
   assert.ok(ics.split('\r\n').every(line=>new TextEncoder().encode(line).length<=75));
   const events=ics.split('BEGIN:VEVENT').length-1;
   assert.ok(events>=schedule.lessons.length-1);
-  assert.match(ics,/RRULE:FREQ=WEEKLY;UNTIL=20261231T205959Z/);
+  assert.match(ics,/RRULE:FREQ=WEEKLY;INTERVAL=1;UNTIL=20261231T205959Z/);
   // Monday 10:30 lecture starts on the first Monday of the term.
   assert.match(ics,/DTSTART;TZID=Europe\/Moscow:20260907T103000/);
+});
+
+test('calendar file follows the weeks of classes, skips holidays, alternates ФИИТ entries', async () => {
+  const {parseParity} = await import('../lib/term.mjs');
+  const term = parseParity(['01 сентября 2026 г. - 06 сентября 2026 г. нечетная неделя', '07 сентября 2026 г. - 13 сентября 2026 г. четная неделя',
+    '02 ноября 2026 г. - 08 ноября 2026 г. четная неделя', '14 декабря 2026 г. - 20 декабря 2026 г. четная неделя']);
+  const pmi = calendarFile({...groupSchedule(snapshot.schedule,'114'), term}, {}, new Date('2026-09-26T10:00:00Z'));
+  assert.match(pmi, /UNTIL=20261220T205959Z/);
+  // Wednesday classes skip 4 November.
+  assert.match(pmi, /EXDATE;TZID=Europe\/Moscow:20261104T\d{6}/);
+  const fiit = calendarFile({...groupSchedule(snapshot.schedule,'141'), term}, {}, new Date('2026-09-26T10:00:00Z'));
+  assert.match(fiit, /RRULE:FREQ=WEEKLY;INTERVAL=2;/);
 });

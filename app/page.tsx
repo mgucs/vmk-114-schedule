@@ -1,11 +1,15 @@
 import React, {Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type TouchEvent} from 'react';
-import {ArrowUpRight, CalendarDays, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, WifiOff, X} from 'lucide-react';
+import {ArrowUpRight, CalendarDays, ChevronDown, GraduationCap, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
 import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,type Task} from '@/components/personal';
 import {useSearch} from '@/components/search';
 import {useSubgroups} from '@/components/subgroups';
-import {dayGlance, duration, focusDate, minutes, roomFor} from '@/lib/day-glance.mjs';
+import {dayGlance, duration, focusDate, lessonsOn, minutes, roomFor} from '@/lib/day-glance.mjs';
+import {dayKind, isStacked, termEnd, validTerm, weekOf} from '@/lib/term.mjs';
+import {SessionView, isCurrent, type Session} from '@/components/session';
+import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
+import {Onboarding, needsOnboarding} from '@/components/onboarding';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
 // three.js is loaded only when the map is opened.
@@ -16,7 +20,9 @@ type Lesson = {id:string; day:number; start:string; end:string; title:string; de
 type Schedule = {group:number; year:number; page:number; lessons:Lesson[]; sourceDate:string; sourceUrl:string; hash:string; savedAt:string};
 type Table = {year:number; groups:Record<string,{page:number; lessons:Lesson[]}>; sourceDate:string; sourceUrl:string; hash:string; savedAt:string};
 type HistoryEntry = {date:string; previousDate:string|null; detectedAt:string; pdfChanged:boolean; changes:Record<string,Change[]>};
-type Snapshot = {schema:number; status:string; attemptedAt:string; checkedAt:string|null; error:string|null; date:string; url:string; hash:string; schedule:Table; history:HistoryEntry[]};
+type Contacts = {room:string; phone:string; head:{name:string; email:string}|null; inspector:{name:string; email:string}|null};
+type Faculty = {term?:{start:string; end:string; odd:boolean}[]; notices?:string[]; contacts?:Contacts; session?:Session; archive?:Session[]};
+type Snapshot = {schema:number; status:string; attemptedAt:string; checkedAt:string|null; error:string|null; date:string; url:string; hash:string; schedule:Table; history:HistoryEntry[]; faculty?:Faculty};
 type Change = {id:string; day:number; start:string; title?:string; before?:string; after?:string; details?:string[]};
 type Saved = {snapshot:Snapshot; syncedAt:string};
 const dayNames = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
@@ -45,7 +51,27 @@ function ago(iso:string|null) {
   if (h<24) return `${h} ${plural(h,['час','часа','часов'])} назад`;
   return stamp(iso);
 }
-const active = (lesson:Lesson,date:string) => !lesson.rule || ((!lesson.rule.from || date>=lesson.rule.from) && (!lesson.rule.dates || lesson.rule.dates.includes(date)));
+// Data from other VMK pages; each part is checked so a malformed one is simply left out.
+function readFaculty(snapshot:Snapshot) {
+  const f = snapshot.faculty || {};
+  const valid = (s:any):s is Session => !!s && typeof s.title==='string' && typeof s.year==='number' && !!s.exams && !!s.credits && !!s.lists && Array.isArray(s.sources);
+  const session = valid(f.session) ? f.session : null;
+  return {term:validTerm(f.term) ? f.term! : null, notices:Array.isArray(f.notices) ? f.notices.filter(n => typeof n==='string').slice(0,8) : [],
+    contacts:f.contacts && typeof f.contacts.room==='string' ? f.contacts : null, session, archive:Array.isArray(f.archive) ? f.archive.filter(valid) : []};
+}
+const noticeKey = 'vmk-notices-read';
+const fold = (s:string) => s.toLowerCase().replace(/ё/g,'е');
+const surnames = (detail:string) => (teacherRows(detail) as {teacher:string}[]).map(r => r.teacher.replace(/^(?:\S+\s+)*?([А-ЯЁ][а-яё]{3,})(?:\s+[А-ЯЁ].*)?$/, '$1')).filter(s => /^[А-ЯЁ][а-яё]{3,}$/.test(s));
+const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+// A notice concerns a class when it names the class's teacher and, if it names a date, that date.
+function noticeFor(notices:string[], lesson:Lesson, date:string) {
+  return notices.find(n => {
+    const text = fold(n);
+    if (!surnames(lesson.detail).some(s => text.includes(fold(s)))) return false;
+    const m = n.match(/(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/i);
+    return !m || date.slice(5) === `${String(months.indexOf(m[2].toLowerCase())+1).padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  });
+}
 function initialState():Saved {
   const fallback:Saved = {snapshot:seed as Snapshot, syncedAt:''};
   try {
@@ -98,7 +124,7 @@ function Room({room,note=''}:{room:string; note?:string}) {
     : <span className="room" aria-label={`Аудитория ${room}${note?', '+note:''}`}>{content}</span>;
 }
 type Editor = {task?:Task; editing:boolean; open:()=>void; editor:React.ReactNode};
-function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,stacked}:{lesson:Lesson;date:string;today:string;clock:string;change?:Change;next:boolean;hw:Editor;preferredTeacher?:string;stacked:boolean}) {
+function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,stacked,notice}:{lesson:Lesson;date:string;today:string;clock:string;change?:Change;next:boolean;hw:Editor;preferredTeacher?:string;stacked:''|'odd'|'even'|'both';notice?:string}) {
   const now = date===today && !!clock && clock>=lesson.start && clock<lesson.end;
   const past = date<today || (date===today && !!clock && clock>=lesson.end);
   const left = clock ? minutes(now?lesson.end:lesson.start)-minutes(clock) : 0;
@@ -108,7 +134,8 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
   const rows = allRows.length>1 && matched.length ? matched : allRows;
   const missingTeacher = !!preferredTeacher && allRows.length>0 && lesson.type!=='lecture' && !matched.length;
   const note = lesson.rule?.dates ? 'Только '+lesson.rule.dates.map(d=>formatDate(d,{day:'numeric',month:'short'})).join(', ') : lesson.rule?.from ? 'С '+formatDate(lesson.rule.from) : '';
-  const label = now ? `идёт, ещё ${duration(left)}` : next ? `через ${duration(left)}` : '';
+  // Time left is in the bar under the header; the card only says the class is on.
+  const label = now ? 'идёт' : next ? `через ${duration(left)}` : '';
   return <LessonAt.Provider value={{date,start:lesson.start}}><article className={`lesson ${lesson.type} ${now?'current':''} ${past?'past':''}`} onClick={event=>{if(!hw.editing && !(event.target as HTMLElement).closest('button,a,textarea,input,label'))hw.open();}}>
     <div className="lesson-time">
       <span className="range">{lesson.start}<span><i> – </i>{lesson.end}</span></span>
@@ -117,13 +144,16 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
       <HomeworkButton task={hw.task} onClick={hw.open}/>
     </div>
     <h3>{cleanTitle(lesson)}</h3>
-      {rows.map((row,i)=><div className="teacher-row" key={i}><span>{row.teacher}</span>{(row.room || (i===0 && lesson.room)) && <Room room={row.room || lesson.room} note={row.note}/>}</div>)}
+      {rows.map((row,i)=><div className="teacher-row" key={i}><span>{row.teacher ? <TeacherName name={row.teacher}/> : null}</span>{(row.room || (i===0 && lesson.room)) && <Room room={row.room || lesson.room} note={row.note}/>}</div>)}
       {!rows.length && lesson.room && <div className="teacher-row"><span/><Room room={lesson.room}/></div>}
       {now && <div className="progress" aria-hidden="true"><i style={{width:`${Math.round(progress*100)}%`}}/></div>}
       {change && <p className="changed-note">Изменено: {(change.details?.length?change.details:['обновлена запись в PDF']).join('; ')}</p>}
       {missingTeacher && <p className="rule-note subgroup-warning">Преподаватель подгруппы изменился — показаны все варианты.</p>}
       {note && <p className="rule-note">{note}</p>}
-      {stacked && <p className="rule-note">В PDF в этой клетке две записи одна под другой — обычно это чередование недель.</p>}
+      {stacked==='odd' && <p className="rule-note">По нечётным неделям</p>}
+      {stacked==='even' && <p className="rule-note">По чётным неделям</p>}
+      {stacked==='both' && <p className="rule-note">В PDF в этой клетке две записи одна под другой — обычно это чередование недель.</p>}
+      {notice && <p className="notice-note">Объявление ВМК: {notice}</p>}
       {hw.task && !hw.editing && <button className={`hw-preview ${hw.task.done?'task-done':''}`} onClick={hw.open}>{hw.task.text}</button>}
       {hw.editing && hw.editor}
   </article></LessonAt.Provider>;
@@ -135,14 +165,15 @@ export default function Home() {
   const [today,setToday] = useState(isoMoscow), [clock,setClock] = useState(clockMoscow);
   // null = follow the current time (today, or the next teaching day once today's classes are over).
   const [pinned,setPinned] = useState<string|null>(null), [slide,setSlide] = useState('');
-  const [tab,setTab] = useState<'schedule'|'map'>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
+  const [tab,setTab] = useState<'schedule'|'map'|'session'>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
   const [changesOpen,setChangesOpen] = useState(false), [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
   const checking = useRef(false), lastAttempt = useRef(0), touch = useRef<{x:number;y:number}|null>(null);
   const [group,setGroupState] = useState(loadGroup), [groupsOpen,setGroupsOpen] = useState(false);
   const table = saved.snapshot.schedule;
-  const data = groupSchedule(table,group) as Schedule;
+  const faculty = readFaculty(saved.snapshot);
+  const data = {...groupSchedule(table,group), term:faculty.term} as Schedule & {term:Faculty['term']|null};
   const groupName = String(data.group);
   const history = saved.snapshot.history;
   // Latest version of every class changed by a VMK update within the last week.
@@ -154,17 +185,35 @@ export default function Home() {
   const calendar=useCalendarExport(data,subgroups.selected);
   // Search looks at the current teaching week; on Sunday that is the coming one.
   const searchWeek=Array.from({length:6},(_,i)=>addDays(today,i-weekday(today)+(weekday(today)===6?7:0)));
-  const search=useSearch({table,dates:searchWeek,today,clock,group:groupName,room:(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>});
+  const search=useSearch({table,term:faculty.term,dates:searchWeek,today,clock,group:groupName,room:(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>});
   function setGroup(name:string){setGroupState(name);setGroupsOpen(false);setMessage('');try{localStorage.setItem(groupKey,name);}catch{}}
   const focus = focusDate(data,today,clock) as string;
   const selected = pinned ?? focus;
   const monday = addDays(selected,-weekday(selected));
   const week = Array.from({length:7},(_,i)=>addDays(monday,i));
-  const todayLessons = data.lessons.filter(l=>isDisplayedLesson(l) && l.day===weekday(today) && active(l,today)).sort((a,b)=>a.start.localeCompare(b.start));
+  const todayLessons = lessonsOn(data,today) as Lesson[];
   const nextId = todayLessons.find(l=>l.start>clock)?.id;
-  const selectedLessons = data.lessons.filter(l=>isDisplayedLesson(l) && l.day===weekday(selected) && active(l,selected));
+  const selectedLessons = lessonsOn(data,selected) as Lesson[];
+  // "How long until the end of this class": shown on every tab and in the window title.
+  const ongoing = todayLessons.find(l=>clock>=l.start && clock<l.end);
+  const ongoingLeft = ongoing ? minutes(ongoing.end)-minutes(clock) : 0;
+  const fiit = Number(groupName)>=140, parity = fiit ? weekOf(faculty.term,selected)?.odd : undefined;
+  const [readNotices,setReadNotices] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem(noticeKey)||'[]');}catch{return [];}});
+  const freshNotices = faculty.notices.filter(n=>!readNotices.includes(n));
+  const [contactsOpen,setContactsOpen] = useState(false), [onboarding,setOnboarding] = useState(needsOnboarding), [preset,setPreset] = useState(false), [shared,setShared] = useState('');
+  // Lecturer of each subject this term, by the first letters of its name.
+  const lecturers = Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];}));
+  const teacherCard = useTeacherCard({table, session:isCurrent(faculty.session,data.year) ? faculty.session : null, dates:searchWeek, term:faculty.term, room:(name,day,start)=><LessonAt.Provider value={{date:searchWeek[day],start}}><Room room={name}/></LessonAt.Provider>});
   const status = verification(saved.snapshot);
   const glance = view==='day' && (selected===today || selected===focus) ? dayGlance(data,today,clock,subgroups.selected) : null;
+  function dismissNotices(){const next=[...readNotices,...freshNotices].slice(-30);setReadNotices(next);try{localStorage.setItem(noticeKey,JSON.stringify(next));}catch{}}
+  async function shareGroup(){
+    const url=location.origin+import.meta.env.BASE_URL+'?g='+groupName;
+    try{
+      if(navigator.share){await navigator.share({title:`Расписание ВМК · группа ${groupName}`,url});return;}
+      await navigator.clipboard.writeText(url);setShared('Ссылка скопирована');
+    }catch(error){if(!(error instanceof DOMException && error.name==='AbortError'))setShared(url);}
+  }
   // The strip already names the weekday and the number; the heading says only what the strip does not.
   const near = selected===today ? 'Сегодня' : selected===addDays(today,1) ? 'Завтра' : selected===addDays(today,-1) ? 'Вчера' : '';
   const monthOf = (iso:string) => { const m=new Date(iso+'T12:00:00Z').toLocaleDateString('ru-RU',{month:'long',timeZone:'Europe/Moscow'}); return m[0].toUpperCase()+m.slice(1); };
@@ -265,12 +314,19 @@ export default function Home() {
     window.addEventListener('keydown',onKey); return()=>window.removeEventListener('keydown',onKey);
   });
 
+  useEffect(()=>{document.title = ongoing ? `ещё ${duration(ongoingLeft)} · ${cleanTitle(ongoing)}` : 'Расписание ВМК';},[ongoing?.id,ongoingLeft]);
+  useEffect(()=>{
+    const params=new URLSearchParams(location.search), wanted=params.get('g');
+    if(!wanted)return;
+    if(table.groups[wanted]){setGroup(wanted);setPreset(true);}
+    params.delete("g");window.history.replaceState(null,'',location.pathname+(params.size?'?'+params:'')+location.hash);
+  },[]);
   const closePdf = React.useCallback(() => setPdfOpen(false), []);
   // The class before this one tells where the walk starts.
   function openRoom(room:string, date=today, start='') {
     const to=findRoom(room);
     if(!to)return;
-    const day=data.lessons.filter(l=>isDisplayedLesson(l) && l.day===weekday(date) && active(l,date) && (!start || l.start<start)).sort((a,b)=>a.start.localeCompare(b.start));
+    const day=(lessonsOn(data,date) as Lesson[]).filter(l=>!start || l.start<start);
     const prev=[...day].reverse().map(l=>findRoom(roomFor(l,subgroups.selected)||'')).find(Boolean);
     setMapTarget({to:to.key, from:start && prev && prev.key!==to.key ? prev.key : null, n:Date.now()});
     setTab('map');
@@ -284,7 +340,8 @@ export default function Home() {
       editor:editing?<HomeworkEditor task={draft} error={homework.error} onSave={homework.save} onToggle={()=>homework.toggle(id)} onClose={()=>homework.setEditing('')}/>:null};
   }
   function renderDay(date:string,weekly=false) {
-    const list=data.lessons.filter(l=>isDisplayedLesson(l) && l.day===weekday(date) && active(l,date)).sort((a,b)=>a.start.localeCompare(b.start));
+    const list=lessonsOn(data,date) as Lesson[];
+    const kind=dayKind(faculty.term,date);
     const items:React.ReactNode[]=[];
     let until='';
     for (const l of list) {
@@ -293,17 +350,21 @@ export default function Home() {
         const now=date===today && !!clock && clock>=until && clock<l.start;
         items.push(<div key={'gap'+l.id} className={`gap ${now?'now':''}`}><span>Окно</span><b>{now?`ещё ${duration(minutes(l.start)-minutes(clock))}`:duration(gap)}</b><small>{until}–{l.start}</small></div>);
       }
-      items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={list.filter(o=>o.id.split('-').slice(0,2).join('-')===l.id.split('-').slice(0,2).join('-')).length>1}/>);
+      items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={!isStacked(l,data.lessons) ? '' : fiit && weekOf(faculty.term,date) ? (/-\d$/.test(l.id)?'even':'odd') : list.filter(o=>o.id.replace(/-\d$/,'')===l.id.replace(/-\d$/,'')).length>1 ? 'both' : ''} notice={noticeFor(faculty.notices,l,date)}/>);
       if (l.end>until) until=l.end;
     }
     const density = weekly ? 'compact' : list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
     return <section className={weekly?'week-day':'day'} key={date} aria-label={formatDate(date)}>
       {weekly && <div className="day-title"><h2>{dayNames[weekday(date)]}<span> · {formatDate(date,{day:'numeric',month:'short'})}</span></h2><span>{lessonCount(list.length)}</span></div>}
-      {list.length ? <div className={`list ${density} ${weekly?'':'fill'}`}>{items}</div> : <div className="empty"><CalendarDays size={22}/><p>Пар нет — отдыхай</p></div>}
+      {list.length ? <div className={`list ${density} ${weekly?'':'fill'}`}>{items}</div>
+        : kind.kind==='holiday' ? <div className="empty"><CalendarDays size={22}/><p>{kind.name}</p><small>Праздник, пар нет</small></div>
+        : kind.kind==='after' ? <div className="empty"><GraduationCap size={22}/><p>Занятия закончились {formatDate(kind.end)}</p><small>Дальше — зачёты и экзамены.</small><button className="text-button" onClick={()=>setTab('session')}>Открыть сессию</button></div>
+        : kind.kind==='before' ? <div className="empty"><CalendarDays size={22}/><p>Занятия начнутся {formatDate(kind.start)}</p></div>
+        : <div className="empty"><CalendarDays size={22}/><p>Пар нет — отдыхай</p></div>}
     </section>;
   }
 
-  return <OpenRoom.Provider value={openRoom}><div className="shell">
+  return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><div className="shell">
     <MsuDecor/>
     <header className="topbar">
       <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
@@ -314,16 +375,25 @@ export default function Home() {
       </div>
     </header>
 
-    <nav className="tabs" aria-label="Разделы"><button aria-pressed={tab==='schedule'} onClick={()=>setTab('schedule')}><CalendarDays/><span>Расписание</span></button><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}><MapIcon/><span>Карта</span></button></nav>
+    {ongoing && <div className="now-bar" role="status" aria-label={`Идёт пара, до конца ${duration(ongoingLeft)}`}>
+      <b>ещё {duration(ongoingLeft)}</b><span>{cleanTitle(ongoing)}{roomFor(ongoing,subgroups.selected) ? ` · ${roomFor(ongoing,subgroups.selected)}` : ''}</span><small>до {ongoing.end}</small>
+      <i style={{width:`${Math.round((minutes(clock)-minutes(ongoing.start))/(minutes(ongoing.end)-minutes(ongoing.start))*100)}%`}}/>
+    </div>}
+
+    <nav className="tabs" aria-label="Разделы"><button aria-pressed={tab==='schedule'} onClick={()=>setTab('schedule')}><CalendarDays/><span>Расписание</span></button><button aria-pressed={tab==='session'} onClick={()=>setTab('session')}><GraduationCap/><span>Сессия</span></button><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}><MapIcon/><span>Карта</span></button></nav>
 
     {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
-    </CampusMap></Suspense> : <>
+    </CampusMap></Suspense> : tab==='session' ? <main className="session-main">
+      <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
+        room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
+    </main> : <>
     <div className={`heading ${view}`}>
       <div className="heading-text">
         <h1><span className="h-lead">{view==='day' && near || months}</span><span className="h-month">{months}</span></h1>
         <p className="eyebrow">
           {view==='day' && near && <span className="e-rel">{near}</span>}
+          {parity!=null && <span className="e-week">{parity?'нечётная':'чётная'} неделя</span>}
           {view==='day' && <span className="count">{lessonCount(selectedLessons.length)}{dayStart && <span className="day-end"> · {dayStart}–{dayEnd}</span>}</span>}
           {pinned!==null && <button className="text-button" onClick={()=>go(focus,focus>selected?1:-1)}>{focus===today?'Сегодня':'К ближайшим'}</button>}
           <button className={`status ${tone}`} onClick={()=>setStatusOpen(true)} aria-label={`Статус проверки: ${statusText}`}>
@@ -342,18 +412,21 @@ export default function Home() {
     </nav>
 
     <main onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      {glance && glance.kind!=='done' && <section className={`glance-line ${glance.kind}`} aria-label="Мой день сейчас">
+      {freshNotices.length>0 && <section className="notices" aria-label="Объявления ВМК">
+        <div className="notices-head"><strong>Объявление ВМК</strong><button className="dismiss-message" aria-label="Прочитано" onClick={dismissNotices}><X size={15}/></button></div>
+        {freshNotices.map(n=><p key={n}>{n}</p>)}
+      </section>}
+      {glance && glance.kind!=='done' && glance.kind!=='now' && <section className={`glance-line ${glance.kind}`} aria-label="Мой день сейчас">
         <b>{glance.left!=null && (glance.left<60 ? `${glance.left} мин` : `${Math.floor(glance.left/60)}:${String(glance.left%60).padStart(2,'0')}`)}</b>
         <strong>{{now:'до конца пары',before:'до первой пары',break:'до следующей пары'}[glance.kind as 'now']}</strong>
         <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
       </section>}
       {message && <div className="message" role="status"><span>{message}{groupHistory.length>0 && message!=='Изменений нет' && <button onClick={()=>setChangesOpen(true)}>Подробнее</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
-      {(selected<`${data.year}-09-01` || selected>`${data.year+1}-01-31`) && <div className="message warning">Это расписание осени {data.year}. Для выбранной даты оно может быть неактуально.</div>}
       <div key={selected+view} className={`slide ${slide}`}>{view==='day'?renderDay(selected):week.map(date=>renderDay(date,true))}</div>
     </main>
 
     <footer className="footer">
-      <div className="footer-links">{subgroups.button}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
+      <div className="footer-links">{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
     </footer>
     </>}
 
@@ -379,6 +452,20 @@ export default function Home() {
     {subgroups.dialog}
     {calendar.dialog}
     {search.dialog}
+    {teacherCard.dialog}
+    {faculty.contacts && <Dialog open={contactsOpen} onOpenChange={setContactsOpen}><DialogContent className="changes-dialog contacts-card">
+      <DialogTitle>Учебная часть 1 курса</DialogTitle>
+      <DialogDescription>Справки, пропуски, вопросы по учёбе и сессии. Контакты с сайта ВМК.</DialogDescription>
+      <dl className="status-list">
+        {faculty.contacts.room && <div><dt>Где</dt><dd><LessonAt.Provider value={{}}><Room room={faculty.contacts.room}/></LessonAt.Provider></dd></div>}
+        {faculty.contacts.phone && <div><dt>Телефон</dt><dd><a href={`tel:${faculty.contacts.phone.replace(/[^+\d]/g,'')}`}>{faculty.contacts.phone}</a></dd></div>}
+        {faculty.contacts.head && <div><dt>Начальник курса</dt><dd>{faculty.contacts.head.name}<br/><a href={`mailto:${faculty.contacts.head.email}`}>{faculty.contacts.head.email}</a></dd></div>}
+        {faculty.contacts.inspector && <div><dt>Инспектор курса</dt><dd>{faculty.contacts.inspector.name}<br/><a href={`mailto:${faculty.contacts.inspector.email}`}>{faculty.contacts.inspector.email}</a></dd></div>}
+      </dl>
+      <div className="source-links"><a href="https://cs.msu.ru/studies/contacts" target="_blank" rel="noreferrer">Страница на сайте ВМК<ArrowUpRight size={14}/></a></div>
+    </DialogContent></Dialog>}
+    {onboarding && <Onboarding streams={streams(table)} group={groupName} preset={preset} subgroups={subgroups}
+      onGroup={name=>{setGroupState(name);try{localStorage.setItem(groupKey,name);}catch{}}} onDone={()=>setOnboarding(false)}/>}
     <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog"><DialogTitle>Изменения · группа {groupName}</DialogTitle><DialogDescription>Сервер сравнивает каждую новую версию PDF с предыдущей и записывает, что поменялось.</DialogDescription>
       {groupHistory.length ? groupHistory.map(entry=><section className="history-entry" key={entry.detectedAt}>
         <h4>Расписание от {entry.date}{entry.previousDate && entry.previousDate!==entry.date?` (было от ${entry.previousDate})`:''}</h4>
@@ -392,6 +479,8 @@ export default function Home() {
         <div className="stream-head"><strong>{stream.title}</strong><span>{stream.range}</span></div>
         <div className="group-grid">{stream.groups.map(name=><button key={name} aria-pressed={name===groupName} onClick={()=>setGroup(name)}>{name}</button>)}</div>
       </section>)}
+      <button className="share-group" onClick={shareGroup}><Share2 size={16}/> Поделиться ссылкой на группу {groupName}</button>
+      {shared && <p className="personal-hint share-result">{shared}</p>}
     </DialogContent></Dialog>
-  </div></OpenRoom.Provider>;
+  </div></OpenTeacher.Provider></OpenRoom.Provider>;
 }

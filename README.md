@@ -34,6 +34,12 @@ PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium no
 | `scripts/sync-schedule.mjs`, `scripts/source-check.mjs` | проверка сайта ВМК, история изменений |
 | `public/parser.mjs` | разбор PDF по границам ячеек |
 | `app/page.tsx` | интерфейс расписания |
+| `scripts/faculty.mjs` | чётность недель, объявления со страницы расписания, учебная часть 1 курса, сессия; прошлые сессии уходят в архив |
+| `scripts/session-parser.mjs` | разбор PDF сессии: перечень экзаменов, таблицы экзаменов и зачётов |
+| `scripts/sync-people.mjs` | карточки преподавателей из справочника cs.msu.ru (раз в неделю) |
+| `scripts/archive-session.mjs` | добавить в архив прошлую сессию по сохранённой странице (например, из Wayback Machine) |
+| `lib/term.mjs` | праздники, недели занятий, чётность (у ФИИТ верхняя запись клетки — нечётная неделя) |
+| `components/session.tsx`, `components/teacher.tsx`, `components/onboarding.tsx` | вкладка «Сессия», карточка преподавателя, первый вход |
 | `lib/search.mjs`, `components/search.tsx` | поиск по всем группам: преподаватель, предмет, аудитория, группа |
 | `lib/calendar.mjs` | экспорт пар группы в `.ics` для календаря телефона |
 | `app/globals.css` | цвета тем и стили оформления (`data-style`: журнал, минимал, лента, карточки) |

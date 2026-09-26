@@ -1,0 +1,488 @@
+{
+ "updatedAt": "2026-09-26T21:37:55.338Z",
+ "people": {
+  "Абрамов В.Г.": {
+   "name": "Абрамов Владимир Геннадиевич",
+   "url": "https://cs.msu.ru/persons/abramov-v-g",
+   "position": "Учёный секретарь, доцент кафедры АЯ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Арибжанова Д.З.": {
+   "name": "Арибжанова Дина Зинюровна",
+   "url": "https://cs.msu.ru/persons/415",
+   "position": "Старший преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Балашов В.В.": {
+   "name": "Балашов Василий Викторович",
+   "url": "https://cs.msu.ru/persons/3453",
+   "position": "Старший научный сотрудник лаборатории ВК",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "http://istina.msu.ru/dissertations/2014137/"
+  },
+  "Белеванцев А.А.": {
+   "name": "Белеванцев Андрей Андреевич",
+   "url": "https://cs.msu.ru/persons/667",
+   "position": "Чл.-кор. РАН. профессор кафедры СП",
+   "degree": "д-р физ.-мат. наук",
+   "istina": ""
+  },
+  "Бим М.М.": {
+   "name": "Бим Мария Моисеевна",
+   "url": "https://cs.msu.ru/persons/413",
+   "position": "Преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Бобылева О.Н.": {
+   "name": "Бобылёва Ольга Николаевна",
+   "url": "https://cs.msu.ru/persons/254",
+   "position": "Ассистент кафедры НДСиПУ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Бордаченкова Е.А.": {
+   "name": "Бордаченкова Елена Анатольевна",
+   "url": "https://cs.msu.ru/persons/4204",
+   "position": "Доцент кафедры АЯ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Бородинова Д.Ю.": {
+   "name": "Бородинова Дарья Юрьевна",
+   "url": "https://cs.msu.ru/persons/3436",
+   "position": "Ассистент кафедры ОМ",
+   "degree": "",
+   "istina": "https://istina.msu.ru/profile/dashaborodinova/"
+  },
+  "Будак А.Б.": {
+   "name": "Будак Александр Борисович",
+   "url": "https://cs.msu.ru/persons/budak-a-b",
+   "position": "Доцент кафедры ОМ , отв. за учебно-методическую работу и за работу с аспирантами",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/alexanderborisovichbudak/"
+  },
+  "Буничева А.Я.": {
+   "name": "Буничева Анна Яковлевна",
+   "url": "https://cs.msu.ru/persons/534",
+   "position": "Доцент, ученый секретарь кафедры ВМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Владимирова Ю.С.": {
+   "name": "Владимирова Юлия Сергеевна",
+   "url": "https://cs.msu.ru/persons/591",
+   "position": "Cтарший научный сотрудник НИЛ ДУСП",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Вороненко А.А.": {
+   "name": "Вороненко Андрей Анатольевич",
+   "url": "https://cs.msu.ru/persons/voronenko-a-a",
+   "position": "Профессор кафедры МК",
+   "degree": "д-р физ.-мат. наук",
+   "istina": ""
+  },
+  "Востриков И.В.": {
+   "name": "Востриков Иван Васильевич",
+   "url": "https://cs.msu.ru/persons/366",
+   "position": "Доцент кафедры СА",
+   "degree": "",
+   "istina": ""
+  },
+  "Вылиток А.А.": {
+   "name": "Вылиток Алексей Александрович",
+   "url": "https://cs.msu.ru/persons/3886",
+   "position": "Доцент кафедры АЯ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Горшечникова Е.А.": {
+   "name": "Горшечникова Елена Аркадьевна",
+   "url": "https://cs.msu.ru/persons/412",
+   "position": "Старший преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Грацианова Т.Ю.": {
+   "name": "Грацианова Татьяна Юрьевна",
+   "url": "https://cs.msu.ru/persons/3865",
+   "position": "Доцент кафедры АЯ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Груздева Н.В.": {
+   "name": "Груздева Надежда Валерьевна",
+   "url": "https://cs.msu.ru/persons/3863",
+   "position": "Доцент кафедры АЯ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Гуляев А.В.": {
+   "name": "Гуляев Анатолий Викторович",
+   "url": "https://cs.msu.ru/persons/guliaev-a-v",
+   "position": "Доцент кафедры СКИ , зав. лабораторией ПОВП",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Гуляев Д.А.": {
+   "name": "Гуляев Денис Анатольевич",
+   "url": "https://cs.msu.ru/persons/3683",
+   "position": "",
+   "degree": "",
+   "istina": ""
+  },
+  "Домрина А.В.": {
+   "name": "Домрина Александра Владимировна",
+   "url": "https://cs.msu.ru/persons/1059",
+   "position": "Доцент кафедры ОМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/Domrina/"
+  },
+  "Емельянов Д.П.": {
+   "name": "Емельянов Дмитрий Павлович",
+   "url": "https://cs.msu.ru/persons/3975",
+   "position": "Ассистент кафедры ОМ",
+   "degree": "",
+   "istina": ""
+  },
+  "Есикова Н.Б.": {
+   "name": "Есикова Наталия Борисовна",
+   "url": "https://cs.msu.ru/persons/527",
+   "position": "Доцент кафедры ВМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Ефремова Н.Э.": {
+   "name": "Ефремова Наталья Эрнестовна",
+   "url": "https://cs.msu.ru/persons/3891",
+   "position": "Старший преподаватель кафедры АЯ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Зайцева Н.В.": {
+   "name": "Зайцева Наталья Владимировна",
+   "url": "https://cs.msu.ru/persons/3296",
+   "position": "Доцент кафедры ОМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/Zaitseva/"
+  },
+  "Замарашкин Н.Л.": {
+   "name": "Замарашкин Николай Леонидович",
+   "url": "https://cs.msu.ru/persons/386",
+   "position": "Доцент кафедры ВТМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/zamarashkin/"
+  },
+  "Золотарева Н.Д.": {
+   "name": "Золотарева Наталья Дмитриевна",
+   "url": "https://cs.msu.ru/persons/278",
+   "position": "Доцент кафедры ВМ",
+   "degree": "",
+   "istina": ""
+  },
+  "Илютина А.Ю.": {
+   "name": "Илютина Анастасия Юрьевна",
+   "url": "https://cs.msu.ru/persons/ilutina-a-u",
+   "position": "Старший преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Капитонова А.П.": {
+   "name": "Капитонова Алла Петровна",
+   "url": "https://cs.msu.ru/persons/3442",
+   "position": "Доцент кафедры АСВК",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Кашелкина О.А.": {
+   "name": "Кашелкина Ольга Александровна",
+   "url": "https://cs.msu.ru/persons/408",
+   "position": "Преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Ким Г.Д.": {
+   "name": "Ким Галина Динховна",
+   "url": "https://cs.msu.ru/persons/kim-g-d",
+   "position": "Доцент кафедры ОМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/GD_Kim/"
+  },
+  "Кичина Е.М.": {
+   "name": "Кичина Екатерина Михайловна",
+   "url": "https://cs.msu.ru/persons/407",
+   "position": "Преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Корухова Л.С.": {
+   "name": "Корухова Людмила Сергеевна",
+   "url": "https://cs.msu.ru/persons/60",
+   "position": "Доцент, зам. зав. кафедры СП , учёный секретарь кафедры СП",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Корухова Ю.С.": {
+   "name": "Корухова Юлия Станиславовна",
+   "url": "https://cs.msu.ru/persons/781",
+   "position": "Доцент кафедры АЯ",
+   "degree": "",
+   "istina": ""
+  },
+  "Кузьменкова Е.А.": {
+   "name": "Кузьменкова Евгения Анатольевна",
+   "url": "https://cs.msu.ru/persons/665",
+   "position": "Доцент кафедры СП",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Лапонин В.С.": {
+   "name": "Лапонин Владислав Сергеевич",
+   "url": "https://cs.msu.ru/persons/2532",
+   "position": "Доцент кафедры ВМ , начальник курса",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Лебедева О.С.": {
+   "name": "Лебедева Ольга Сергеевна",
+   "url": "https://cs.msu.ru/persons/3501",
+   "position": "Ассистент кафедры ВТМ",
+   "degree": "",
+   "istina": "https://istina.msu.ru/profile/lebedevaos/"
+  },
+  "Ложкин С.А.": {
+   "name": "Ложкин Сергей Андреевич",
+   "url": "https://cs.msu.ru/persons/lojkin-s-a",
+   "position": "Заведующий кафедрой МК , и.о. заведующего лабораторией ДУСП",
+   "degree": "д-р физ.-мат. наук",
+   "istina": ""
+  },
+  "Матвеев С.А.": {
+   "name": "Матвеев Сергей Александрович",
+   "url": "https://cs.msu.ru/persons/3500",
+   "position": "Доцент, ученый секретарь кафедры ВТМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/matseralex/"
+  },
+  "Мокроусов И.С.": {
+   "name": "Мокроусов Илья Сергеевич",
+   "url": "https://cs.msu.ru/persons/3448",
+   "position": "Доцент кафедры ОМ",
+   "degree": "",
+   "istina": "https://istina.msu.ru/profile/mokrousov.ilya/"
+  },
+  "Морозова В.А.": {
+   "name": "Морозова Валентина Алексеевна",
+   "url": "https://cs.msu.ru/persons/708",
+   "position": "Доцент кафедры МФ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Мухин С.И.": {
+   "name": "Мухин Сергей Иванович",
+   "url": "https://cs.msu.ru/persons/523",
+   "position": "Профессор кафедры ВМ",
+   "degree": "д-р физ.-мат. наук",
+   "istina": ""
+  },
+  "Нефедов В.В.": {
+   "name": "Нефёдов Владимир Вадимович",
+   "url": "https://cs.msu.ru/persons/348",
+   "position": "Доцент, ученый секретарь кафедры АНИ",
+   "degree": "",
+   "istina": ""
+  },
+  "Никитин А.А.": {
+   "name": "Никитин Алексей Антонович",
+   "url": "https://cs.msu.ru/persons/784",
+   "position": "Доцент кафедры ОМ",
+   "degree": "",
+   "istina": "https://istina.msu.ru/profile/Alexey_Nikitin/"
+  },
+  "Опарина О.И.": {
+   "name": "Опарина Ольга Игоревна",
+   "url": "https://cs.msu.ru/persons/402",
+   "position": "Доцент кафедры английского языка",
+   "degree": "канд. филол. наук",
+   "istina": ""
+  },
+  "Падарян В.А.": {
+   "name": "Падарян Вартан Андроникович",
+   "url": "https://cs.msu.ru/persons/608",
+   "position": "Доцент кафедры СП",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Панферов А.А.": {
+   "name": "Панфёров Антон Александрович",
+   "url": "https://cs.msu.ru/persons/4205",
+   "position": "Научный сотрудник кафедры АЯ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Панферов В.С.": {
+   "name": "Панфёров Валерий Семёнович",
+   "url": "https://cs.msu.ru/persons/paferov-v-s",
+   "position": "Доцент кафедры ОМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/vspanferov/"
+  },
+  "Пашков В.Н.": {
+   "name": "Пашков Василий Николаевич",
+   "url": "https://cs.msu.ru/persons/3447",
+   "position": "Ассистент кафедры АСВК",
+   "degree": "",
+   "istina": ""
+  },
+  "Перцева З.Е.": {
+   "name": "Перцева Зинаида Евгеньевна",
+   "url": "https://cs.msu.ru/persons/401",
+   "position": "Преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Плиева С.И.": {
+   "name": "Плиева Сима Ивановна",
+   "url": "https://cs.msu.ru/persons/400",
+   "position": "Старший преподаватель кафедры английского языка",
+   "degree": "",
+   "istina": ""
+  },
+  "Полосин А.А.": {
+   "name": "Полосин Алексей Андреевич",
+   "url": "https://cs.msu.ru/persons/4218",
+   "position": "Профессор кафедры ОМ",
+   "degree": "",
+   "istina": ""
+  },
+  "Потапова Н.М.": {
+   "name": "Потапова Наталия Михайловна",
+   "url": "https://cs.msu.ru/persons/399",
+   "position": "Старший преподаватель кафедры английского языка",
+   "degree": "канд. филол. наук",
+   "istina": ""
+  },
+  "Романов Д.С.": {
+   "name": "Романов Дмитрий Сергеевич",
+   "url": "https://cs.msu.ru/persons/2564",
+   "position": "Профессор кафедры МК",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Руднев С.Г.": {
+   "name": "Руднев Сергей Геннадьевич",
+   "url": "https://cs.msu.ru/persons/rudnev-s-g",
+   "position": "Доцент кафедры ВТМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Русол А.В.": {
+   "name": "Русол Андрей Владимирович",
+   "url": "https://cs.msu.ru/persons/3456",
+   "position": "Доцент кафедры СКИ",
+   "degree": "канд. техн. наук",
+   "istina": ""
+  },
+  "Садовничая И.В.": {
+   "name": "Садовничая Инна Викторовна",
+   "url": "https://cs.msu.ru/persons/1060",
+   "position": "Профессор кафедры ОМ",
+   "degree": "д-р физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/SadovnichayaIV/"
+  },
+  "Сальников А.Н.": {
+   "name": "Сальников Алексей Николаевич",
+   "url": "https://cs.msu.ru/persons/salnikov-a-n",
+   "position": "Доцент кафедры АСВК",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Селезнева С.Н.": {
+   "name": "Селезнева Светлана Николаевна",
+   "url": "https://cs.msu.ru/persons/2561",
+   "position": "Профессор кафедры МК",
+   "degree": "д-р физ.-мат. наук",
+   "istina": ""
+  },
+  "Смирнов И.Н.": {
+   "name": "Смирнов Илья Николаевич",
+   "url": "https://cs.msu.ru/persons/785",
+   "position": "Доцент кафедры ОМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/ILYA_SMIRNOV/"
+  },
+  "Точилин П.А.": {
+   "name": "Точилин Павел Александрович",
+   "url": "https://cs.msu.ru/persons/tochilin-p-a",
+   "position": "Доцент кафедры СА , ученый секретарь кафедры СА",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Тыртышников Е.Е.": {
+   "name": "Тыртышников Евгений Евгеньевич",
+   "url": "https://cs.msu.ru/persons/333",
+   "position": "профессор, академик РАН, зав. кафедрой ВТМ",
+   "degree": "д-р физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/tyrtyshnikov/"
+  },
+  "Федотов М.В.": {
+   "name": "Федотов Михаил Валентинович",
+   "url": "https://cs.msu.ru/persons/fedotov-m-v",
+   "position": "Зам. декана по учебной работе, доцент кафедры МФ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/Fedotov_MV/"
+  },
+  "Фоменко Т.Н.": {
+   "name": "Фоменко Татьяна Николаевна",
+   "url": "https://cs.msu.ru/persons/1062",
+   "position": "Профессор кафедры ОМ",
+   "degree": "д-р физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/tn-fomenko/"
+  },
+  "Фомичев В.В.": {
+   "name": "Фомичев Василий Владимирович",
+   "url": "https://cs.msu.ru/persons/313",
+   "position": "Зам. декана по научной работе, доцент, заведующий кафедрой НДСиПУ",
+   "degree": "",
+   "istina": ""
+  },
+  "Холомеева А.А.": {
+   "name": "Холомеева Анна Андреевна",
+   "url": "https://cs.msu.ru/persons/787",
+   "position": "Доцент, ученый секретарь кафедры ФАиП",
+   "degree": "",
+   "istina": ""
+  },
+  "Хорошилова Е.В.": {
+   "name": "Хорошилова Елена Владимировна",
+   "url": "https://cs.msu.ru/persons/1063",
+   "position": "Доцент кафедры ОМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": "https://istina.msu.ru/profile/KhoroshilovaEV/"
+  },
+  "Хруленко А.Б.": {
+   "name": "Хруленко Александр Борисович",
+   "url": "https://cs.msu.ru/persons/531",
+   "position": "Доцент кафедры ВМ",
+   "degree": "канд. физ.-мат. наук",
+   "istina": ""
+  },
+  "Цыбров Е.Г.": {
+   "name": "Цыбров Евгений Германович",
+   "url": "https://cs.msu.ru/persons/4084",
+   "position": "Старший преподаватель кафедры МФ",
+   "degree": "",
+   "istina": ""
+  },
+  "Шляхов П.И.": {
+   "name": "Шляхов Павел Игоревич",
+   "url": "https://cs.msu.ru/persons/shlyakhov-p-i",
+   "position": "Старший преподаватель кафедры ВМ",
+   "degree": "",
+   "istina": ""
+  }
+ }
+}
