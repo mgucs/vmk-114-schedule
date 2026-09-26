@@ -1,5 +1,5 @@
 import React, {Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type TouchEvent} from 'react';
-import {ArrowUpRight, CalendarDays, ChevronDown, GraduationCap, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
+import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
 import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,type Task} from '@/components/personal';
@@ -10,6 +10,7 @@ import {dayKind, isStacked, termEnd, validTerm, weekOf} from '@/lib/term.mjs';
 import {SessionView, isCurrent, type Session} from '@/components/session';
 import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
 import {Onboarding, needsOnboarding} from '@/components/onboarding';
+import {TermCalendar} from '@/components/term-calendar';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
 // three.js is loaded only when the map is opened.
@@ -165,7 +166,7 @@ export default function Home() {
   const [today,setToday] = useState(isoMoscow), [clock,setClock] = useState(clockMoscow);
   // null = follow the current time (today, or the next teaching day once today's classes are over).
   const [pinned,setPinned] = useState<string|null>(null), [slide,setSlide] = useState('');
-  const [tab,setTab] = useState<'schedule'|'map'|'session'>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
+  const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'map'>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
   const [changesOpen,setChangesOpen] = useState(false), [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
@@ -380,12 +381,16 @@ export default function Home() {
       <i style={{width:`${Math.round((minutes(clock)-minutes(ongoing.start))/(minutes(ongoing.end)-minutes(ongoing.start))*100)}%`}}/>
     </div>}
 
-    <nav className="tabs" aria-label="Разделы"><button aria-pressed={tab==='schedule'} onClick={()=>setTab('schedule')}><CalendarDays/><span>Расписание</span></button><button aria-pressed={tab==='session'} onClick={()=>setTab('session')}><GraduationCap/><span>Сессия</span></button><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}><MapIcon/><span>Карта</span></button></nav>
+    <nav className="tabs" aria-label="Разделы"><button aria-pressed={tab==='schedule'} onClick={()=>setTab('schedule')}><CalendarClock/><span>Расписание</span></button><button aria-pressed={tab==='calendar'} onClick={()=>setTab('calendar')}><CalendarRange/><span>Календарь</span></button><button aria-pressed={tab==='session'} onClick={()=>setTab('session')}><GraduationCap/><span>Сессия</span></button><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}><MapIcon/><span>Карта</span></button></nav>
 
     {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
-    </CampusMap></Suspense> : tab==='session' ? <main className="session-main">
-      <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
+    </CampusMap></Suspense> : tab==='calendar' ? <main className="session-main">
+      <TermCalendar term={faculty.term} session={isCurrent(faculty.session,data.year) ? faculty.session : null} group={groupName} today={today} academicYear={data.year}
+        lastWinter={[faculty.session, ...faculty.archive].find(s=>s && s.season==='winter' && s.year===data.year-1) || null}
+        classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
+    </main> : tab==='session' ? <main className="session-main">
+      <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
     </main> : <>
     <div className={`heading ${view}`}>

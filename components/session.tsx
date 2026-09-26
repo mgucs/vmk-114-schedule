@@ -21,13 +21,13 @@ type Item = {kind:'exam'|'credit'; date:string; time:string; room:string; subjec
 // Only a session of the current academic year is the real one; older ones are kept for comparison.
 export function isCurrent(session:Session|null|undefined, academicYear:number) { return !!session && session.year===academicYear; }
 
-type Props = {session:Session|null; archive:Session[]; lecturers?:Record<string,string>; group:string; today:string; academicYear:number; classesEnd:string;
+type Props = {session:Session|null; archive:Session[]; lecturers?:Record<string,string>; subjects?:string[]; group:string; today:string; academicYear:number; classesEnd:string;
   room:(name:string, date:string, start:string)=>ReactNode; teacher:(name:string)=>ReactNode};
 
 // Subject names differ slightly between files ("Математический анализ I"); compare by the first letters.
 const key = (s:string) => s.toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0, 12);
 
-export function SessionView({session, archive, lecturers = {}, group, today, academicYear, classesEnd, room, teacher}:Props) {
+export function SessionView({session, archive, lecturers = {}, subjects = [], group, today, academicYear, classesEnd, room, teacher}:Props) {
   const current = isCurrent(session, academicYear) ? session : null;
   // Past sessions, the one of the coming season first: in autumn last winter is the closest comparison.
   const coming = Number(today.slice(5,7)) >= 8 || Number(today.slice(5,7)) === 1 ? 'winter' : 'spring';
@@ -39,6 +39,21 @@ export function SessionView({session, archive, lecturers = {}, group, today, aca
     <span>Для сравнения:</span>{past.map(s => <button key={s.title} aria-pressed={s.title===shown} onClick={()=>setShown(s.title===shown ? '' : s.title)}>{short[s.season] || s.season} {years(s)}</button>)}
   </div>;
 
+  // Until the list for this session is out: last time's list for the same session, checked against this term's timetable.
+  const model = past.find(s => s.season===coming && (s.lists[group] || []).length);
+  const plan = model ? [...model.lists[group]].sort((a,b) => Number(!!b.control?.includes('экзамен'))-Number(!!a.control?.includes('экзамен'))) : [];
+  const taught = new Set(subjects.map(key));
+  const count = (word:string) => plan.filter(e => (e.control || ['экзамен']).some(c => c.startsWith(word))).length;
+  const planned = !current && plan.length > 0 && <section className="session-what session-plan">
+    <h2>Что будем сдавать</h2>
+    <p className="session-muted">По перечню ВМК на {short[model!.season]==='зима' ? 'прошлую зимнюю' : 'прошлую'} сессию первого курса: {count('экзамен')} {plural(count('экзамен'),['экзамен','экзамена','экзаменов'])}, {count('зачёт')} {plural(count('зачёт'),['зачёт','зачёта','зачётов'])}. Официальный перечень на эту сессию ВМК опубликует вместе с расписанием.</p>
+    <ul>{plan.map(e => <li key={e.name}>
+      <span className={`session-kind ${e.control?.includes('экзамен') ? '' : 'credit'}`}>{cap((e.control || ['экзамен']).join(', '))}</span>
+      <strong>{e.name}</strong>
+      {subjects.length > 0 && !taught.has(key(e.name)) && <small>В расписании группы этого предмета сейчас нет</small>}
+    </li>)}</ul>
+  </section>;
+
   if (!view) return <section className="session">
     <h1 className="session-title">Сессия</h1>
     <div className="session-empty">
@@ -46,6 +61,7 @@ export function SessionView({session, archive, lecturers = {}, group, today, aca
       <p>Приложение проверяет сайт каждые 15 минут и покажет здесь все зачёты и экзамены твоей группы, как только они появятся.</p>
       {classesEnd && <p className="session-muted">Занятия идут до {new Date(classesEnd+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric', month:'long', timeZone:'UTC'})}.</p>}
     </div>
+    {planned}
     {compare}
   </section>;
 
