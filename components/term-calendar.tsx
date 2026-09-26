@@ -28,6 +28,7 @@ function marksOf(session:Session|null, group:string) {
 export function TermCalendar({term, session, lastWinter, group, today, academicYear, classesOn, openDay}:{term:Term; session:Session|null; lastWinter:Session|null; group:string; today:string; academicYear:number;
   classesOn:(date:string)=>number; openDay:(date:string)=>void}) {
   const [selected, setSelected] = useState(today);
+  const [showPast,setShowPast]=useState(false);
   const start = termStart(term) || `${academicYear}-09-01`, end = termEnd(term) || `${academicYear}-12-31`;
   const marks = marksOf(session, group);
   const fiit = Number(group) >= 140;
@@ -78,7 +79,9 @@ export function TermCalendar({term, session, lastWinter, group, today, academicY
       {classesOn(selected) > 0 && !holidayOn(selected) && <button className="text-button" onClick={()=>openDay(selected)}>Открыть в расписании</button>}
     </div>
 
-    {months.map(month => {
+    {months.some(m=>m.slice(0,7)<today.slice(0,7)) && <button className="calendar-history text-button" aria-expanded={showPast} onClick={()=>setShowPast(v=>!v)}>{showPast?'Скрыть прошедшие месяцы':'Показать прошедшие месяцы'}</button>}
+    {!showPast && months.every(m=>m.slice(0,7)<today.slice(0,7)) && <p className="session-muted">Этот семестр завершён. Его календарь доступен в прошедших месяцах.</p>}
+    {months.filter(month=>showPast || month.slice(0,7)>=today.slice(0,7)).map(month => {
       const lead = weekday(month), count = days(month, plus(month, 32).slice(0,8)+'01');
       const cells = [...Array(lead).fill(''), ...Array.from({length:count}, (_, i) => plus(month, i))];
       return <section className="term-month" key={month}>

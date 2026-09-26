@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {Palette,NotebookPen,Check,CalendarPlus} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
+import {StylePreview} from './style-preview';
 import {calendarFile} from '../lib/calendar.mjs';
 
 // name, label, scheme, swatch colours (background, lecture, now)
@@ -35,10 +36,26 @@ export function applyTheme(choice:string,style=loadStyle()){
   document.documentElement.dataset.style=style;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme[3][0]);
 }
+export function useStyleChoice() {
+  const [style,setStyle]=useState(loadStyle);
+  useEffect(()=>{const sync=(e:Event)=>setStyle((e as CustomEvent<string>).detail||loadStyle());window.addEventListener('vmk-style-change',sync);return()=>window.removeEventListener('vmk-style-change',sync);},[]);
+  function pickStyle(name:string){
+    if(!STYLES.some(s=>s[0]===name))return;
+    setStyle(name);try{localStorage.setItem(styleKey,name);}catch{}
+    document.documentElement.dataset.style=name;
+    window.dispatchEvent(new CustomEvent('vmk-style-change',{detail:name}));
+  }
+  return [style,pickStyle] as const;
+}
+export function StylePicker({value,onChange}:{value:string;onChange:(name:string)=>void}) {
+  return <div className="style-grid style-gallery">{STYLES.map(([name,label,hint])=><button key={name} aria-label={`${label}: ${hint}`} aria-pressed={value===name} onClick={()=>onChange(name)}>
+    <StylePreview name={name}/><span className="style-choice-title"><strong>{label}</strong><span className="style-check" aria-hidden="true">{value===name&&<Check size={12}/>}</span></span><small>{hint}</small>
+  </button>)}</div>;
+}
 export function ThemeButton() {
   // MSU is the default look; anyone can switch.
   const [choice,setChoice]=useState(()=>{try{return legacy(localStorage.getItem(themeKey))||'msu';}catch{return 'msu';}});
-  const [style,setStyle]=useState(loadStyle);
+  const [style,pickStyle]=useStyleChoice();
   const [open,setOpen]=useState(false),[section,setSection]=useState<'style'|'theme'>('style');
   useEffect(()=>{
     applyTheme(choice,style);
@@ -47,7 +64,6 @@ export function ThemeButton() {
     media.addEventListener('change',follow);return()=>media.removeEventListener('change',follow);
   },[choice,style]);
   function pick(name:string){setChoice(name);try{localStorage.setItem(themeKey,name);}catch{}}
-  function pickStyle(name:string){setStyle(name);try{localStorage.setItem(styleKey,name);}catch{}}
   return <>
     <button className="icon-button" aria-label="Оформление" title="Оформление" onClick={()=>setOpen(true)}><Palette size={18}/></button>
     <Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>Оформление</DialogTitle><DialogDescription>Сохраняется на этом устройстве.</DialogDescription>
@@ -55,8 +71,7 @@ export function ThemeButton() {
         <button role="tab" aria-selected={section==='style'} onClick={()=>setSection('style')}>Стиль</button>
         <button role="tab" aria-selected={section==='theme'} onClick={()=>setSection('theme')}>Тема</button>
       </div>
-      {section==='style' ? <div className="style-grid">{STYLES.map(([name,label,hint])=><button key={name} aria-pressed={style===name} onClick={()=>pickStyle(name)}>
-        <span className={'style-preview '+name} aria-hidden="true"><b>Aa</b><i/><i/><i/></span><strong>{label}</strong><small>{hint}</small></button>)}</div>
+      {section==='style' ? <StylePicker value={style} onChange={pickStyle}/>
       : (['light','dark'] as const).map(scheme=><div key={scheme}>
         <h4 className="theme-section">{scheme==='light'?'Светлые':'Тёмные'}</h4>
         <div className="theme-grid">

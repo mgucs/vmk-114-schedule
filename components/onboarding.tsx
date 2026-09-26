@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {StylePicker,useStyleChoice} from './personal';
 import {Share, SquarePlus, EllipsisVertical, Download} from 'lucide-react';
 
 type Stream = {page:number; groups:string[]; title:string; range:string};
@@ -14,21 +15,22 @@ if (typeof window !== 'undefined') window.addEventListener('beforeinstallprompt'
 
 // First visit: which group, which subgroup, and how to put the site on the home screen.
 export function Onboarding({streams, group, preset, onGroup, subgroups, onDone}:{streams:Stream[]; group:string; preset:boolean; onGroup:(name:string)=>void; subgroups:Subgroups; onDone:()=>void}) {
-  const [step, setStep] = useState<'group'|'subgroups'|'install'>(preset ? 'subgroups' : 'group');
+  const [step, setStep] = useState<'group'|'subgroups'|'style'|'install'>(preset ? 'subgroups' : 'group');
+  const [style,pickStyle]=useStyleChoice();
   const [draft, setDraft] = useState<Record<string,string>>({});
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
   useEffect(() => setDraft({...subgroups.selected}), [group]);
   function finish() { try { localStorage.setItem(onboardedKey, '1'); } catch {} onDone(); }
   // The next step that applies: subgroups only if the group has them, install only in a browser tab.
   function advance(from:typeof step) {
-    const order = ['group','subgroups','install'] as const;
+    const order = ['group','subgroups','style','install'] as const;
     let i = order.indexOf(from)+1;
     while (i < order.length && ((order[i]==='subgroups' && !subgroups.subjects.size) || (order[i]==='install' && standalone()))) i++;
     if (i >= order.length) finish(); else setStep(order[i]);
   }
   // Subjects of a just-chosen group are known only after it renders.
   useEffect(() => { if (step==='subgroups' && !subgroups.subjects.size) advance('subgroups'); }, [step, subgroups.subjects.size]);
-  const steps = ['group','subgroups','install'].filter(s => s!=='subgroups' || subgroups.subjects.size).filter(s => s!=='install' || !standalone());
+  const steps = ['group','subgroups','style','install'].filter(s => s!=='subgroups' || subgroups.subjects.size).filter(s => s!=='install' || !standalone());
   const dots = <div className="onboarding-dots" aria-hidden="true">{steps.map(s => <i key={s} className={s===step ? 'on' : ''}/>)}</div>;
 
   return <div className="onboarding" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
@@ -55,6 +57,12 @@ export function Onboarding({streams, group, preset, onGroup, subgroups, onDone}:
           <button className="text-button" onClick={()=>advance('subgroups')}>Пропустить</button>
           <button className="small-primary" onClick={()=>{subgroups.store(draft); advance('subgroups');}}>Дальше</button>
         </div>
+      </>}
+      {step==='style' && <>
+        <h2 id="onboarding-title">Твоё расписание. Твой стиль.</h2>
+        <p>Посмотри, как будут выглядеть пары. Цветовую тему можно настроить позже через «Оформление».</p>
+        <StylePicker value={style} onChange={pickStyle}/>
+        <div className="onboarding-actions style-continue"><span>Можно изменить в любой момент</span><button className="small-primary" onClick={()=>advance('style')}>Продолжить</button></div>
       </>}
       {step==='install' && <>
         <h2 id="onboarding-title">Добавь на экран «Домой»</h2>

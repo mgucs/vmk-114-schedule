@@ -890,3 +890,53 @@ h1 .h-month { display:none; }
 .style-preview.glass i { left:10px; right:10px; height:13px; border-radius:7px; background:color-mix(in srgb,#fff 45%,transparent); box-shadow:inset 0 1px 0 #fff9; }
 .style-preview.glass i:nth-of-type(1) { top:33px; } .style-preview.glass i:nth-of-type(2) { top:50px; } .style-preview.glass i:nth-of-type(3) { display:none; }
 [data-style=glass] .eyebrow .e-rel { display:none; }
+/* Real schedule previews, isolated from the selected page layout. */
+.style-gallery { gap:12px; }
+.style-gallery > button { padding:6px 6px 12px; border:1px solid var(--hair); background:color-mix(in srgb,var(--card) 80%,transparent); border-radius:19px; overflow:hidden; transition:border-color .2s,box-shadow .2s; }
+.style-gallery > button[aria-pressed=true] { border-color:var(--accent-ink); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent-ink) 22%,transparent); }
+.style-live-preview { display:block; position:relative; width:100%; aspect-ratio:320/350; overflow:hidden; border-radius:13px; background:var(--background); isolation:isolate; pointer-events:none; }
+.style-live-preview iframe { position:absolute; inset:0; border:0; max-width:none; transform-origin:top left; pointer-events:none; }
+.style-choice-title { display:flex; align-items:center; justify-content:space-between; align-self:stretch; margin:3px 5px 0; }
+.style-choice-title strong { margin:0; }
+.style-gallery small { margin:2px 5px 0; }
+.style-check { display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid var(--hair-strong); }
+[aria-pressed=true] > .style-choice-title .style-check { background:var(--foreground); border-color:var(--foreground); color:var(--background); }
+.style-continue { position:sticky; bottom:-18px; padding:14px 0 4px; background:var(--card); z-index:2; }
+.style-continue > span { max-width:145px; font-size:11px; line-height:1.4; color:var(--muted-foreground); }
+.calendar-history { margin:8px 0 20px; }
+
+/* One lens follows the finger; the section changes once the gesture ends. */
+.drag-tabs { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+.drag-tabs button { position:relative; z-index:1; -webkit-tap-highlight-color:transparent; touch-action:pan-y; }
+.tab-lens { display:none; pointer-events:none; }
+.drag-tabs button:focus-visible { outline:2px solid var(--accent-ink); outline-offset:2px; }
+.drag-tabs.dragging { cursor:grabbing; }
+
+/* Layered, restrained glass: a bright lip, a darker lower edge and soft depth. */
+:root[data-style=glass] { --glass:color-mix(in srgb,var(--card) 64%,transparent); --glass-strong:color-mix(in srgb,var(--card) 80%,transparent); --glass-edge:#ffffff80; --glass-shine:#ffffffc7; --glass-shade:#22365038; }
+:root[data-scheme=dark][data-style=glass] { --glass:color-mix(in srgb,var(--card) 69%,transparent); --glass-strong:color-mix(in srgb,var(--card) 85%,#ffffff18); --glass-edge:#ffffff24; --glass-shine:#ffffff40; --glass-shade:#00000075; }
+[data-style=glass] body { isolation:isolate; }
+[data-style=glass] body::before { filter:blur(48px) saturate(1.3); opacity:.8; }
+[data-style=glass] .lesson { background:linear-gradient(145deg,#ffffff12,transparent 45%,#ffffff05),var(--glass); border:1px solid var(--glass-edge); border-radius:23px; backdrop-filter:blur(26px) saturate(1.55); -webkit-backdrop-filter:blur(26px) saturate(1.55); box-shadow:inset 0 1px 0 var(--glass-shine),inset 1px 0 0 #ffffff0d,inset 0 -1px 0 #0000000a,0 8px 26px -18px var(--glass-shade); }
+[data-style=glass] .lesson.lecture { background:linear-gradient(135deg,color-mix(in srgb,var(--lecture) 15%,transparent),transparent 75%),var(--glass); }
+[data-style=glass] .lesson.current::after { animation:none; background:linear-gradient(135deg,#ffffff10,transparent 48%); }
+[data-style=glass] .lesson.current { box-shadow:inset 0 1px 0 var(--glass-shine),0 0 0 1px color-mix(in srgb,var(--now) 32%,transparent),0 12px 32px -18px var(--glass-shade); }
+[data-style=glass] .room { padding:3px 11px; border:1px solid var(--glass-edge); background:linear-gradient(145deg,#ffffff14,transparent),color-mix(in srgb,var(--foreground) 6%,transparent); box-shadow:inset 0 1px 0 #ffffff18; }
+[data-style=glass] .shell>.drag-tabs { gap:0; padding:6px; height:70px; background:linear-gradient(135deg,#ffffff16,transparent 45%,#ffffff0a),var(--glass); backdrop-filter:blur(32px) saturate(1.75); -webkit-backdrop-filter:blur(32px) saturate(1.75); box-shadow:inset 0 1px 0 var(--glass-shine),inset 0 -1px 0 #00000012,0 14px 40px -12px var(--glass-shade); }
+[data-style=glass] .drag-tabs button { flex:1; width:auto; height:56px; min-width:0; justify-content:center; background:none!important; box-shadow:none!important; transition:color .18s,transform .25s; font-size:10.5px; }
+[data-style=glass] .drag-tabs button svg { width:23px; height:23px; }
+[data-style=glass] .drag-tabs button:active { transform:none; }
+[data-style=glass] .tab-lens { display:block; position:absolute; z-index:0; top:6px; bottom:6px; left:6px; width:calc((100% - 12px)/4); transform:translateX(calc(var(--tab-position)*100%)); border-radius:999px; border:1px solid var(--glass-edge); background:linear-gradient(130deg,#ffffff30,transparent 48%,#ffffff12),var(--glass-strong); box-shadow:inset 0 1px 1px var(--glass-shine),inset 0 -1px 2px #00000012,0 3px 12px -5px var(--glass-shade); transition:transform .38s cubic-bezier(.22,1,.36,1),filter .2s; }
+[data-style=glass] .tab-lens::after { content:''; position:absolute; inset:1px; border-radius:inherit; border-top:1px solid var(--glass-shine); border-left:1px solid #ffffff14; pointer-events:none; }
+[data-style=glass] .drag-tabs.dragging .tab-lens { transition:none; transform:translateX(calc(var(--tab-position)*100%)) scale(1.05,1.08); filter:brightness(1.08); }
+[data-style=glass] .drag-tabs.dragging button { color:var(--muted-foreground); }
+[data-style=glass] .drag-tabs.dragging button[data-hovered=true] { color:var(--foreground); transform:translateY(-1px); }
+[data-style=glass] .term-month { padding:15px; border:1px solid var(--glass-edge); border-radius:24px; background:linear-gradient(140deg,#ffffff0d,transparent),color-mix(in srgb,var(--glass) 72%,transparent); }
+[data-style=glass] .onboarding-card, [data-style=glass] [data-slot=dialog-content] { background:var(--glass-strong); }
+@media (prefers-reduced-motion:reduce) {
+  [data-style=glass] body::before,[data-style=glass] .slide .lesson,[data-style=glass] .slide .gap,[data-style=glass] .session-item,[data-style=glass] .term-month { animation:none!important; }
+  .tab-lens,.drag-tabs button,[data-style=glass] .lesson { transition:none!important; }
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  :root[data-style=glass] { --glass:var(--card); --glass-strong:var(--card); }
+}

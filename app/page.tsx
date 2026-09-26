@@ -10,6 +10,7 @@ import {dayKind, isStacked, termEnd, validTerm, weekOf} from '@/lib/term.mjs';
 import {SessionView, isCurrent, type Session} from '@/components/session';
 import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
 import {Onboarding, needsOnboarding} from '@/components/onboarding';
+import {SectionTabs} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
@@ -381,7 +382,7 @@ export default function Home() {
       <i style={{width:`${Math.round((minutes(clock)-minutes(ongoing.start))/(minutes(ongoing.end)-minutes(ongoing.start))*100)}%`}}/>
     </div>}
 
-    <nav className="tabs" aria-label="Разделы"><button aria-pressed={tab==='schedule'} onClick={()=>setTab('schedule')}><CalendarClock/><span>Расписание</span></button><button aria-pressed={tab==='calendar'} onClick={()=>setTab('calendar')}><CalendarRange/><span>Календарь</span></button><button aria-pressed={tab==='session'} onClick={()=>setTab('session')}><GraduationCap/><span>Сессия</span></button><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}><MapIcon/><span>Карта</span></button></nav>
+    <SectionTabs value={tab} onChange={setTab}/>
 
     {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
