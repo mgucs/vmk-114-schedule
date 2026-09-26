@@ -94,7 +94,7 @@ export function TermCalendar({term, session, lastWinter, group, today, academicY
               ...week.map((date, i) => date ? (() => {
                 const holiday = !!holidayOn(date), list = marks.get(date) || [];
                 const cls = ['term-cell', holiday ? 'holiday' : '', list.some(m => m.kind==='exam') ? 'exam' : list.length ? 'credit' : '',
-                  !holiday && classesOn(date) ? 'classes' : '', date===today ? 'today' : '', date===selected ? 'selected' : '', date > end ? 'after' : ''].filter(Boolean).join(' ');
+                  !holiday && classesOn(date) ? 'classes' : '', !holiday && !classesOn(date) && date >= start && date <= end ? 'rest' : '', date===today ? 'today' : '', date===selected ? 'selected' : '', date > end ? 'after' : ''].filter(Boolean).join(' ');
                 return <button key={date} className={cls} aria-pressed={date===selected} aria-label={dayLong(date)} onClick={()=>setSelected(date)}>{Number(date.slice(8))}</button>;
               })() : <span key={row*7+i}/>)];
           })}
@@ -103,7 +103,7 @@ export function TermCalendar({term, session, lastWinter, group, today, academicY
     })}
 
     <div className="term-legend">
-      <span><i className="l-classes"/>есть пары</span><span><i className="l-holiday"/>праздник</span><span><i className="l-credit"/>зачёт</span><span><i className="l-exam"/>экзамен</span>
+      <span><i className="l-classes"/>есть пары</span><span><i className="l-rest"/>выходной</span><span><i className="l-holiday"/>праздник</span><span><i className="l-credit"/>зачёт</span><span><i className="l-exam"/>экзамен</span>
       {fiit && <span><b>н</b>/<b>ч</b> — чётность недели</span>}
     </div>
 
