@@ -45,7 +45,9 @@ PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium no
 | `lib/calendar.mjs` | экспорт пар группы в `.ics` для календаря телефона |
 | `app/globals.css` | цвета тем и стили оформления (`data-style`: журнал, минимал, лента, карточки, стекло) |
 | `components/day-pager.tsx` | дни листаются пальцем: соседний день въезжает вслед за жестом |
-| `components/wallpaper.tsx` | заставка стиля «Стекло»: векторные ленты света в цветах темы |
+| `app/glass.css` | изолированное оформление «Стекло», светлые/тёмные поверхности и доступные упрощённые эффекты |
+| `components/wallpaper.tsx` | фон «Стекла»: локальная фотография МГУ под спокойной дымкой |
+| `components/glass-optics.tsx` | преломление кромок панелей в Chromium; в Safari/Firefox — CSS-стекло |
 | `components/campus-map.tsx`, `components/map-scene.ts` | карта корпуса (three.js) |
 | `tools/build_map.py` | разметка кабинетов по планам этажей из `tools/floor-plans.pdf` |
 | `tools/build-map-models.mjs` | объёмные модели этажей из разметки (см. `tools/map-models.md`) |

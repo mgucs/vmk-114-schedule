@@ -1,0 +1,324 @@
+/* Liquid Glass. This file owns only the glass style; colour palettes and other
+   layouts remain in globals.css. Cards use frosted glass for reading, controls
+   use clearer glass with progressive edge refraction (GlassOptics). */
+.glass-only, .wallpaper { display:none; }
+.glass-optics { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
+:root[data-style=glass] {
+  --radius:1.6rem;
+  --g-fill:color-mix(in srgb,var(--card) 64%,transparent); --g-thick:color-mix(in srgb,var(--card) 88%,transparent);
+  --g-sheen:linear-gradient(155deg,#ffffff75,#ffffff18 38%,#ffffff00 70%,#ffffff24);
+  --g-rim:linear-gradient(145deg,#ffffffee,#ffffff80 22%,#ffffff15 48%,#ffffff70 84%,#ffffffcc);
+  --g-blur:blur(20px) saturate(1.25); --g-blur-thick:blur(28px) saturate(1.3);
+  --g-edge:inset 0 0 0 1px #ffffff80; --g-lip:inset 0 1px 1px #ffffffc0; --g-pool:inset 0 -1px 1px #ffffff50;
+  --g-drop:0 2px 4px #1b324508, 0 12px 32px -14px #1b32452b;
+  --g-chip:color-mix(in srgb,var(--foreground) 5%,#ffffff50);
+  --g-lens:linear-gradient(160deg,#ffffffee,#ffffff60); --g-lens-shadow:inset 0 1px 1px #fff, inset 0 -1px 1px #ffffff70, 0 4px 12px #152b4214;
+  --g-accent:var(--accent-ink);
+  --spring:cubic-bezier(.22,1.12,.36,1); --glide:cubic-bezier(.22,1,.36,1);
+  --wp-photo:.28; --wp-wash:color-mix(in srgb,var(--background) 72%,transparent);
+  --g-text-shadow:0 1px 10px #ffffff60;
+}
+:root[data-scheme=dark][data-style=glass] {
+  --g-fill:color-mix(in srgb,var(--card) 58%,transparent); --g-thick:color-mix(in srgb,var(--card) 88%,transparent);
+  --g-sheen:linear-gradient(145deg,#ffffff17,#ffffff04 42%,#ffffff00 70%,#ffffff06);
+  --g-rim:linear-gradient(145deg,#ffffff70,#ffffff26 24%,#ffffff08 48%,#ffffff20 82%,#ffffff48);
+  --g-edge:inset 0 0 0 1px #ffffff20; --g-lip:inset 0 1px 1px #ffffff36; --g-pool:inset 0 -1px 1px #ffffff10;
+  --g-drop:0 2px 4px #00000012, 0 14px 32px -16px #00000065;
+  --g-chip:color-mix(in srgb,var(--foreground) 8%,transparent);
+  --g-lens:linear-gradient(150deg,#ffffff32,#ffffff10); --g-lens-shadow:inset 0 1px 1px #ffffff68, inset 0 0 0 1px #ffffff18, 0 4px 14px #00000020;
+  --wp-photo:.48; --wp-wash:color-mix(in srgb,var(--background) 45%,transparent);
+  --g-text-shadow:0 1px 8px #00000035;
+}
+:root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic]) {
+  --background:#101d2c; --card:#203247; --foreground:#f4f7fc; --muted:#293c51; --muted-foreground:#b9c8d8;
+  --lecture:#d8bd86; --accent-ink:#e6cea0; --lecture-soft:#343d47; --now:#a1cfed; --now-soft:#294658;
+  --now-ink:#122b3c; --mark-bg:#d5bd8e; --mark-fg:#182c40; --ring:#cce5f6;
+}
+/* A static campus scene: the large viewport unit avoids jumps when Safari's
+   toolbar retracts. Fog quiets the photograph without a costly animated blur. */
+html[data-style=glass] { background:var(--background); }
+[data-style=glass] body { background:transparent; }
+[data-style=glass] .wallpaper { display:block; position:fixed; inset:0; height:100vh; height:100lvh; z-index:-1; pointer-events:none; overflow:hidden; background:var(--background); }
+[data-style=glass] .glass-campus { position:absolute; inset:0; background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(.3); }
+[data-style=glass] .glass-atmosphere { position:absolute; inset:0; background:linear-gradient(180deg,var(--background) 0%,var(--wp-wash) 32%,transparent 65%,var(--background) 100%); }
+[data-style=glass] .glass-horizon { position:absolute; inset:0; background:radial-gradient(ellipse at 0% 40%,color-mix(in srgb,var(--lecture) 10%,transparent),transparent 60%),linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--background) 45%,transparent)); }
+[data-style=glass] :is(.msu-hero,.msu-emblem) { display:none; }
+[data-style=glass] .glass-only { display:block; }
+[data-style=glass] .brand .glass-only { margin:0 0 5px; color:var(--muted-foreground); font-size:9px; font-weight:650; letter-spacing:.16em; line-height:1; }
+[data-style=glass] .glass-date { grid-column:1/-1; grid-row:1; margin:0 0 5px; color:var(--muted-foreground); font-size:12px; letter-spacing:.02em; }
+
+/* Материал. Кромка — отдельный слой по маске: градиент рисуется только на ободке и не просвечивает сквозь стекло. */
+[data-style=glass] .lesson, [data-style=glass] .now-bar, [data-style=glass] .glance-line, [data-style=glass] .notices, [data-style=glass] .message,
+[data-style=glass] .empty, [data-style=glass] .term-facts div, [data-style=glass] .term-day, [data-style=glass] .term-month, [data-style=glass] .session-item,
+[data-style=glass] .session-next, [data-style=glass] .onboarding-card, [data-style=glass] .date-navigation, [data-style=glass] .heading .view-switch,
+[data-style=glass] .session-empty, [data-style=glass] .session-what, [data-style=glass] .term-dates,
+[data-style=glass] .header-actions, [data-style=glass] .footer-links button, [data-style=glass] .shell>.drag-tabs, [data-style=glass] [data-slot=dialog-content] {
+  border:0; background:var(--g-sheen), var(--g-tint, linear-gradient(#0000,#0000)), var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lip), var(--g-pool), var(--g-drop); }
+[data-style=glass] .lesson::before, [data-style=glass] .now-bar::before, [data-style=glass] .glance-line::before, [data-style=glass] .notices::before, [data-style=glass] .message::before,
+[data-style=glass] .empty::before, [data-style=glass] .term-facts div::before, [data-style=glass] .term-day::before, [data-style=glass] .term-month::before, [data-style=glass] .session-item::before,
+[data-style=glass] .session-next::before, [data-style=glass] .date-navigation::before, [data-style=glass] .heading .view-switch::before,
+[data-style=glass] .session-empty::before, [data-style=glass] .session-what::before, [data-style=glass] .term-dates::before,
+[data-style=glass] .header-actions::before, [data-style=glass] .footer-links button::before, [data-style=glass] .shell>.drag-tabs::before {
+  content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none; background:var(--g-rim);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite:exclude; }
+[data-style=glass] .glance-line, [data-style=glass] .notices, [data-style=glass] .message, [data-style=glass] .empty, [data-style=glass] .term-facts div,
+[data-style=glass] .term-month, [data-style=glass] .session-item, [data-style=glass] .session-next, [data-style=glass] .onboarding-card,
+[data-style=glass] .date-navigation, [data-style=glass] .heading .view-switch, [data-style=glass] .header-actions, [data-style=glass] .footer-links button,
+[data-style=glass] .session-empty, [data-style=glass] .session-what, [data-style=glass] .term-dates { position:relative; }
+/* Окна прокручиваются, и слой кромки уехал бы вместе с содержимым: у них кромка — внутренняя тень. */
+[data-style=glass] [data-slot=dialog-content], [data-style=glass] .onboarding-card { box-shadow:var(--g-edge), var(--g-lip), var(--g-drop); }
+/* Толстое стекло там, где под ним всегда текст: панель вкладок, окна, закреплённый день календаря. */
+[data-style=glass] .shell>.drag-tabs, [data-style=glass] [data-slot=dialog-content], [data-style=glass] .onboarding-card, [data-style=glass] .term-day {
+  --g-fill:var(--g-thick); -webkit-backdrop-filter:var(--g-blur-thick); backdrop-filter:var(--g-blur-thick); }
+/* Блик: под пальцем при нажатии, под курсором при наведении. */
+[data-style=glass] .lesson::after, [data-style=glass] .session-item::after, [data-style=glass] .term-facts div::after {
+  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:0; transition:opacity .5s;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,0%), #ffffff38, #ffffff00 58%); }
+[data-style=glass] .lesson:active::after, [data-style=glass] .session-item:active::after { opacity:1; transition-duration:.08s; }
+@media (hover:hover) { [data-style=glass] .lesson:hover::after, [data-style=glass] .session-item:hover::after, [data-style=glass] .term-facts div:hover::after { opacity:.75; } }
+
+/* Шапка: название группы и круглые стеклянные кнопки в одной капсуле. */
+[data-style=glass] .topbar { height:82px; text-shadow:none; }
+[data-style=glass] .header-actions { gap:0; padding:3px; border-radius:999px; }
+[data-style=glass] .header-actions .icon-button, [data-style=glass] .vmk-link { height:40px; border-radius:999px; transition:background .2s; }
+[data-style=glass] .header-actions .icon-button { width:40px; }
+[data-style=glass] .vmk-link { padding:0 8px 0 12px; color:var(--foreground); }
+[data-style=glass] .header-actions .icon-button:hover, [data-style=glass] .vmk-link:hover { background:var(--g-chip); }
+[data-style=glass] .brandmark { width:38px; height:38px; box-shadow:inset 0 1px 1px #ffffff70, 0 4px 12px -4px #0004; }
+
+/* Заголовок и переключатели: бегунок сегментов переезжает с пружиной. */
+[data-style=glass] .heading { padding:20px 2px 4px; gap:8px 10px; text-shadow:none; }
+[data-style=glass] .heading h1 { grid-row:2; font-size:36px; font-weight:650; letter-spacing:-.055em; }
+[data-style=glass] .heading.week h1 { font-size:25px; line-height:1.08; white-space:normal; }
+[data-style=glass] .eyebrow .e-rel { display:none; }
+[data-style=glass] .heading .view-switch { grid-row:2; display:grid; grid-template-columns:1fr 1fr; padding:4px; border-radius:999px; }
+[data-style=glass] .eyebrow { grid-row:3; gap:7px; flex-wrap:wrap; font-size:12px; white-space:normal; }
+[data-style=glass] .eyebrow .status { font-size:11px; }
+[data-style=glass] .eyebrow .e-week { display:none; }
+[data-style=glass] .heading .view-switch button { position:relative; z-index:1; min-height:34px; padding:6px 12px; border-radius:999px; background:none!important; box-shadow:none!important; font-size:12px; font-weight:550; transition:color .3s; }
+[data-style=glass] .heading .view-switch button[aria-pressed=true] { color:var(--foreground); }
+[data-style=glass] .heading .view-switch::after { content:''; position:absolute; top:3px; bottom:3px; left:3px; width:calc(50% - 3px); border-radius:999px; pointer-events:none;
+  background:var(--g-lens); box-shadow:var(--g-lens-shadow); transition:transform .55s var(--spring); }
+[data-style=glass] .heading.week .view-switch::after { transform:translateX(100%); }
+
+/* Полоса дней — стеклянная капсула; выбранный день — линза, которая переезжает к нажатому. */
+[data-style=glass] .date-navigation { margin:20px 0 22px; padding:8px 2px; grid-template-columns:26px 1fr 26px; border-radius:26px; overflow:hidden; overflow:clip; }
+[data-style=glass] .date-navigation>.icon-button { width:30px; height:48px; border-radius:14px; background:none; color:var(--muted-foreground); }
+[data-style=glass] .date-navigation>.icon-button svg { width:18px; height:18px; }
+[data-style=glass] .days { position:relative; gap:2px; }
+[data-style=glass] .day-lens { display:block; position:absolute; grid-area:1/1/2/2; inset:0; border-radius:18px; pointer-events:none;
+  background:var(--g-lens); box-shadow:var(--g-lens-shadow); transform:translateX(calc(var(--day) * (100% + 2px))); transition:transform .6s var(--spring), background .3s; }
+[data-style=glass] .day-lens[data-squish="0"] { animation:lens-squish-a .6s var(--glide); }
+[data-style=glass] .day-lens[data-squish="1"] { animation:lens-squish-b .6s var(--glide); }
+[data-style=glass] .day-lens.today { background:var(--g-lens); box-shadow:var(--g-lens-shadow); }
+[data-style=glass] .day-button { z-index:1; gap:3px; padding:7px 0 8px; border-radius:18px; }
+[data-style=glass] .day-button span { font-size:11.5px; font-weight:600; transition:color .3s; }
+[data-style=glass] .day-button strong { width:auto; height:auto; border-radius:0; background:none!important; font-size:18px; font-weight:650; transition:color .3s, transform .45s var(--spring); }
+[data-style=glass] .day-button:active strong { transform:scale(.86); }
+[data-style=glass] .day-button[aria-pressed=true] span, [data-style=glass] .day-button[aria-pressed=true] strong { color:var(--foreground); }
+[data-style=glass] .day-button.today[aria-pressed=true] span, [data-style=glass] .day-button.today[aria-pressed=true] strong { color:var(--foreground); }
+[data-style=glass] .day-button.today::after { content:''; position:absolute; bottom:2px; width:3px; height:3px; border-radius:50%; background:var(--g-accent); }
+
+/* Сейчас и дальше */
+[data-style=glass] .glance-line { margin:0 0 12px; padding:12px 16px; border-radius:22px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 20%,transparent),#0000 70%); }
+[data-style=glass] .glance-line b { font-size:15px; font-weight:750; }
+[data-style=glass] .now-bar { order:0; margin:0 0 2px; padding:11px 15px 15px; border-radius:20px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 8%,transparent),#0000 75%); }
+[data-style=glass] .now-bar i { left:16px; bottom:8px; width:calc(var(--p,0) * (100% - 32px)); height:3px; border-radius:3px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--now) 50%,#fff),var(--now)); box-shadow:0 0 10px color-mix(in srgb,var(--now) 70%,transparent); }
+
+/* Пары. Время и тип сверху, предмет крупно, преподаватель и аудитория внизу. */
+[data-style=glass] .list { gap:12px; }
+[data-style=glass] .list .lesson { padding:19px 20px 20px; border-radius:26px; transition:transform .45s var(--spring), box-shadow .25s; }
+[data-style=glass] .list.roomy .lesson { padding:18px 20px 20px; border-radius:30px; }
+[data-style=glass] .list .lesson:active { transform:scale(.987); transition-duration:.18s; }
+[data-style=glass] .lesson.lecture { --g-tint:linear-gradient(135deg,color-mix(in srgb,var(--lecture) 5%,transparent),#0000 75%); }
+[data-style=glass] .lesson.current, [data-style=glass] .lesson.lecture.current {
+  --g-tint:linear-gradient(140deg,color-mix(in srgb,var(--now) 10%,transparent),#0000 70%);
+  --g-rim:linear-gradient(155deg,color-mix(in srgb,var(--now) 85%,#fff),color-mix(in srgb,var(--now) 24%,transparent) 30%,#ffffff12 55%,color-mix(in srgb,var(--now) 48%,transparent));
+  box-shadow:var(--g-lip),var(--g-pool),0 0 0 1px color-mix(in srgb,var(--now) 12%,transparent),var(--g-drop); }
+[data-style=glass] .list .lesson.current { padding-bottom:30px; }
+[data-style=glass] .lesson.past { opacity:1; --g-fill:color-mix(in srgb,var(--card) 42%,transparent); color:var(--muted-foreground); }
+[data-style=glass] .lesson-time { gap:6px; min-height:24px; color:var(--muted-foreground); font-size:14px; }
+[data-style=glass] .lesson-time > :nth-child(2) { margin-left:auto; }
+[data-style=glass] .range { color:var(--foreground); font-size:13px; font-weight:650; letter-spacing:.01em; white-space:nowrap; }
+[data-style=glass] .range span { color:var(--muted-foreground); font-weight:500; }
+[data-style=glass] .tag, [data-style=glass] .live { display:inline-flex; align-items:center; gap:5px; min-height:22px; padding:3px 8px; border-radius:999px; font-size:10px; font-weight:550; white-space:nowrap; }
+[data-style=glass] .tag { background:color-mix(in srgb,var(--lecture) 10%,transparent); color:var(--g-accent); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--lecture) 15%,transparent); }
+[data-style=glass] .live { background:color-mix(in srgb,var(--now) 16%,transparent); color:var(--now); }
+[data-style=glass] .tag::before { display:none; }
+[data-style=glass] .live::before { content:''; width:6px; height:6px; margin:0; border-radius:50%; color:inherit; background:currentColor; }
+[data-style=glass] .lesson.current .live { background:color-mix(in srgb,var(--now) 16%,transparent); color:var(--now); box-shadow:inset 0 1px 0 #ffffff20; }
+[data-style=glass] .lesson.current .live::before { animation:live-pulse 1.8s ease-in-out infinite; }
+@keyframes live-pulse { 50% { opacity:.3; } }
+[data-style=glass] .lesson .homework-button { height:24px; border:0; background:var(--g-chip); box-shadow:inset 0 1px 0 #ffffff1f; }
+[data-style=glass] .lesson h3 { margin:13px 0 0; font-size:22px; font-weight:600; line-height:1.22; letter-spacing:-.035em; }
+[data-style=glass] .list.roomy .lesson h3 { font-size:23px; }
+[data-style=glass] .teacher-row { align-items:center; margin-top:16px; font-size:12px; line-height:1.5; }
+[data-style=glass] .list.roomy .teacher-row { margin-top:10px; font-size:15px; }
+[data-style=glass] .room { min-height:32px; align-items:center; padding:6px 12px; border-radius:12px; background:var(--g-chip); box-shadow:inset 0 1px 0 #ffffff24, inset 0 0 0 .5px #ffffff1a; font-size:13px; font-weight:600; transition:background .2s; }
+[data-style=glass] .list.roomy .room { font-size:16px; }
+[data-style=glass] button.room:hover { text-decoration:none; background:color-mix(in srgb,var(--foreground) 16%,transparent); }
+[data-style=glass] .room-note { opacity:.7; }
+[data-style=glass] .lesson .progress { left:20px; right:20px; bottom:13px; height:2px; border-radius:4px; overflow:hidden; background:color-mix(in srgb,var(--now) 15%,transparent); }
+[data-style=glass] .lesson .progress i { border-radius:inherit; background:linear-gradient(90deg,color-mix(in srgb,var(--now) 50%,#fff),var(--now)); box-shadow:0 0 12px var(--now); }
+[data-style=glass] .changed-note, [data-style=glass] .notice-note, [data-style=glass] .hw-preview { border-radius:14px; }
+[data-style=glass] .hw-preview { background:var(--g-chip); }
+/* Breaks are quieter than classes; a small capsule keeps their text readable. */
+[data-style=glass] .gap { align-self:center; align-items:center; gap:5px; padding:6px 14px; border-radius:999px; font-size:12.5px;
+  background:var(--g-sheen), var(--g-fill); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur); box-shadow:var(--g-edge), var(--g-lip); }
+[data-style=glass] .gap b { color:var(--foreground); font-weight:650; }
+[data-style=glass] .gap small { margin-left:0; font-size:12.5px; }
+[data-style=glass] .gap small::before { content:'·'; margin-right:5px; }
+/* Подписи прямо на заставке */
+[data-style=glass] .day-title, [data-style=glass] .term-sub, [data-style=glass] .term-legend, [data-style=glass] .calendar-history, [data-style=glass] .map-credit { text-shadow:var(--g-text-shadow); }
+[data-style=glass] .empty { padding:44px 24px 40px; border-radius:30px; }
+[data-style=glass] .empty svg { width:48px; height:48px; padding:12px; border-radius:50%; background:var(--g-chip); color:var(--foreground); opacity:1; box-shadow:inset 0 1px 0 #ffffff2e; }
+[data-style=glass] .empty p { margin-top:14px; color:var(--foreground); font-size:19px; font-weight:700; letter-spacing:-.02em; }
+[data-style=glass] .week-day { margin-bottom:26px; }
+[data-style=glass] .day-title { margin:0 4px 10px; }
+[data-style=glass] .day-title h2 { font-size:21px; font-weight:750; letter-spacing:-.03em; }
+[data-style=glass] .week-day .list .lesson { padding:12px 16px 14px; border-radius:22px; }
+[data-style=glass] .week-day .list .lesson.current { padding-bottom:22px; }
+[data-style=glass] .week-day .lesson h3 { margin-top:5px; font-size:17px; }
+[data-style=glass] .week-day .empty { padding:22px; border-radius:22px; }
+[data-style=glass] .week-day .empty svg { display:none; }
+[data-style=glass] .week-day .empty p { margin:0; font-size:15px; font-weight:600; }
+[data-style=glass] .notices, [data-style=glass] .message { border-radius:22px; --g-tint:linear-gradient(120deg,color-mix(in srgb,var(--warn-fg) 18%,transparent),#0000 70%); }
+[data-style=glass] .footer-links { gap:8px; margin:0 -4px; padding:4px 4px 10px; }
+[data-style=glass] .footer-links button { padding:8px 15px; border-radius:999px; color:var(--foreground); font-size:13.5px; font-weight:550; }
+
+/* Панель вкладок: плавающая капсула. Линза переезжает с пружиной, растягивается от скорости пальца,
+   а пока палец её тащит — становится прозрачной каплей крупнее панели. */
+[data-style=glass] .shell { max-width:660px; padding:0 20px calc(110px + env(safe-area-inset-bottom)); }
+[data-style=glass] .shell>.drag-tabs { left:50%; right:auto; bottom:calc(16px + env(safe-area-inset-bottom)); translate:-50% 0; width:min(420px,calc(100% - 32px)); height:70px; padding:6px; gap:0; border-radius:28px;
+  --g-fill:color-mix(in srgb,var(--card) 64%,transparent);
+  box-shadow:var(--g-lip), var(--g-pool), 0 2px 6px -2px #0000002e, 0 20px 44px -18px #000000b3; }
+[data-style=glass] .drag-tabs button { flex:1; width:auto; min-width:0; height:58px; justify-content:center; gap:4px; padding:0; border-radius:22px; font-size:9px; font-weight:550; transition:color .3s; }
+[data-style=glass] .drag-tabs button svg { width:24px; height:24px; transition:transform .45s var(--spring); }
+[data-style=glass] .drag-tabs button[aria-pressed=true] { color:var(--g-accent); }
+[data-style=glass] .drag-tabs button:active svg { transform:scale(.84); }
+[data-style=glass] .tab-lens { display:block; position:absolute; z-index:0; top:6px; bottom:6px; left:6px; width:calc((100% - 12px)/4); border-radius:22px;
+  background:var(--g-lens); box-shadow:var(--g-lens-shadow);
+  transform:translateX(calc(var(--tab-position)*100%)) scaleX(var(--tab-stretch,1)); transition:transform .6s var(--spring), background .3s, box-shadow .3s; }
+[data-style=glass] .tab-lens[data-squish="0"] { animation:lens-squish-a .6s var(--glide); }
+[data-style=glass] .tab-lens[data-squish="1"] { animation:lens-squish-b .6s var(--glide); }
+@keyframes lens-squish-a { 30% { scale:1.08 .94; } 65% { scale:.99 1.02; } }
+@keyframes lens-squish-b { 30% { scale:1.08 .94; } 65% { scale:.99 1.02; } }
+[data-style=glass] .drag-tabs.dragging .tab-lens { transform:translateX(calc(var(--tab-position)*100%)) scale(min(var(--tab-stretch,1),1.12),1.06);
+  transition:transform .16s var(--glide), background .3s, box-shadow .3s; background:radial-gradient(120% 90% at 50% 0%,#ffffff2e,#ffffff08 65%);
+  box-shadow:inset 0 0 0 1px #ffffff66, inset 0 1.5px 1px #ffffffb3, inset 0 -8px 14px -10px #ffffffa6, 0 12px 26px -10px #00000080; }
+[data-style=glass] .drag-tabs.dragging button[data-hovered=true] { color:var(--foreground); }
+[data-style=glass] .drag-tabs.dragging button[aria-pressed=true]:not([data-hovered=true]) { color:var(--muted-foreground); }
+[data-style=glass] .drag-tabs.dragging button[data-hovered=true] svg { transform:scale(1.14); }
+
+/* Разделы въезжают со своей стороны. Только сдвиг: прозрачность на контейнере отключила бы стекло внутри него. */
+[data-style=glass] .shell[data-pane=right] > :is(.pane,.heading,.date-navigation,main,.footer,.campus-map) { animation:pane-from-right .5s var(--glide) backwards; }
+[data-style=glass] .shell[data-pane=left] > :is(.pane,.heading,.date-navigation,main,.footer,.campus-map) { animation:pane-from-left .5s var(--glide) backwards; }
+@keyframes pane-from-right { from { transform:translate3d(36px,0,0); } }
+@keyframes pane-from-left { from { transform:translate3d(-36px,0,0); } }
+
+/* Окна и первый вход */
+[data-style=glass] [data-slot=dialog-overlay] { background:#00000047; }
+[data-style=glass] [data-slot=dialog-content] { border-radius:32px; }
+[data-style=glass] .onboarding-card { border-radius:32px; }
+[data-style=glass] .group-grid button, [data-style=glass] .segmented, [data-style=glass] .search-days button { background:var(--g-chip); }
+[data-style=glass] .group-grid button { border-radius:14px; }
+[data-style=glass] .group-grid button[aria-pressed=true] { background:var(--lecture); }
+[data-style=glass] .segmented button[aria-selected=true] { background:var(--g-lens); box-shadow:var(--g-lens-shadow); }
+[data-style=glass] .search-field { background:var(--g-chip); border-color:transparent; }
+
+/* Календарь и сессия */
+[data-style=glass] .session-title { font-size:34px; font-weight:800; letter-spacing:-.04em; }
+[data-style=glass] .term-facts { gap:10px; }
+[data-style=glass] .term-facts div { padding:14px 16px; border-radius:22px; }
+[data-style=glass] .term-day { top:8px; border-radius:22px; }
+[data-style=glass] .term-month { margin-top:14px; padding:14px 10px 12px; border-radius:26px; }
+[data-style=glass] .term-month h2 { margin:0 6px 8px; }
+[data-style=glass] .term-cell { border-radius:12px; }
+[data-style=glass] .term-cell.selected { background:var(--g-lens); color:var(--foreground); box-shadow:var(--g-lens-shadow); }
+[data-style=glass] .term-cell.selected::after { background:var(--hair-strong); }
+[data-style=glass] .session-next { border-radius:22px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 20%,transparent),#0000 70%); }
+[data-style=glass] .session-item { margin-bottom:10px; padding:14px 18px; border-radius:24px; }
+[data-style=glass] .session-item.exam { --g-tint:linear-gradient(140deg,color-mix(in srgb,var(--lecture) 24%,transparent),#0000 70%); }
+[data-style=glass] .session-note { border-radius:18px; background:var(--g-chip); }
+[data-style=glass] .session-empty, [data-style=glass] .session-what, [data-style=glass] .term-dates { margin-top:16px; padding:16px 18px 10px; border-radius:26px; }
+[data-style=glass] .session-empty { padding-bottom:6px; }
+[data-style=glass] .session-what li:last-child, [data-style=glass] .term-dates li:last-child { padding-bottom:4px; }
+
+/* Карта: поиск, этажи, режимы и подсказки — то же стекло поверх заставки. */
+[data-style=glass] .map-search, [data-style=glass] .map-modes, [data-style=glass] .floor-switch button, [data-style=glass] .map-card, [data-style=glass] .route-box,
+[data-style=glass] .map-quick button, [data-style=glass] .map-zoom, [data-style=glass] .map-orientation, [data-style=glass] .scene-view, [data-style=glass] .map-results, [data-style=glass] .scene-hint {
+  border:0; background:var(--g-sheen), var(--g-fill); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur); box-shadow:var(--g-edge), var(--g-lip), var(--g-drop); }
+[data-style=glass] .map-results, [data-style=glass] .map-card { --g-fill:var(--g-thick); -webkit-backdrop-filter:var(--g-blur-thick); backdrop-filter:var(--g-blur-thick); }
+[data-style=glass] .map-modes, [data-style=glass] .route-box, [data-style=glass] .map-quick button { position:relative; }
+[data-style=glass] .map-search { height:50px; border-radius:999px; }
+[data-style=glass] .map-search:focus-within { box-shadow:var(--g-edge), var(--g-lip), 0 0 0 3px color-mix(in srgb,var(--lecture) 30%,transparent), var(--g-drop); }
+[data-style=glass] .floor-switch { gap:6px; }
+[data-style=glass] .floor-switch button { width:38px; border-radius:999px; }
+[data-style=glass] .floor-switch button[aria-pressed=true] { --g-fill:var(--lecture); color:var(--lecture-ink); }
+[data-style=glass] .map-modes { padding:3px; border-radius:999px; }
+[data-style=glass] .map-modes button { border-radius:999px; transition:background .3s, color .3s; }
+[data-style=glass] .map-modes button[aria-pressed=true] { background:var(--g-lens); box-shadow:var(--g-lens-shadow); color:var(--foreground); }
+[data-style=glass] .scene-view { border-radius:28px; }
+[data-style=glass] .map-orientation, [data-style=glass] .map-zoom { border-radius:18px; }
+[data-style=glass] .map-card { border-radius:24px; }
+[data-style=glass] .route-box { border-radius:22px; }
+[data-style=glass] .point-chip { border-radius:12px; background:var(--g-chip); }
+[data-style=glass] .map-quick button { border-radius:999px; }
+[data-style=glass] .map-results { border-radius:22px; }
+
+/* Optics only on small navigation surfaces: the centre remains frosted enough
+   to read scrolling content. WebKit keeps the prefixed CSS-only treatment. */
+[data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)[data-glass-optics] {
+  backdrop-filter:blur(10px) var(--g-optics) saturate(1.25);
+}
+[data-style=glass] .lesson-time { flex-wrap:wrap; }
+[data-style=glass] .lesson .homework-button { font-size:10px; padding:0 7px; }
+[data-style=glass] .footer { padding-top:24px; }
+[data-style=glass] .footer-links button { min-height:36px; font-size:11px; padding:8px 12px; }
+[data-style=glass] .eyebrow .e-week { display:inline; }
+[data-style=glass] .eyebrow .status { flex-basis:100%; margin-top:2px; }
+[data-style=glass] .gap { font-size:11px; padding:5px 12px; }
+[data-style=glass] .gap small { font-size:10px; }
+[data-style=glass] .session-main { padding-top:20px; }
+[data-style=glass] .session-title { font-weight:650; }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  [data-style=glass] .list .lesson:hover { transform:translateY(-2px); }
+}
+@media (min-width:760px) {
+  [data-style=glass] .shell { padding-top:16px; }
+  [data-style=glass] .heading { padding-top:28px; }
+  [data-style=glass] .heading h1 { font-size:44px; }
+  [data-style=glass] .glass-campus { background-position:50% 56%; }
+  [data-style=glass] .list .lesson { padding:22px 26px; }
+  [data-style=glass] .list .lesson.current { padding-bottom:32px; }
+  [data-style=glass] .lesson h3 { font-size:24px; }
+  [data-style=glass] .teacher-row { font-size:14px; }
+}
+@media (max-width:360px) {
+  [data-style=glass] .shell { padding-left:12px; padding-right:12px; }
+  [data-style=glass] .heading h1 { font-size:30px; }
+  [data-style=glass] .heading .view-switch button { padding-inline:9px; }
+  [data-style=glass] .brand { gap:7px; }
+  [data-style=glass] .brand strong { font-size:15px; }
+  [data-style=glass] .brandmark { width:32px; height:32px; }
+  [data-style=glass] .vmk-link { font-size:12px; padding-inline:6px; }
+  [data-style=glass] .list .lesson { padding-inline:16px; }
+  [data-style=glass] .day-button span { font-size:10px; }
+}
+
+/* Без прозрачности — сплошные панели того же рисунка. */
+@media (prefers-reduced-transparency:reduce) {
+  :root[data-style=glass] { --g-fill:var(--card); --g-thick:var(--card); --g-blur:none; --g-blur-thick:none; }
+  [data-style=glass] .wallpaper { display:none; }
+  [data-style=glass] :is(.lesson.past,.shell>.drag-tabs) { --g-fill:var(--card); }
+  [data-style=glass] [data-glass-optics] { backdrop-filter:none!important; }
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  :root[data-style=glass] { --g-fill:var(--card); --g-thick:var(--card); }
+  [data-style=glass] :is(.lesson.past,.shell>.drag-tabs) { --g-fill:var(--card); }
+}
+

@@ -376,7 +376,7 @@ export default function Home() {
   return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><Wallpaper/><div className="shell" data-pane={paneDir}>
     <MsuDecor/>
     <header className="topbar">
-      <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
+      <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><small className="glass-only">МГУ · ВМК</small><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
       <div className="header-actions">
         <a className="vmk-link" href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer" aria-label="Расписание на сайте ВМК">ВМК<ArrowUpRight size={13}/></a>
         {search.button}
@@ -403,6 +403,7 @@ export default function Home() {
     </main> : <>
     <div className={`heading ${view}`}>
       <div className="heading-text">
+        <p className="glass-only glass-date">{view==='day' ? `${dayNames[weekday(selected)]}, ${formatDate(selected,{day:'numeric',month:'long'})}` : 'Расписание на неделю'}</p>
         <h1><span className="h-lead">{view==='day' && near || months}</span><span className="h-month">{months}</span></h1>
         <p className="eyebrow">
           {view==='day' && near && <span className="e-rel">{near}</span>}

@@ -6,7 +6,8 @@ export type Section=typeof items[number][0];
 export const sectionIndex=(s:Section)=>items.findIndex(i=>i[0]===s);
 
 // Slide a finger along the bar: the lens follows it, stretches with speed, and the section
-// under it opens at once, without lifting the finger. A tap still works as a tap.
+// opens on release in glass mode, avoiding mounting expensive panes mid-gesture.
+// Other styles keep their existing live switching. A tap still works as a tap.
 export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Section)=>void}) {
   const index=sectionIndex(value);
   const [position,setPosition]=useState<number|null>(null),[stretch,setStretch]=useState(1);
@@ -37,11 +38,11 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
       g.lastX=e.clientX;g.lastT=e.timeStamp;
       setPosition(pos);setStretch(1+Math.min(.45,speed*.35));
       const n=Math.round(pos);
-      if(n!==g.live){g.live=n;onChange(items[n][0]);navigator.vibrate?.(4);}
+      if(n!==g.live){g.live=n;if(document.documentElement.dataset.style!=='glass')onChange(items[n][0]);navigator.vibrate?.(4);}
     }}
     onPointerUp={e=>end(e)} onPointerCancel={e=>end(e,true)} onLostPointerCapture={e=>{if(e.target===e.currentTarget&&gesture.current?.id===e.pointerId){gesture.current=null;setPosition(null);setStretch(1);}}}
     onClickCapture={e=>{if(suppressClick.current){e.preventDefault();e.stopPropagation();suppressClick.current=false;}}}
-    onKeyDown={e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?3:(index+(e.key==='ArrowRight'?1:3))%4;onChange(items[n][0]);e.currentTarget.querySelectorAll('button')[n].focus();}}>
+    onKeyDown={e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();if(document.documentElement.dataset.style==='glass')e.stopPropagation();const n=e.key==='Home'?0:e.key==='End'?3:(index+(e.key==='ArrowRight'?1:3))%4;onChange(items[n][0]);e.currentTarget.querySelectorAll('button')[n].focus();}}>
     <span className="tab-lens" aria-hidden="true" data-squish={moves.current.n&&position===null?moves.current.n%2:undefined}/>
     {items.map(([name,label,Icon],i)=><button key={name} aria-pressed={value===name} data-hovered={position!==null&&Math.round(position)===i||undefined} onClick={()=>onChange(name)}><Icon/><span>{label}</span></button>)}
   </nav>;
