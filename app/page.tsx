@@ -10,7 +10,7 @@ import {dayKind, isStacked, termEnd, validTerm, weekOf} from '@/lib/term.mjs';
 import {SessionView, isCurrent, type Session} from '@/components/session';
 import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
 import {Onboarding, needsOnboarding} from '@/components/onboarding';
-import {SectionTabs} from '@/components/section-tabs';
+import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
@@ -202,7 +202,7 @@ export default function Home() {
   const fiit = Number(groupName)>=140, parity = fiit ? weekOf(faculty.term,selected)?.odd : undefined;
   const [readNotices,setReadNotices] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem(noticeKey)||'[]');}catch{return [];}});
   const freshNotices = faculty.notices.filter(n=>!readNotices.includes(n));
-  const [contactsOpen,setContactsOpen] = useState(false), [onboarding,setOnboarding] = useState(needsOnboarding), [preset,setPreset] = useState(false), [shared,setShared] = useState('');
+  const [contactsOpen,setContactsOpen] = useState(false), [onboarding,setOnboarding] = useState(needsOnboarding), [shared,setShared] = useState('');
   // Lecturer of each subject this term, by the first letters of its name.
   const lecturers = Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];}));
   const teacherCard = useTeacherCard({table, session:isCurrent(faculty.session,data.year) ? faculty.session : null, dates:searchWeek, term:faculty.term, room:(name,day,start)=><LessonAt.Provider value={{date:searchWeek[day],start}}><Room room={name}/></LessonAt.Provider>});
@@ -320,9 +320,12 @@ export default function Home() {
   useEffect(()=>{
     const params=new URLSearchParams(location.search), wanted=params.get('g');
     if(!wanted)return;
-    if(table.groups[wanted]){setGroup(wanted);setPreset(true);}
+    if(table.groups[wanted]){setGroup(wanted);setOnboarding(false);}
     params.delete("g");window.history.replaceState(null,'',location.pathname+(params.size?'?'+params:'')+location.hash);
   },[]);
+  // The new section slides in from the side it lies on in the tab bar.
+  const [paneDir,setPaneDir] = useState('');
+  function switchTab(next:Section){if(next===tab)return;setPaneDir(sectionIndex(next)>sectionIndex(tab)?'right':'left');setTab(next);}
   const closePdf = React.useCallback(() => setPdfOpen(false), []);
   // The class before this one tells where the walk starts.
   function openRoom(room:string, date=today, start='') {
@@ -366,7 +369,7 @@ export default function Home() {
     </section>;
   }
 
-  return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><div className="shell">
+  return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><div className="shell" data-pane={paneDir}>
     <MsuDecor/>
     <header className="topbar">
       <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
@@ -382,15 +385,15 @@ export default function Home() {
       <i style={{width:`${Math.round((minutes(clock)-minutes(ongoing.start))/(minutes(ongoing.end)-minutes(ongoing.start))*100)}%`}}/>
     </div>}
 
-    <SectionTabs value={tab} onChange={setTab}/>
+    <SectionTabs value={tab} onChange={switchTab}/>
 
     {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
-    </CampusMap></Suspense> : tab==='calendar' ? <main className="session-main">
+    </CampusMap></Suspense> : tab==='calendar' ? <main className="session-main pane" key="calendar">
       <TermCalendar term={faculty.term} session={isCurrent(faculty.session,data.year) ? faculty.session : null} group={groupName} today={today} academicYear={data.year}
         lastWinter={[faculty.session, ...faculty.archive].find(s=>s && s.season==='winter' && s.year===data.year-1) || null}
         classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
-    </main> : tab==='session' ? <main className="session-main">
+    </main> : tab==='session' ? <main className="session-main pane" key="session">
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
     </main> : <>
@@ -470,8 +473,7 @@ export default function Home() {
       </dl>
       <div className="source-links"><a href="https://cs.msu.ru/studies/contacts" target="_blank" rel="noreferrer">Страница на сайте ВМК<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>}
-    {onboarding && <Onboarding streams={streams(table)} group={groupName} preset={preset} subgroups={subgroups}
-      onGroup={name=>{setGroupState(name);try{localStorage.setItem(groupKey,name);}catch{}}} onDone={()=>setOnboarding(false)}/>}
+    {onboarding && <Onboarding streams={streams(table)} onGroup={name=>{setGroupState(name);try{localStorage.setItem(groupKey,name);}catch{}}} onDone={()=>setOnboarding(false)}/>}
     <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog"><DialogTitle>Изменения · группа {groupName}</DialogTitle><DialogDescription>Сервер сравнивает каждую новую версию PDF с предыдущей и записывает, что поменялось.</DialogDescription>
       {groupHistory.length ? groupHistory.map(entry=><section className="history-entry" key={entry.detectedAt}>
         <h4>Расписание от {entry.date}{entry.previousDate && entry.previousDate!==entry.date?` (было от ${entry.previousDate})`:''}</h4>

@@ -940,3 +940,110 @@ h1 .h-month { display:none; }
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
   :root[data-style=glass] { --glass:var(--card); --glass-strong:var(--card); }
 }
+
+/* ——— Стекло, третья редакция: material, light and motion.
+   Glass = blurred, saturated backdrop + an iridescent rim (gradient border) + a specular highlight
+   that follows the finger + fine grain. Motion is springy and short. ——— */
+:root[data-style=glass] {
+  --glass:color-mix(in srgb,var(--card) 46%,transparent); --glass-strong:color-mix(in srgb,var(--card) 70%,transparent);
+  --rim:linear-gradient(135deg,#ffffffe6,#ffffff40 30%,#ffffff12 55%,#ffffff26 75%,#ffffffb3);
+  --glass-shade:#1c2b4a33; --spec:#ffffff8c; --spring:cubic-bezier(.34,1.56,.64,1); --ease:cubic-bezier(.2,.9,.25,1);
+}
+:root[data-scheme=dark][data-style=glass] {
+  --glass:color-mix(in srgb,var(--card) 56%,transparent); --glass-strong:color-mix(in srgb,var(--card) 76%,#ffffff10);
+  --rim:linear-gradient(135deg,#ffffff5c,#ffffff14 30%,#ffffff05 55%,#ffffff0d 75%,#ffffff40);
+  --glass-shade:#000000a6; --spec:#ffffff2e;
+}
+/* Living background: two slow aurora layers and grain, under everything. */
+[data-style=glass] { background:var(--background); }
+[data-style=glass] body { background:transparent; }
+[data-style=glass]::before { content:''; position:fixed; inset:-30%; z-index:-2; pointer-events:none;
+  background:radial-gradient(28% 24% at 70% 12%, color-mix(in srgb,var(--accent-ink) 55%,transparent), transparent 70%),
+    radial-gradient(26% 26% at 12% 62%, color-mix(in srgb,var(--now) 38%,transparent), transparent 70%),
+    radial-gradient(30% 22% at 88% 78%, color-mix(in srgb,var(--lecture) 45%,transparent), transparent 70%);
+  filter:blur(56px) saturate(1.4); animation:aurora-a 34s var(--ease) infinite alternate; }
+[data-style=glass] body::before { inset:-30%; z-index:-1; opacity:.85; animation:aurora-b 27s var(--ease) infinite alternate; }
+[data-style=glass] body::after { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+@keyframes aurora-a { to { transform:translate3d(-6%,4%,0) rotate(-10deg) scale(1.12); } }
+@keyframes aurora-b { 50% { transform:translate3d(5%,-3%,0) rotate(7deg) scale(1.06); } to { transform:translate3d(-3%,5%,0) rotate(-5deg) scale(1.14); } }
+
+/* The material. A gradient border drawn with two backgrounds gives the iridescent rim. */
+[data-style=glass] .lesson, [data-style=glass] .now-bar, [data-style=glass] .glance-line, [data-style=glass] .term-facts div, [data-style=glass] .session-item,
+[data-style=glass] .session-next, [data-style=glass] .notices, [data-style=glass] .term-day, [data-style=glass] .term-month, [data-style=glass] .heading .view-switch,
+[data-style=glass] .shell>.drag-tabs, [data-style=glass] [data-slot=dialog-content], [data-style=glass] .onboarding-card, [data-style=glass] .search-field {
+  border:1px solid transparent;
+  background:linear-gradient(var(--glass),var(--glass)) padding-box, var(--rim) border-box;
+  -webkit-backdrop-filter:blur(26px) saturate(2) brightness(1.04); backdrop-filter:blur(26px) saturate(2) brightness(1.04);
+  box-shadow:inset 0 1px 1px var(--spec), inset 0 -8px 16px -12px #00000024, inset 1px 0 0 #ff5fa80d, inset -1px 0 0 #4fd2ff0d, 0 1px 2px #0000000a, 0 16px 40px -20px var(--glass-shade);
+}
+/* Specular highlight: a soft light that sits where the finger is (top-left by default). */
+[data-style=glass] .lesson::before, [data-style=glass] .now-bar::before, [data-style=glass] .term-facts div::before, [data-style=glass] .session-item::before {
+  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+  background:radial-gradient(90% 70% at var(--mx,18%) var(--my,-20%), var(--spec), transparent 60%); opacity:.9; transition:opacity .3s; }
+[data-style=glass] .lesson > *, [data-style=glass] .session-item > *, [data-style=glass] .term-facts div > * { position:relative; z-index:1; }
+[data-style=glass] .term-facts div, [data-style=glass] .session-item { position:relative; overflow:hidden; }
+[data-style=glass] .lesson { border-radius:26px; padding:15px 18px 16px; transition:transform .5s var(--spring), box-shadow .3s; }
+[data-style=glass] .lesson:active { transform:scale(.965); transition-duration:.12s; }
+@media (hover:hover) { [data-style=glass] .lesson:hover { transform:translateY(-3px) scale(1.005); } }
+[data-style=glass] .lesson.lecture { background:linear-gradient(135deg,color-mix(in srgb,var(--lecture) 20%,var(--glass)),var(--glass) 70%) padding-box, var(--rim) border-box; }
+[data-style=glass] .lesson.current { background:linear-gradient(135deg,color-mix(in srgb,var(--now) 16%,var(--glass)),var(--glass) 75%) padding-box,
+  linear-gradient(135deg,var(--now),color-mix(in srgb,var(--now) 20%,transparent) 45%,color-mix(in srgb,var(--now) 70%,transparent)) border-box; }
+/* The class in progress breathes: its rim light travels around once every few seconds. */
+[data-style=glass] .lesson.current::after { content:''; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none; padding:1px;
+  background:conic-gradient(from var(--spin,0deg), transparent 0 70%, #ffffffcc 80%, transparent 90%); animation:rim-spin 4s linear infinite;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+@property --spin { syntax:'<angle>'; inherits:false; initial-value:0deg; }
+@keyframes rim-spin { to { --spin:360deg; } }
+[data-style=glass] .lesson h3 { font-size:18px; font-weight:700; letter-spacing:-.025em; }
+[data-style=glass] .tag { padding:2px 9px; border-radius:999px; background:color-mix(in srgb,var(--lecture) 26%,transparent); box-shadow:inset 0 1px 0 #ffffff40; color:var(--foreground); font-size:12px; }
+[data-style=glass] .room { padding:3px 11px; border:1px solid transparent; border-radius:999px; background:linear-gradient(color-mix(in srgb,var(--foreground) 7%,var(--glass)),color-mix(in srgb,var(--foreground) 7%,var(--glass))) padding-box, var(--rim) border-box; box-shadow:inset 0 1px 0 var(--spec); }
+[data-style=glass] .gap { padding:0 20px; font-weight:500; }
+
+/* Header, strip and switches: lenses. */
+[data-style=glass] .heading h1 { font-size:34px; font-weight:800; letter-spacing:-.04em; }
+[data-style=glass] .heading .view-switch { padding:3px; border-radius:999px; }
+[data-style=glass] .view-switch button { border-radius:999px; transition:background .35s var(--ease), color .35s, transform .4s var(--spring); }
+[data-style=glass] .view-switch button:active { transform:scale(.92); }
+[data-style=glass] .view-switch button[aria-pressed=true] { background:linear-gradient(var(--glass-strong),var(--glass-strong)) padding-box, var(--rim) border-box; border:1px solid transparent; box-shadow:inset 0 1px 1px var(--spec), 0 4px 12px -4px var(--glass-shade); }
+[data-style=glass] .day-button strong { transition:transform .45s var(--spring), background .3s, box-shadow .3s; }
+[data-style=glass] .day-button:active strong { transform:scale(.88); }
+[data-style=glass] .day-button[aria-pressed=true] strong { transform:scale(1.12); border:1px solid transparent; color:var(--foreground);
+  background:linear-gradient(var(--glass-strong),var(--glass-strong)) padding-box, var(--rim) border-box;
+  -webkit-backdrop-filter:blur(10px) saturate(2); backdrop-filter:blur(10px) saturate(2); box-shadow:inset 0 1px 1px var(--spec), 0 8px 18px -8px var(--glass-shade); }
+[data-style=glass] .day-button.today[aria-pressed=true] strong { background:linear-gradient(var(--now),var(--now)) padding-box, var(--rim) border-box; color:#fff; }
+[data-style=glass] .now-bar { position:relative; border-radius:22px; }
+[data-style=glass] .now-bar > * { position:relative; z-index:1; }
+[data-style=glass] .now-bar i { z-index:1; height:3px; border-radius:3px; background:linear-gradient(90deg,var(--now),color-mix(in srgb,var(--now) 50%,#fff)); box-shadow:0 0 12px var(--now); }
+
+/* Tab bar: a floating capsule with a liquid lens. The lens stretches with the speed of the finger and springs into place. */
+[data-style=glass] .shell>.drag-tabs { height:68px; padding:6px; border-radius:999px; }
+[data-style=glass] .tab-lens { top:6px; bottom:6px; border:1px solid transparent; border-radius:999px;
+  background:linear-gradient(color-mix(in srgb,var(--foreground) 6%,var(--glass-strong)),color-mix(in srgb,var(--foreground) 6%,var(--glass-strong))) padding-box, var(--rim) border-box;
+  -webkit-backdrop-filter:blur(6px) saturate(2.4) brightness(1.12); backdrop-filter:blur(6px) saturate(2.4) brightness(1.12);
+  box-shadow:inset 0 1px 1px var(--spec), inset 0 -2px 6px -3px #00000026, 0 6px 16px -6px var(--glass-shade);
+  transform:translateX(calc(var(--tab-position)*100%)) scaleX(var(--tab-stretch,1)); transition:transform .55s var(--spring), filter .25s; }
+[data-style=glass] .drag-tabs.dragging .tab-lens { transition:transform .08s linear; transform:translateX(calc(var(--tab-position)*100%)) scale(calc(var(--tab-stretch,1)*1.06),1.12); filter:brightness(1.1); }
+[data-style=glass] .drag-tabs button { transition:color .25s, transform .4s var(--spring); }
+[data-style=glass] .drag-tabs button[aria-pressed=true] { color:var(--accent-ink); }
+[data-style=glass] .drag-tabs button[aria-pressed=true] svg { transform:scale(1.08); }
+[data-style=glass] .drag-tabs button svg { transition:transform .4s var(--spring); }
+[data-style=glass] .drag-tabs.dragging button[data-hovered=true] { color:var(--foreground); transform:translateY(-2px) scale(1.06); }
+
+/* Sections slide in from their side; cards rise one after another. */
+[data-style=glass] .shell[data-pane] > .pane, [data-style=glass] .shell[data-pane] > .heading, [data-style=glass] .shell[data-pane] > .date-navigation,
+[data-style=glass] .shell[data-pane] > main, [data-style=glass] .shell[data-pane] > .footer { animation:pane-in .5s var(--ease) both; }
+[data-style=glass] .shell[data-pane=left] > * { --from:-28px; }
+@keyframes pane-in { from { opacity:0; transform:translateX(var(--from,28px)) scale(.985); filter:blur(8px); } }
+[data-style=glass] .slide .lesson, [data-style=glass] .slide .gap, [data-style=glass] .session-item { animation:glass-rise .6s var(--ease) both; }
+@keyframes glass-rise { from { opacity:0; transform:translateY(18px) scale(.96); filter:blur(8px); } }
+[data-style=glass] .term-month { animation:none; }
+[data-style=glass] [data-slot=dialog-content] { border-radius:30px; background:linear-gradient(var(--glass-strong),var(--glass-strong)) padding-box, var(--rim) border-box; }
+[data-style=glass] .footer-links button { border:1px solid transparent; background:linear-gradient(var(--glass),var(--glass)) padding-box, var(--rim) border-box; }
+[data-style=glass] .term-cell.selected { background:linear-gradient(var(--glass-strong),var(--glass-strong)) padding-box, var(--rim) border-box; border:1px solid transparent; color:var(--foreground); box-shadow:inset 0 1px 1px var(--spec); }
+@media (prefers-reduced-motion:reduce) {
+  [data-style=glass]::before, [data-style=glass] body::before, [data-style=glass] .lesson.current::after { animation:none!important; }
+  [data-style=glass] .shell[data-pane] > * { animation:none!important; }
+}
+/* The tab bar always sits over text: a denser glass keeps its labels readable. */
+[data-style=glass] .shell>.drag-tabs { background:linear-gradient(var(--glass-strong),var(--glass-strong)) padding-box, var(--rim) border-box; -webkit-backdrop-filter:blur(34px) saturate(2.2) brightness(1.05); backdrop-filter:blur(34px) saturate(2.2) brightness(1.05); }
