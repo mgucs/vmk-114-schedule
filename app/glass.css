@@ -377,3 +377,26 @@ html[data-style=glass] { background:var(--background); }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-horizon { display:none; }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.heading,.topbar) { text-shadow:0 1px 10px color-mix(in srgb,var(--background) 85%,transparent); }
 }
+
+/* Ещё плотнее и прозрачнее: карточки — тонкое стекло, сквозь которое видно здание;
+   строки подгрупп идут вплотную друг к другу. */
+:root[data-style=glass] { --g-fill:color-mix(in srgb,var(--card) 42%,transparent); --g-blur:blur(12px) saturate(1.45); }
+:root[data-scheme=dark][data-style=glass] { --g-fill:color-mix(in srgb,var(--card) 40%,transparent); }
+[data-style=glass] .list { gap:6px; }
+[data-style=glass] .list .lesson { padding:10px 14px 11px; border-radius:20px; }
+[data-style=glass] .list .lesson.current { padding-bottom:18px; }
+[data-style=glass] .lesson-time { min-height:20px; }
+[data-style=glass] .lesson h3 { margin-top:2px; font-size:18px; line-height:1.18; }
+[data-style=glass] .teacher-row { margin-top:5px; font-size:12.5px; line-height:1.3; }
+[data-style=glass] .teacher-row + .teacher-row { margin-top:2px; }
+[data-style=glass] .room { min-height:0; padding:2px 9px; border-radius:9px; font-size:12.5px; }
+[data-style=glass] .rule-note, [data-style=glass] .changed-note, [data-style=glass] .notice-note { margin-top:4px; font-size:12px; }
+[data-style=glass] .lesson .progress { bottom:8px; }
+[data-style=glass] .gap { padding:2px 11px; }
+@media (min-width:760px) {
+  [data-style=glass] .list .lesson { padding:13px 20px 14px; }
+  [data-style=glass] .list .lesson.current { padding-bottom:22px; }
+  [data-style=glass] .lesson h3 { font-size:20px; }
+}
+/* Лёгкое преломление по краю карточек пар (Chromium); в Safari — то же стекло без искажения. */
+[data-style=glass] .list .lesson[data-glass-optics] { backdrop-filter:blur(9px) var(--g-optics) saturate(1.45); }

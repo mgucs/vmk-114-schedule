@@ -1,7 +1,7 @@
 import {useEffect, useRef} from 'react';
 
 const NS = 'http://www.w3.org/2000/svg';
-const surfaces = '.shell > .drag-tabs, .date-navigation, .header-actions';
+const surfaces = '.shell > .drag-tabs, .date-navigation, .header-actions, .list .lesson';
 
 // A neutral centre and curved displacement at the rounded edge. Drawn once per
 // size at half resolution, never on scroll. Only the backdrop is displaced.

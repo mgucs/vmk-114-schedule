@@ -33,7 +33,7 @@ try {
   await page.goto(base);await page.locator('.lesson').first().waitFor();
   await page.evaluate(()=>document.fonts.ready);
   await page.waitForTimeout(500);
-  await page.waitForFunction(()=>document.querySelectorAll('[data-glass-optics]').length===3);
+  await page.waitForFunction(()=>document.querySelectorAll('[data-glass-optics]').length>=3);
   assert.match(await page.locator('.glass-campus').getAttribute('style'),/vmk-schedule\/brand\/msu-night.webp/);
   assert.equal((await page.request.get(base+'brand/msu-night.webp')).status(),200);
   const nav=page.getByRole('navigation',{name:'Разделы'});
@@ -82,12 +82,12 @@ try {
   await page.getByRole('button',{name:/^Стекло:/}).click();
   await page.keyboard.press('Escape');
   await page.getByRole('dialog').waitFor({state:'hidden'});
-  await page.waitForFunction(()=>document.querySelectorAll('[data-glass-optics]').length===3);
+  await page.waitForFunction(()=>document.querySelectorAll('[data-glass-optics]').length>=3);
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.waitForFunction(()=>document.querySelectorAll('.glass-optics filter').length===0);
   assert.equal(await nav.evaluate(e=>getComputedStyle(e).animationName),'none');
   await page.emulateMedia({reducedMotion:'no-preference'});
-  await page.waitForFunction(()=>document.querySelectorAll('[data-glass-optics]').length===3);
+  await page.waitForFunction(()=>document.querySelectorAll('[data-glass-optics]').length>=3);
   await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
   await page.waitForFunction(()=>document.querySelectorAll('.glass-optics filter').length===0);
   assert.equal(await page.locator('.wallpaper').isVisible(),false);
