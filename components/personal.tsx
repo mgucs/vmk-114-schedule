@@ -19,13 +19,13 @@ export const THEMES = [
 // Layout and type, independent of the colour theme.
 export const STYLES = [
   ['atelier','Журнал','Антиква и тонкие линейки'],
+  ['glass','Стекло','Жидкое стекло, как в iOS 26'],
   ['minimal','Минимал','Время, предмет, аудитория'],
   ['timeline','Лента','Шкала времени и карточки'],
-  ['cards','Карточки','Как в приложениях iOS'],
-  ['glass','Стекло','Жидкое стекло, как в iOS 26'],
+  ['cards','Карточки','Как в приложениях iOS'],
 ] as const;
 const themeKey='vmk114-theme',styleKey='vmk114-style';
-const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'atelier';}catch{return 'atelier';}};
+const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'glass';}catch{return 'glass';}};
 // Older versions stored plain "light"/"dark".
 const legacy=(value:string|null)=>value==='light'?'paper':value==='dark'?'night':value;
 export function applyTheme(choice:string,style=loadStyle()){

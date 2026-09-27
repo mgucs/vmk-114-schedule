@@ -295,9 +295,8 @@ export class MapScene {
 
   // Room numbers are printed on the floor of each room, like on the paper plan: along the room's
   // long side, sized to fill it, with a contrasting outline. They lie in the floor plane, so in 3D
-  // they turn and tilt with the model. They never get smaller on screen than a readable size.
-  // Zoomed out, numbers that would run into each other gather into one capsule with their range
-  // («701–711»), like a sign in a corridor; zooming in splits it back into single numbers.
+  // they turn and tilt with the model. Every room keeps its number at any zoom: zoomed out the
+  // numbers shrink with their rooms instead of hiding. Toilets, food and stairs show where there is room.
   private labelKey = '';
   private drawLabels() {
     const ctx = this.labelContext, w = this.host.clientWidth, h = this.host.clientHeight;
@@ -323,7 +322,7 @@ export class MapScene {
     const halo = dark ? 'rgba(9,13,30,.94)' : 'rgba(255,255,255,.96)';
     const accent = `#${this.colors.now.toString(16).padStart(6,'0')}`;
     const family = getComputedStyle(this.host).fontFamily || 'system-ui, sans-serif';
-    const MIN = 11.5, MAX = 30, CHIP = 11.5;
+    const MIN = 11.5, MAX = 30, ROOM_MIN = 6;
     type P = {x:number; y:number};
     type Rect = {x0:number; y0:number; x1:number; y1:number};
     const rectOf = (pts:P[]):Rect => ({x0:Math.min(...pts.map(p=>p.x)), y0:Math.min(...pts.map(p=>p.y)), x1:Math.max(...pts.map(p=>p.x)), y1:Math.max(...pts.map(p=>p.y))});
@@ -335,9 +334,9 @@ export class MapScene {
     const free = (r:Rect) => !blocked.some(b => overlap(b, r));
     const labels = [
       // A capital letter suffix: in this font a small «б» is easy to misread as «6» (733б → 7336).
-      ...f.rooms.map(r=>({text:r.id.replace(/(\d)([а-я])$/, (_, d:string, l:string)=>d+l.toUpperCase()),x:r.x,y:r.y,box:r.box as Box|undefined,kind:'room',priority:(r.box[2]-r.box[0])*(r.box[3]-r.box[1]),side:sideOf(f, r) as Side|null})),
-      ...f.places.filter(p=>p.kind==='wc'||p.kind==='food'||(p.kind==='place'&&p.box)).map(p=>({text:p.kind==='wc'?'WC':p.name.replace(/\s*\(.*\)/,'').replace(/^Столовая /,''),x:p.x,y:p.y,box:p.box,kind:'place',priority:1200,side:null as Side|null})),
-      ...f.stairs.map(s=>({text:`Л ${s.id}`,x:s.x,y:s.y,box:s.box,kind:'stair',priority:600,side:null as Side|null})),
+      ...f.rooms.map(r=>({text:r.id.replace(/(\d)([а-я])$/, (_, d:string, l:string)=>d+l.toUpperCase()),x:r.x,y:r.y,box:r.box as Box|undefined,kind:'room',priority:(r.box[2]-r.box[0])*(r.box[3]-r.box[1])})),
+      ...f.places.filter(p=>p.kind==='wc'||p.kind==='food'||(p.kind==='place'&&p.box)).map(p=>({text:p.kind==='wc'?'WC':p.name.replace(/\s*\(.*\)/,'').replace(/^Столовая /,''),x:p.x,y:p.y,box:p.box,kind:'place',priority:1200})),
+      ...f.stairs.map(s=>({text:`Л ${s.id}`,x:s.x,y:s.y,box:s.box,kind:'stair',priority:600})),
     ].map(item=>({...item, important:selected.has(`${item.x}:${item.y}`)}))
       .sort((a,b)=>Number(b.important)-Number(a.important) || b.priority-a.priority);
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
@@ -368,7 +367,7 @@ export class MapScene {
       const perPx = ctx.measureText(item.text).width/100;            // text width per 1px of font size
       // Size in floor units that fills the room, then clamped to the readable range on screen.
       const fit = Math.min(S*.6, L*.84/perPx) * (item.kind==='room' ? 1 : .8);
-      const size = THREE.MathUtils.clamp(fit*ld, MIN, MAX) + (item.important ? 2 : 0) - (item.kind==='stair' ? 1.5 : 0);
+      const size = THREE.MathUtils.clamp(fit*ld, item.kind==='room' && !item.important ? ROOM_MIN : MIN, MAX) + (item.important ? 2 : 0) - (item.kind==='stair' ? 1.5 : 0);
       const tw = perPx*size*lb/ld, th = size;                         // on-screen extents along B and D
       const ub = {x:B.x/lb, y:B.y/lb}, ud = {x:D.x/ld, y:D.y/ld};
       const corners = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>({x:c.x+ub.x*tw/2*i+ud.x*th/2*j*1.1, y:c.y+ub.y*tw/2*i+ud.y*th/2*j*1.1}));
@@ -377,105 +376,18 @@ export class MapScene {
         // Draw in text space: 1 unit = 1 screen px across the letters, stretched along the baseline by perspective.
         ctx.setTransform(ratio*ub.x*lb/ld, ratio*ub.y*lb/ld, ratio*ud.x, ratio*ud.y, ratio*c.x, ratio*c.y);
         ctx.font = `${weight} ${size}px ${family}`;
-        ctx.lineWidth = Math.max(3, size*.3); ctx.strokeStyle = halo;
+        ctx.lineWidth = Math.max(1.5, size*.3); ctx.strokeStyle = halo;
         ctx.strokeText(item.text, 0, size*.04);
         ctx.fillStyle = item.important ? accent : item.kind==='room' ? ink : soft;
         ctx.fillText(item.text, 0, size*.04);
       }};
     };
-    // A capsule with the range of numbers it stands for.
-    const chipFont = `750 ${CHIP}px ${family}`;
-    // Kept inside the view: a capsule at the edge moves in rather than being cut off.
-    const chipRect = (text:string, c:P):Rect => {
-      ctx.font = chipFont;
-      const bw = ctx.measureText(text).width+16, bh = CHIP+10;
-      const x = THREE.MathUtils.clamp(c.x, bw/2+4, Math.max(bw/2+4, w-bw/2-4)), y = THREE.MathUtils.clamp(c.y, bh/2+4, Math.max(bh/2+4, h-bh/2-4));
-      return {x0:x-bw/2, y0:y-bh/2, x1:x+bw/2, y1:y+bh/2};
-    };
-    const drawChip = (text:string, r:Rect) => {
-      ctx.setTransform(ratio,0,0,ratio,0,0);
-      ctx.beginPath(); ctx.roundRect(r.x0, r.y0, r.x1-r.x0, r.y1-r.y0, (r.y1-r.y0)/2);
-      ctx.fillStyle = dark ? 'rgba(20,26,58,.9)' : 'rgba(255,255,255,.95)'; ctx.fill();
-      ctx.lineWidth = 1; ctx.strokeStyle = dark ? 'rgba(255,255,255,.2)' : 'rgba(16,19,28,.14)'; ctx.stroke();
-      ctx.font = chipFont; ctx.fillStyle = ink; ctx.fillText(text, (r.x0+r.x1)/2, (r.y0+r.y1)/2+.5);
-    };
-
     const laid = labels.map(lay).filter((l):l is Laid => !!l);
     // The chosen rooms are always printed, and nothing covers them.
     const fixed = laid.filter(l => l.item.important);
     const taken:Rect[] = fixed.map(l => l.rect);
-    // A capsule stands outside the building on its rooms' side of the corridor: above the upper row,
-    // below the lower one, left or right of a wing — so the two sides never run into each other.
-    const outside = (members:Laid[], text:string):{rect:Rect; dir:P} => {
-      const {nx, nz} = members[0].item.side!, tx = -nz, tz = nx;
-      let out = -Infinity, along = 0;
-      for (const m of members) {
-        const b = m.item.box ?? [m.item.x, m.item.y, m.item.x, m.item.y];
-        for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]) out = Math.max(out, x*nx+z*nz);
-        along += ((b[0]+b[2])/2)*tx+((b[1]+b[3])/2)*tz;
-      }
-      along /= members.length;
-      const ax = tx*along+nx*out, az = tz*along+nz*out, a = project(ax, az), e = project(ax+nx*20, az+nz*20);
-      const len = Math.hypot(e.x-a.x, e.y-a.y) || 1, sx = (e.x-a.x)/len, sy = (e.y-a.y)/len;
-      ctx.font = chipFont;
-      const off = Math.abs(sx)*(ctx.measureText(text).width+16)/2 + Math.abs(sy)*(CHIP+10)/2 + 5;
-      return {rect:chipRect(text, {x:a.x+sx*off, y:a.y+sy*off}), dir:{x:sx, y:sy}};
-    };
-    type Group = {members:Laid[]; key:string; rect:Rect; text?:string; dir?:P};
-    const chip = (members:Laid[]):Group => {
-      const text = members.length === 1 ? members[0].item.text : range(members.map(m => m.item.text));
-      return {members, key:members[0].item.side!.key, text, ...outside(members, text)};
-    };
-    // Numbers of one side that would overlap gather into one capsule; the capsule may meet others in turn.
-    // Across the corridor nothing is merged: a number inside its room that meets the other side steps out to its own.
-    const groups:Group[] = laid.filter(l => !l.item.important && l.item.kind==='room').map(l => ({members:[l], key:l.item.side!.key, rect:l.rect}));
-    for (let i = 0; i < groups.length; i++) {
-      for (let again = true; again;) {
-        again = false;
-        for (let k = 0; k < groups.length; k++) {
-          const a = groups[i], b = groups[k];
-          if (k === i || !overlap(a.rect, b.rect)) continue;
-          if (a.key === b.key) { groups[i] = chip([...a.members, ...b.members]); groups.splice(k, 1); if (k < i) i--; }
-          else if (!a.text) groups[i] = chip(a.members);
-          else if (!b.text) groups[k] = chip(b.members);
-          else continue;
-          again = true; break;
-        }
-      }
-    }
-    // Bigger capsules first. Where two sides meet at a corner, the smaller capsule moves further out
-    // from its rooms (or along them) to the first free place instead of disappearing.
-    groups.sort((a, b) => Number(!!b.text)-Number(!!a.text) || b.members.length-a.members.length);
-    const within = (r:Rect) => r.x0 >= 0 && r.y0 >= 0 && r.x1 <= w && r.y1 <= h;
-    const place = () => {
-      const used = [...taken], placed:{g:Group; rect:Rect}[] = [], lost:Group[] = [];
-      const clear = (r:Rect) => free(r) && !used.some(t => overlap(t, r));
-      for (const g of groups) {
-        let rect:Rect|undefined = g.rect;
-        if (!clear(rect) && g.text && g.dir) {
-          const bw = g.rect.x1-g.rect.x0, bh = g.rect.y1-g.rect.y0, n = g.dir, t = {x:-n.y, y:n.x};
-          const step = Math.abs(n.x)*(bw+4)+Math.abs(n.y)*(bh+4), side = Math.abs(t.x)*(bw/2+4)+Math.abs(t.y)*(bh/2+4);
-          const moves = [[1, 0], [2, 0], [0, 1], [0, -1], [1, 1], [1, -1], [3, 0]].map(([i, j]) => ({x:n.x*step*i+t.x*side*j, y:n.y*step*i+t.y*side*j}));
-          rect = moves.map(m => ({x0:g.rect.x0+m.x, y0:g.rect.y0+m.y, x1:g.rect.x1+m.x, y1:g.rect.y1+m.y})).find(r => clear(r) && within(r));
-        }
-        if (rect && clear(rect)) { used.push(rect); placed.push({g, rect}); } else lost.push(g);
-      }
-      return {used, placed, lost};
-    };
-    // A capsule with no free place left joins the nearest capsule of its own side, so its numbers stay on the map.
-    let layout = place();
-    for (let round = 0; round < 8; round++) {
-      const lost = layout.lost.find(g => g.text && layout.placed.some(p => p.g.key === g.key && p.g.text));
-      if (!lost) break;
-      const mid = (r:Rect) => ({x:(r.x0+r.x1)/2, y:(r.y0+r.y1)/2}), m = mid(lost.rect);
-      const near = layout.placed.filter(p => p.g.key === lost.key && p.g.text)
-        .sort((p, q) => Math.hypot(mid(p.rect).x-m.x, mid(p.rect).y-m.y)-Math.hypot(mid(q.rect).x-m.x, mid(q.rect).y-m.y))[0].g;
-      groups.splice(groups.indexOf(lost), 1); groups.splice(groups.indexOf(near), 1, chip([...near.members, ...lost.members]));
-      groups.sort((a, b) => Number(!!b.text)-Number(!!a.text) || b.members.length-a.members.length);
-      layout = place();
-    }
-    taken.splice(0, taken.length, ...layout.used);
-    for (const {g, rect} of layout.placed) if (g.text) drawChip(g.text, rect); else g.members[0].draw();
+    // Room numbers stay on their rooms at any zoom: never hidden, never moved, only smaller when far.
+    for (const l of laid) if (!l.item.important && l.item.kind==='room') { taken.push(l.rect); l.draw(); }
     // Toilets, food and stairs where there is room left.
     for (const l of laid) if (!l.item.important && l.item.kind!=='room' && free(l.rect) && !taken.some(t => overlap(t, l.rect))) { taken.push(l.rect); l.draw(); }
     for (const l of fixed) l.draw();
@@ -499,52 +411,6 @@ function disposeTree(root:THREE.Object3D) {
       (material as THREE.Material & {map?:THREE.Texture}).map?.dispose(); material.dispose();
     }
   });
-}
-
-// Which side of the corridor a room is on: the nearest long run of the corridor and the side of it,
-// with the direction pointing from the corridor to the room (in floor coordinates).
-type Side = {key:string; nx:number; nz:number};
-const sides = new WeakMap<object, Side>();
-function sideOf(f:FloorData, room:{x:number; y:number}):Side {
-  const known = sides.get(room);
-  if (known) return known;
-  let best = {d:Infinity, side:{key:'', nx:0, nz:1}};
-  f.corridors.forEach((line, li) => line.slice(1).forEach(([bx, by], si) => {
-    const [ax, ay] = line[si], dx = bx-ax, dy = by-ay, len = Math.hypot(dx, dy);
-    if (len < 150) return;   // short spurs into rooms and stairwells do not count
-    const t = THREE.MathUtils.clamp(((room.x-ax)*dx+(room.y-ay)*dy)/(len*len), 0, 1);
-    const d = Math.hypot(room.x-ax-dx*t, room.y-ay-dy*t);
-    if (d >= best.d) return;
-    const s = Math.sign(dx*(room.y-ay)-dy*(room.x-ax)) || 1;
-    best = {d, side:{key:`${li}.${si}${s > 0 ? '+' : '-'}`, nx:-dy/len*s, nz:dx/len*s}};
-  }));
-  sides.set(room, best.side);
-  return best.side;
-}
-
-// The text of a capsule: runs of numbers that go in a row. Rooms across a corridor are numbered from
-// the other end, so 607…619 and 684…696 stay two runs: «607–619 · 684–696». П-3, П-5, МЗ-1 → «П-3–5 · МЗ-1».
-// Side rooms numbered differently («64» among 6xx) are left out: they show when zoomed in.
-function range(ids:string[]) {
-  const parts = new Map<string, {pre:string; nums:number[]}>();
-  for (const id of ids) {
-    const m = id.match(/^(\D*)(\d+)/);
-    if (!m) continue;
-    const key = `${m[1]}|${m[2].length}`, part = parts.get(key) ?? {pre:m[1], nums:[]};
-    part.nums.push(Number(m[2])); parts.set(key, part);
-  }
-  const all = [...parts.values()], most = Math.max(...all.map(p => p.nums.length));
-  const runs:{pre:string; lo:number; hi:number; n:number}[] = [];
-  for (const p of all.filter(p => p.nums.length*3 >= most)) {
-    const nums = [...new Set(p.nums)].sort((a, b) => a-b);
-    for (const n of nums) {
-      const last = runs.at(-1);
-      if (last && last.pre === p.pre && n-last.hi <= 3) { last.hi = n; last.n++; } else runs.push({pre:p.pre, lo:n, hi:n, n:1});
-    }
-  }
-  const shown = [...runs].sort((a, b) => b.n-a.n).slice(0, 2).sort((a, b) => runs.indexOf(a)-runs.indexOf(b));
-  const text = shown.map(r => r.pre+r.lo+(r.hi > r.lo ? `–${r.hi}` : '')).join(' · ');
-  return runs.length > 2 ? `${text} …` : text;
 }
 
 function bounds(f:FloorData):Box {

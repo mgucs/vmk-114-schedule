@@ -56,13 +56,13 @@ export function SessionView({session, archive, lecturers = {}, subjects = [], gr
 
   if (!view) return <section className="session">
     <h1 className="session-title">Сессия</h1>
+    {compare}
     <div className="session-empty">
       <p>ВМК ещё не опубликовал расписание зимней сессии. Обычно оно появляется в конце декабря — в прошлом году 25 декабря.</p>
       <p>Приложение проверяет сайт каждые 15 минут и покажет здесь все зачёты и экзамены твоей группы, как только они появятся.</p>
       {classesEnd && <p className="session-muted">Занятия идут до {new Date(classesEnd+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric', month:'long', timeZone:'UTC'})}.</p>}
     </div>
     {planned}
-    {compare}
   </section>;
 
   const live = view===current;
