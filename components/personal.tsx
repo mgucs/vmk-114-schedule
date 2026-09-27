@@ -7,10 +7,10 @@ import {calendarFile} from '../lib/calendar.mjs';
 // name, label, scheme, swatch colours (background, lecture, now)
 export const THEMES = [
   ['snow','Снег','light',['#f6f7f9','#3b6fe0','#e5484d']], ['fog','Туман','light',['#e9edf1','#5b7896','#d9735b']],
-  ['mint','Мята','light',['#edf5f1','#2e9a74','#e0604e']], ['lavender','Лаванда','light',['#f3f1f9','#7b66d6','#df5a86']],
+  ['msu-light','МГУ день','light',['#eaf1f8','#c07a45','#2f6fd1']], ['mint','Мята','light',['#edf5f1','#2e9a74','#e0604e']], ['lavender','Лаванда','light',['#f3f1f9','#7b66d6','#df5a86']],
   ['pearl','Жемчуг','light',['#f6f3ed','#9a7738','#16151a']], ['paper','Бумага','light',['#f3efe6','#f5c518','#ff5a36']],
   ['spring','Весна','light',['#f1f5ec','#6dbb5a','#ea4f8a']], ['summer','Лето','light',['#fff6e3','#ffae1f','#ff4e2e']],
-  ['msu','МГУ','dark',['#0b1030','#d8b45c','#2a3aa8']], ['msu-classic','МГУ классика','dark',['#090d24','#e3bd55','#9aa3cf']], ['midnight','Полночь','dark',['#111120','#9f8cff','#ff7eb0']],
+  ['msu','МГУ ночь','dark',['#0b1030','#d8b45c','#2a3aa8']], ['msu-classic','МГУ классика','dark',['#090d24','#e3bd55','#9aa3cf']], ['midnight','Полночь','dark',['#111120','#9f8cff','#ff7eb0']],
   ['ocean','Океан','dark',['#0b161b','#4cc2c4','#ff8a73']], ['forest','Лес','dark',['#0e1512','#74c98f','#ffae6b']],
   ['steel','Сталь','dark',['#17181b','#7aa7ff','#ff7a7a']], ['onyx','Оникс','dark',['#0d0d0f','#c9a96e','#ece7de']],
   ['night','Ночь','dark',['#15130f','#e8b923','#ff6a48']], ['graphite','Графит','dark',['#111214','#b8f34a','#ff4f8b']],

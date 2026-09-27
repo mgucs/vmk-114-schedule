@@ -113,7 +113,7 @@ function persist(value:Saved) {
 // "МГУ" theme: photo of the Main Building behind the header and the emblem as a watermark.
 function MsuDecor() {
   return <>
-    <div className="msu-hero" aria-hidden="true" style={{backgroundImage:`url(${asset('brand/msu-main-building.jpg')})`}}/>
+    <div className="msu-hero" aria-hidden="true" style={{'--photo':`url(${asset('brand/msu-main-building.jpg')})`, '--photo-day':`url(${asset('brand/msu-day.webp')})`} as CSSProperties}/>
     <i className="msu-emblem" aria-hidden="true" style={{maskImage:`url(${asset('brand/msu-emblem.png')})`, WebkitMaskImage:`url(${asset('brand/msu-emblem.png')})`}}/>
   </>;
 }

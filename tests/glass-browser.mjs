@@ -7,7 +7,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE?pathToFileURL(process.env.PLAYWRIGHT_MODULE).href:'playwright');
 const root=path.resolve('dist'), prefix='/vmk-schedule/';
-const types={'.html':'text/html','.js':'application/javascript','.mjs':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.woff2':'font/woff2','.jpg':'image/jpeg','.png':'image/png'};
+const types={'.html':'text/html','.js':'application/javascript','.mjs':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.woff2':'font/woff2','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp'};
 const server=createServer(async(req,res)=>{
   try {
     const name=new URL(req.url,'http://localhost').pathname;
@@ -34,8 +34,8 @@ try {
   await page.evaluate(()=>document.fonts.ready);
   await page.waitForTimeout(500);
   await page.waitForFunction(()=>document.querySelectorAll('[data-glass-optics]').length===3);
-  assert.match(await page.locator('.glass-campus').getAttribute('style'),/vmk-schedule\/brand\/msu-main-building.jpg/);
-  assert.equal((await page.request.get(base+'brand/msu-main-building.jpg')).status(),200);
+  assert.match(await page.locator('.glass-campus').getAttribute('style'),/vmk-schedule\/brand\/msu-night.webp/);
+  assert.equal((await page.request.get(base+'brand/msu-night.webp')).status(),200);
   const nav=page.getByRole('navigation',{name:'Разделы'});
   const initialDay=await page.locator('.day-button[aria-pressed=true]').getAttribute('aria-label');
   const centre=async name=>{const b=await nav.getByRole('button',{name,exact:true}).boundingBox();return{x:b.x+b.width/2,y:b.y+b.height/2};};

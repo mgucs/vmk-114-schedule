@@ -29,6 +29,12 @@
   --wp-photo:.48; --wp-wash:color-mix(in srgb,var(--background) 45%,transparent);
   --g-text-shadow:0 1px 8px #00000035;
 }
+:root[data-style=glass][data-scheme=light] .glass-campus { background-image:var(--photo-day); }
+:root[data-style=glass][data-theme=msu-light] {
+  --background:#e9eff6; --card:#f8fbff; --foreground:#13233a; --muted:#dde6f0; --muted-foreground:#56687f;
+  --lecture:#bf7a47; --accent-ink:#9c5427; --lecture-soft:#f3e6da; --now:#2c74c9; --now-soft:#dbe9f7;
+  --mark-bg:#2a3aa8; --mark-fg:#ffffff; --ring:#2c74c9;
+}
 :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic]) {
   --background:#101d2c; --card:#203247; --foreground:#f4f7fc; --muted:#293c51; --muted-foreground:#b9c8d8;
   --lecture:#d8bd86; --accent-ink:#e6cea0; --lecture-soft:#343d47; --now:#a1cfed; --now-soft:#294658;
@@ -39,7 +45,7 @@
 html[data-style=glass] { background:var(--background); }
 [data-style=glass] body { background:transparent; }
 [data-style=glass] .wallpaper { display:block; position:fixed; inset:0; height:100vh; height:100lvh; z-index:-1; pointer-events:none; overflow:hidden; background:var(--background); }
-[data-style=glass] .glass-campus { position:absolute; inset:0; background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(.3); }
+[data-style=glass] .glass-campus { position:absolute; inset:0; background-image:var(--photo-night); background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(.3); }
 [data-style=glass] .glass-atmosphere { position:absolute; inset:0; background:linear-gradient(180deg,var(--background) 0%,var(--wp-wash) 32%,transparent 65%,var(--background) 100%); }
 [data-style=glass] .glass-horizon { position:absolute; inset:0; background:radial-gradient(ellipse at 0% 40%,color-mix(in srgb,var(--lecture) 10%,transparent),transparent 60%),linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--background) 45%,transparent)); }
 [data-style=glass] :is(.msu-hero,.msu-emblem) { display:none; }
@@ -308,6 +314,16 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] .vmk-link { font-size:12px; padding-inline:6px; }
   [data-style=glass] .list .lesson { padding-inline:16px; }
   [data-style=glass] .day-button span { font-size:10px; }
+}
+
+/* МГУ на большом экране: главное здание целиком, днём или ночью, без дымки. Мягкая тень только
+   под колонкой расписания, чтобы подписи читались; на телефоне фото остаётся приглушённым, как было. */
+@media (min-width:900px) {
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-campus { opacity:1; filter:none; background-position:50% 62%; }
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-atmosphere {
+    background:linear-gradient(90deg, transparent calc(50% - 520px), color-mix(in srgb,var(--background) 42%,transparent) calc(50% - 330px), color-mix(in srgb,var(--background) 42%,transparent) calc(50% + 330px), transparent calc(50% + 520px)); }
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-horizon { display:none; }
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.heading,.topbar,.day-title,.map-credit,.term-sub) { text-shadow:0 1px 12px color-mix(in srgb,var(--background) 80%,transparent); }
 }
 
 /* Без прозрачности — сплошные панели того же рисунка. */
