@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import {WALLPAPER} from './wallpaper';
 
 // An isolated miniature of the actual app CSS, so previews cannot inherit a
 // different layout from the currently selected style. No scripts or interaction.
@@ -17,7 +18,7 @@ export function StylePreview({name}:{name:string}) {
         .heading{margin:12px 0!important;display:block!important}.heading h1{font-size:29px!important}.list{gap:10px!important}.lesson{cursor:default!important}
         .preview-brand{font-size:12px;font-weight:650;letter-spacing:.02em;opacity:.7}.preview-date{font-size:11px;color:var(--muted-foreground)}
         .lesson h3{font-size:18px!important}.lesson-time{font-size:11px!important}.room{font-size:13px!important}.preview-person{font-size:11px;opacity:.7;margin-top:7px}
-      </style></head><body><div class="shell"><div class="preview-brand">114 группа · ВМК</div><div class="heading"><h1>Понедельник</h1><div class="preview-date">28 сентября · 2 пары</div></div><div class="list comfy">
+      </style></head><body>${name==='glass'?`<div class="wallpaper" aria-hidden="true">${WALLPAPER}</div>`:''}<div class="shell"><div class="preview-brand">114 группа · ВМК</div><div class="heading"><h1>Понедельник</h1><div class="preview-date">28 сентября · 2 пары</div></div><div class="list comfy">
         <article class="lesson lecture"><div class="lesson-time"><span class="range">10:30 – 12:05</span><span class="tag">Лекция</span></div><h3>Математический анализ</h3><div class="preview-person">Лектор · <span class="room">П-14</span></div></article>
         <article class="lesson"><div class="lesson-time"><span class="range">12:50 – 14:25</span></div><h3>Алгебра и геометрия</h3><div class="preview-person">Семинар · <span class="room">624</span></div></article>
       </div></div></body></html>`);

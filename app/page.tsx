@@ -1,4 +1,4 @@
-import React, {Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type TouchEvent} from 'react';
+import React, {Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type CSSProperties} from 'react';
 import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
@@ -12,6 +12,8 @@ import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
 import {Onboarding, needsOnboarding} from '@/components/onboarding';
 import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
+import {DayPager} from '@/components/day-pager';
+import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
 // three.js is loaded only when the map is opened.
@@ -148,7 +150,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
     <h3>{cleanTitle(lesson)}</h3>
       {rows.map((row,i)=><div className="teacher-row" key={i}><span>{row.teacher ? <TeacherName name={row.teacher}/> : null}</span>{(row.room || (i===0 && lesson.room)) && <Room room={row.room || lesson.room} note={row.note}/>}</div>)}
       {!rows.length && lesson.room && <div className="teacher-row"><span/><Room room={lesson.room}/></div>}
-      {now && <div className="progress" aria-hidden="true"><i style={{width:`${Math.round(progress*100)}%`}}/></div>}
+      {now && <div className="progress" aria-hidden="true"><i style={{'--p':progress.toFixed(3)} as CSSProperties}/></div>}
       {change && <p className="changed-note">Изменено: {(change.details?.length?change.details:['обновлена запись в PDF']).join('; ')}</p>}
       {missingTeacher && <p className="rule-note subgroup-warning">Преподаватель подгруппы изменился — показаны все варианты.</p>}
       {note && <p className="rule-note">{note}</p>}
@@ -166,12 +168,12 @@ export default function Home() {
   const current = useRef(saved);
   const [today,setToday] = useState(isoMoscow), [clock,setClock] = useState(clockMoscow);
   // null = follow the current time (today, or the next teaching day once today's classes are over).
-  const [pinned,setPinned] = useState<string|null>(null), [slide,setSlide] = useState('');
+  const [pinned,setPinned] = useState<string|null>(null);
   const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'map'>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
   const [changesOpen,setChangesOpen] = useState(false), [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
-  const checking = useRef(false), lastAttempt = useRef(0), touch = useRef<{x:number;y:number}|null>(null);
+  const checking = useRef(false), lastAttempt = useRef(0), scheduleArea = useRef<HTMLElement>(null);
   const [group,setGroupState] = useState(loadGroup), [groupsOpen,setGroupsOpen] = useState(false);
   const table = saved.snapshot.schedule;
   const faculty = readFaculty(saved.snapshot);
@@ -226,18 +228,15 @@ export default function Home() {
     : saved.snapshot.status==='error' ? 'Не удалось проверить ВМК' : checkedAgo ? `Сверено ${checkedAgo}` : status.title;
   const tone = !online ? 'offline' : syncError ? 'warn' : status.tone;
 
-  function go(date:string,direction=0) {
-    setSlide(direction>0?'from-right':direction<0?'from-left':'');
-    setPinned(date===focus?null:date);
-  }
-  function shift(direction:number) { go(addDays(selected,direction*(view==='week'?7:1)),direction); }
-  function onTouchStart(event:TouchEvent) { const t=event.touches[0]; touch.current={x:t.clientX,y:t.clientY}; }
-  function onTouchEnd(event:TouchEvent) {
-    const start=touch.current, t=event.changedTouches[0]; touch.current=null;
-    if (!start) return;
-    const dx=t.clientX-start.x, dy=t.clientY-start.y;
-    if (Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5) shift(dx<0?1:-1);
-  }
+  function go(date:string) { setPinned(date===focus?null:date); }
+  // From the latest pinned day, so two quick swipes move two days even before a re-render.
+  function shift(direction:number) { setPinned(p=>{ const next=addDays(p??focus,direction*(view==='week'?7:1)); return next===focus?null:next; }); }
+  // The week strip slides in from the side the new week lies on.
+  const stripFrom = useRef({monday, side:0});
+  if (stripFrom.current.monday!==monday) stripFrom.current = {monday, side:monday>stripFrom.current.monday?1:-1};
+  // Each move of the chosen-day lens restarts its squish (two identical animations, alternating).
+  const lensMoves = useRef({selected, n:0});
+  if (lensMoves.current.selected!==selected) lensMoves.current = {selected, n:lensMoves.current.n+1};
 
   async function savePdf(hash:string) {
     if (!('caches' in window)) throw Error('Сохранение PDF недоступно в этом браузере.');
@@ -325,7 +324,7 @@ export default function Home() {
   },[]);
   // The new section slides in from the side it lies on in the tab bar.
   const [paneDir,setPaneDir] = useState('');
-  function switchTab(next:Section){if(next===tab)return;setPaneDir(sectionIndex(next)>sectionIndex(tab)?'right':'left');setTab(next);}
+  function switchTab(next:Section){if(next===tab)return;stripFrom.current={monday,side:0};setPaneDir(sectionIndex(next)>sectionIndex(tab)?'right':'left');setTab(next);}
   const closePdf = React.useCallback(() => setPdfOpen(false), []);
   // The class before this one tells where the walk starts.
   function openRoom(room:string, date=today, start='') {
@@ -344,6 +343,11 @@ export default function Home() {
     return {task,editing,open:()=>homework.setEditing(editing?'':id),
       editor:editing?<HomeworkEditor task={draft} error={homework.error} onSave={homework.save} onToggle={()=>homework.toggle(id)} onClose={()=>homework.setEditing('')}/>:null};
   }
+  // The pager shows "day:<date>" or "week:<monday>".
+  const pageId = view==='day' ? `day:${selected}` : `week:${monday}`;
+  const pageDate = (id:string) => id.slice(id.indexOf(':')+1);
+  const renderPage = (id:string) => id.startsWith('day:') ? renderDay(pageDate(id)) : Array.from({length:7},(_,i)=>renderDay(addDays(pageDate(id),i),true));
+  const neighbourPage = (id:string,d:number) => id.startsWith('day:') ? `day:${addDays(pageDate(id),d)}` : `week:${addDays(pageDate(id),7*d)}`;
   function renderDay(date:string,weekly=false) {
     const list=lessonsOn(data,date) as Lesson[];
     const kind=dayKind(faculty.term,date);
@@ -369,7 +373,7 @@ export default function Home() {
     </section>;
   }
 
-  return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><div className="shell" data-pane={paneDir}>
+  return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><Wallpaper/><div className="shell" data-pane={paneDir}>
     <MsuDecor/>
     <header className="topbar">
       <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
@@ -382,7 +386,7 @@ export default function Home() {
 
     {ongoing && <div className="now-bar" role="status" aria-label={`Идёт пара, до конца ${duration(ongoingLeft)}`}>
       <b>ещё {duration(ongoingLeft)}</b><span>{cleanTitle(ongoing)}{roomFor(ongoing,subgroups.selected) ? ` · ${roomFor(ongoing,subgroups.selected)}` : ''}</span><small>до {ongoing.end}</small>
-      <i style={{width:`${Math.round((minutes(clock)-minutes(ongoing.start))/(minutes(ongoing.end)-minutes(ongoing.start))*100)}%`}}/>
+      <i style={{'--p':((minutes(clock)-minutes(ongoing.start))/(minutes(ongoing.end)-minutes(ongoing.start))).toFixed(3)} as CSSProperties}/>
     </div>}
 
     <SectionTabs value={tab} onChange={switchTab}/>
@@ -404,7 +408,7 @@ export default function Home() {
           {view==='day' && near && <span className="e-rel">{near}</span>}
           {parity!=null && <span className="e-week">{parity?'нечётная':'чётная'} неделя</span>}
           {view==='day' && <span className="count">{lessonCount(selectedLessons.length)}{dayStart && <span className="day-end"> · {dayStart}–{dayEnd}</span>}</span>}
-          {pinned!==null && <button className="text-button" onClick={()=>go(focus,focus>selected?1:-1)}>{focus===today?'Сегодня':'К ближайшим'}</button>}
+          {pinned!==null && <button className="text-button" onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>}
           <button className={`status ${tone}`} onClick={()=>setStatusOpen(true)} aria-label={`Статус проверки: ${statusText}`}>
             <span className="status-icon">{!online?<WifiOff size={12}/>:busy?<RefreshCw size={12} className="spin"/>:<span className="status-dot"/>}</span>
             <span aria-live="polite">{statusText}</span>
@@ -416,11 +420,14 @@ export default function Home() {
 
     <nav className="date-navigation" aria-label="Выбрать день">
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
-      <div className="days">{week.map((date,i)=><button key={date} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date,date>selected?1:date<selected?-1:0);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}</div>
+      <div className="days" key={monday} data-from={stripFrom.current.side>0?'right':stripFrom.current.side<0?'left':undefined} style={{'--day':weekday(selected)} as CSSProperties}>
+        {view==='day' && <i className={`day-lens ${selected===today?'today':''}`} aria-hidden="true" data-squish={lensMoves.current.n ? lensMoves.current.n%2 : undefined}/>}
+        {week.map((date,i)=><button key={date} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}
+      </div>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>
 
-    <main onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <main ref={scheduleArea}>
       {freshNotices.length>0 && <section className="notices" aria-label="Объявления ВМК">
         <div className="notices-head"><strong>Объявление ВМК</strong><button className="dismiss-message" aria-label="Прочитано" onClick={dismissNotices}><X size={15}/></button></div>
         {freshNotices.map(n=><p key={n}>{n}</p>)}
@@ -431,7 +438,7 @@ export default function Home() {
         <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
       </section>}
       {message && <div className="message" role="status"><span>{message}{groupHistory.length>0 && message!=='Изменений нет' && <button onClick={()=>setChangesOpen(true)}>Подробнее</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
-      <div key={selected+view} className={`slide ${slide}`}>{view==='day'?renderDay(selected):week.map(date=>renderDay(date,true))}</div>
+      <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} surface={scheduleArea}/>
     </main>
 
     <footer className="footer">

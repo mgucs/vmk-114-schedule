@@ -45,7 +45,7 @@ function PointChip({label, point, onClear}:{label:string; point:Point|null; onCl
 const area = (p:Point) => p.box ? (p.box[2]-p.box[0])*(p.box[3]-p.box[1]) : 1e9;
 
 export function CampusMap({target, fromHint, children}:{target:string|null; fromHint:string|null; children?:ReactNode}) {
-  const [floor, setFloor] = useState(6), [mode, setMode] = useState<Mode>('3d');
+  const [floor, setFloor] = useState(6), [mode, setMode] = useState<Mode>('schema');
   const [query, setQuery] = useState(''), [selected, setSelected] = useState<string|null>(null);
   const [fromKey, setFrom] = useState<string|null>(null), [toKey, setTo] = useState<string|null>(null), [special, setSpecial] = useState<Route|null>(null);
   const results = useMemo(() => search(query) as Point[], [query]);

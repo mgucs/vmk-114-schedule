@@ -43,7 +43,9 @@ PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium no
 | `components/teacher.tsx`, `components/onboarding.tsx` | карточка преподавателя, первый вход |
 | `lib/search.mjs`, `components/search.tsx` | поиск по всем группам: преподаватель, предмет, аудитория, группа |
 | `lib/calendar.mjs` | экспорт пар группы в `.ics` для календаря телефона |
-| `app/globals.css` | цвета тем и стили оформления (`data-style`: журнал, минимал, лента, карточки) |
+| `app/globals.css` | цвета тем и стили оформления (`data-style`: журнал, минимал, лента, карточки, стекло) |
+| `components/day-pager.tsx` | дни листаются пальцем: соседний день въезжает вслед за жестом |
+| `components/wallpaper.tsx` | заставка стиля «Стекло»: векторные ленты света в цветах темы |
 | `components/campus-map.tsx`, `components/map-scene.ts` | карта корпуса (three.js) |
 | `tools/build_map.py` | разметка кабинетов по планам этажей из `tools/floor-plans.pdf` |
 | `tools/build-map-models.mjs` | объёмные модели этажей из разметки (см. `tools/map-models.md`) |

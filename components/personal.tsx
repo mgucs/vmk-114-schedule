@@ -22,7 +22,7 @@ export const STYLES = [
   ['minimal','Минимал','Время, предмет, аудитория'],
   ['timeline','Лента','Шкала времени и карточки'],
   ['cards','Карточки','Как в приложениях iOS'],
-  ['glass','Стекло','Матовые панели и живой фон'],
+  ['glass','Стекло','Жидкое стекло, как в iOS 26'],
 ] as const;
 const themeKey='vmk114-theme',styleKey='vmk114-style';
 const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'atelier';}catch{return 'atelier';}};
@@ -48,7 +48,10 @@ export function useStyleChoice() {
   return [style,pickStyle] as const;
 }
 export function StylePicker({value,onChange}:{value:string;onChange:(name:string)=>void}) {
-  return <div className="style-grid style-gallery">{STYLES.map(([name,label,hint])=><button key={name} aria-label={`${label}: ${hint}`} aria-pressed={value===name} onClick={()=>onChange(name)}>
+  // The chosen style is in view when the list opens.
+  const list=useRef<HTMLDivElement>(null);
+  useEffect(()=>{const el=list.current,on=el?.querySelector<HTMLElement>('[aria-pressed=true]');if(el&&on)el.scrollLeft=on.offsetLeft-(el.clientWidth-on.offsetWidth)/2;},[]);
+  return <div className="style-grid style-gallery" ref={list}>{STYLES.map(([name,label,hint])=><button key={name} aria-label={`${label}: ${hint}`} aria-pressed={value===name} onClick={()=>onChange(name)}>
     <StylePreview name={name}/><span className="style-choice-title"><strong>{label}</strong><span className="style-check" aria-hidden="true">{value===name&&<Check size={12}/>}</span></span><small>{hint}</small>
   </button>)}</div>;
 }
@@ -66,11 +69,13 @@ export function ThemeButton() {
   function pick(name:string){setChoice(name);try{localStorage.setItem(themeKey,name);}catch{}}
   return <>
     <button className="icon-button" aria-label="Оформление" title="Оформление" onClick={()=>setOpen(true)}><Palette size={18}/></button>
-    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>Оформление</DialogTitle><DialogDescription>Сохраняется на этом устройстве.</DialogDescription>
+    {/* The title, the switch and the close button stay in place; only the choices scroll. */}
+    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog settings-dialog"><DialogTitle>Оформление</DialogTitle><DialogDescription>Сохраняется на этом устройстве.</DialogDescription>
       <div className="segmented" role="tablist" aria-label="Что настраивать">
         <button role="tab" aria-selected={section==='style'} onClick={()=>setSection('style')}>Стиль</button>
         <button role="tab" aria-selected={section==='theme'} onClick={()=>setSection('theme')}>Тема</button>
       </div>
+      <div className="settings-scroll">
       {section==='style' ? <StylePicker value={style} onChange={pickStyle}/>
       : (['light','dark'] as const).map(scheme=><div key={scheme}>
         <h4 className="theme-section">{scheme==='light'?'Светлые':'Тёмные'}</h4>
@@ -80,6 +85,7 @@ export function ThemeButton() {
             <span className="swatch" style={{background:colors[0]}}><i style={{background:colors[1]}}/><i style={{background:colors[2]}}/></span>{label}</button>)}
         </div>
       </div>)}
+      </div>
     </DialogContent></Dialog>
   </>;
 }

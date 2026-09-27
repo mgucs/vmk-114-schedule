@@ -12,6 +12,9 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
   const [position,setPosition]=useState<number|null>(null),[stretch,setStretch]=useState(1);
   const gesture=useRef<{id:number;x:number;y:number;dragged:boolean;lastX:number;lastT:number;live:number}|null>(null);
   const suppressClick=useRef(false);
+  // Each move of the lens restarts its squish (two identical animations, alternating).
+  const moves=useRef({index,n:0});
+  if(moves.current.index!==index)moves.current={index,n:moves.current.n+1};
   const locate=(e:PointerEvent<HTMLElement>)=>{
     const buttons=[...e.currentTarget.querySelectorAll('button')];
     const first=buttons[0].getBoundingClientRect(),last=buttons.at(-1)!.getBoundingClientRect();
@@ -39,7 +42,7 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
     onPointerUp={e=>end(e)} onPointerCancel={e=>end(e,true)} onLostPointerCapture={e=>{if(e.target===e.currentTarget&&gesture.current?.id===e.pointerId){gesture.current=null;setPosition(null);setStretch(1);}}}
     onClickCapture={e=>{if(suppressClick.current){e.preventDefault();e.stopPropagation();suppressClick.current=false;}}}
     onKeyDown={e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?3:(index+(e.key==='ArrowRight'?1:3))%4;onChange(items[n][0]);e.currentTarget.querySelectorAll('button')[n].focus();}}>
-    <span className="tab-lens" aria-hidden="true"/>
+    <span className="tab-lens" aria-hidden="true" data-squish={moves.current.n&&position===null?moves.current.n%2:undefined}/>
     {items.map(([name,label,Icon],i)=><button key={name} aria-pressed={value===name} data-hovered={position!==null&&Math.round(position)===i||undefined} onClick={()=>onChange(name)}><Icon/><span>{label}</span></button>)}
   </nav>;
 }
