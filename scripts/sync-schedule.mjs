@@ -1,4 +1,4 @@
-import {appendFile, readFile, writeFile} from 'node:fs/promises';
+import {appendFile, copyFile, mkdir, readFile, writeFile} from 'node:fs/promises';
 import * as pdfjs from '../public/vendor/pdf.mjs';
 import {parseAll} from '../public/parser.mjs';
 import {checkSource, download} from './source-check.mjs';
@@ -10,6 +10,13 @@ const previous = JSON.parse(await readFile(new URL('source.json',root),'utf8'));
 previous.schedule ||= JSON.parse(await readFile(new URL('initial.json',root),'utf8'));
 const {pdf, snapshot} = await checkSource({previous, parse:bytes => parseAll(pdfjs,bytes)});
 if (pdf) {
+  // The replaced PDF is kept in public/archive, and the update in the history links to it.
+  const entry = snapshot.history[0];
+  if (previous.hash && previous.hash !== snapshot.hash && entry?.pdfChanged && entry.detectedAt === snapshot.attemptedAt) {
+    const name = `archive/schedule-${previous.date || 'unknown'}-${previous.hash.slice(0,8)}.pdf`;
+    try { await mkdir(new URL('archive/',root),{recursive:true}); await copyFile(new URL('latest.pdf',root), new URL(name,root)); entry.previousPdf = name; }
+    catch (error) { console.log('Не удалось сохранить прошлый PDF:', error instanceof Error ? error.message : error); }
+  }
   await writeFile(new URL('latest.pdf',root),pdf);
   await writeFile(new URL('initial.json',root),JSON.stringify(snapshot.schedule,null,2)+'\n');
 }

@@ -1,5 +1,5 @@
 import React, {Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type CSSProperties} from 'react';
-import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
+import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
 import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,type Task} from '@/components/personal';
@@ -12,6 +12,7 @@ import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
 import {Onboarding, needsOnboarding} from '@/components/onboarding';
 import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
+import {TermStats} from '@/components/term-stats';
 import {DayPager} from '@/components/day-pager';
 import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
@@ -23,7 +24,7 @@ import seed from '@/public/source.json';
 type Lesson = {id:string; day:number; start:string; end:string; title:string; detail:string; room:string; type:string; raw:string; rule:{from?:string; dates?:string[]}|null};
 type Schedule = {group:number; year:number; page:number; lessons:Lesson[]; sourceDate:string; sourceUrl:string; hash:string; savedAt:string};
 type Table = {year:number; groups:Record<string,{page:number; lessons:Lesson[]}>; sourceDate:string; sourceUrl:string; hash:string; savedAt:string};
-type HistoryEntry = {date:string; previousDate:string|null; detectedAt:string; pdfChanged:boolean; changes:Record<string,Change[]>};
+type HistoryEntry = {date:string; previousDate:string|null; detectedAt:string; pdfChanged:boolean; changes:Record<string,Change[]>; previousPdf?:string};
 type Contacts = {room:string; phone:string; head:{name:string; email:string}|null; inspector:{name:string; email:string}|null};
 type Faculty = {term?:{start:string; end:string; odd:boolean}[]; notices?:string[]; contacts?:Contacts; session?:Session; archive?:Session[]};
 type Snapshot = {schema:number; status:string; attemptedAt:string; checkedAt:string|null; error:string|null; date:string; url:string; hash:string; schedule:Table; history:HistoryEntry[]; faculty?:Faculty};
@@ -64,6 +65,9 @@ function readFaculty(snapshot:Snapshot) {
     contacts:f.contacts && typeof f.contacts.room==='string' ? f.contacts : null, session, archive:Array.isArray(f.archive) ? f.archive.filter(valid) : []};
 }
 const noticeKey = 'vmk-notices-read';
+// detectedAt of the newest VMK update whose marks the user has hidden.
+const seenKey = 'vmk-changes-seen';
+const loadSeen = () => { try { return localStorage.getItem(seenKey) || ''; } catch { return ''; } };
 const fold = (s:string) => s.toLowerCase().replace(/ё/g,'е');
 const surnames = (detail:string) => (teacherRows(detail) as {teacher:string}[]).map(r => r.teacher.replace(/^(?:\S+\s+)*?([А-ЯЁ][а-яё]{3,})(?:\s+[А-ЯЁ].*)?$/, '$1')).filter(s => /^[А-ЯЁ][а-яё]{3,}$/.test(s));
 const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -77,14 +81,14 @@ function noticeFor(notices:string[], lesson:Lesson, date:string) {
   });
 }
 function initialState():Saved {
-  const fallback:Saved = {snapshot:seed as Snapshot, syncedAt:''};
+  const fallback = ():Saved => ({snapshot:seed as Snapshot, syncedAt:''});
   try {
     const old = JSON.parse(localStorage.getItem(storageKey)||'null');
-    if (!validSnapshot(old?.snapshot)) return fallback;
+    if (!validSnapshot(old?.snapshot)) return fallback();
     // Prefer the newer bundled version after an app update, while retaining newer offline data.
-    if (Date.parse(old.snapshot.attemptedAt) < Date.parse(seed.attemptedAt)) return fallback;
+    if (Date.parse(old.snapshot.attemptedAt) < Date.parse(seed.attemptedAt)) return fallback();
     return {snapshot:old.snapshot, syncedAt:typeof old.syncedAt==='string'?old.syncedAt:''};
-  } catch { return fallback; }
+  } catch { return fallback(); }
 }
 // Groups that share lectures form a stream; in the PDF each stream has its own page.
 function streams(table:Table) {
@@ -104,6 +108,35 @@ function describeUpdate(entry:HistoryEntry, group:string) {
   const list = entry.changes[group] || [];
   if (!list.length) return entry.pdfChanged ? `ВМК обновил PDF (от ${entry.date}) — у группы ${group} ничего не поменялось.` : `На сайте ВМК новая дата расписания (${entry.date}), сам PDF не изменился.`;
   return `ВМК обновил расписание (от ${entry.date}): `+list.slice(0,3).map(c=>`${shortDays[c.day]} ${c.start} ${c.title||''} — ${(c.details||[]).join('; ')}`).join(' · ')+(list.length>3?` и ещё ${list.length-3}`:'');
+}
+// "101–104, 108": consecutive group numbers joined into ranges.
+function groupRanges(names:string[]) {
+  const out:string[] = [];
+  for (const n of [...names].sort()) {
+    const last = out.at(-1)?.split('–'), end = last && Number(last.at(-1));
+    if (last && end === Number(n)-1) out[out.length-1] = `${last[0]}–${n}`; else out.push(n);
+  }
+  return out.join(', ');
+}
+// One VMK update for the whole course: the chosen group first, then every other group in turn.
+function UpdateEntry({entry, group, all, pdf}:{entry:HistoryEntry; group:string; all:string[]; pdf?:string}) {
+  const changed = Object.keys(entry.changes).filter(name => entry.changes[name].length).sort((a,b) => Number(b===group)-Number(a===group) || a.localeCompare(b));
+  const same = all.filter(name => !changed.includes(name));
+  return <section className="history-entry">
+    <h4>Расписание от {entry.date}{entry.previousDate && entry.previousDate!==entry.date?` (было от ${entry.previousDate})`:''}</h4>
+    <small>замечено {stamp(entry.detectedAt)}{changed.length ? ` · изменения у ${changed.length} ${plural(changed.length,['группы','групп','групп'])}` : ''}</small>
+    {!entry.pdfChanged && <p className="personal-hint">Поменялась только дата на сайте ВМК, сам PDF тот же.</p>}
+    {(entry.previousPdf || pdf) && <div className="source-links archive-links">
+      {entry.previousPdf && <a href={asset(entry.previousPdf)} target="_blank" rel="noreferrer">PDF до изменений{entry.previousDate ? ` (от ${entry.previousDate})` : ''}<ArrowUpRight size={14}/></a>}
+      {pdf && <a href={asset(pdf)} target="_blank" rel="noreferrer">PDF этой версии<ArrowUpRight size={14}/></a>}
+    </div>}
+    {changed.length>1 && <nav className="change-jump" aria-label="Перейти к группе">{changed.map(name=><a key={name} href={`#ch-${entry.detectedAt}-${name}`} className={name===group?'mine':''}>{name}</a>)}</nav>}
+    {changed.map(name=><div className={`change-group ${name===group?'mine':''}`} key={name} id={`ch-${entry.detectedAt}-${name}`}>
+      <h5>Группа {name}{name===group && <span>моя</span>}</h5>
+      {[...entry.changes[name]].sort((a,b)=>a.day-b.day||a.start.localeCompare(b.start)).map(change=><div className="change-item" key={change.id}><strong>{dayNames[change.day]}, {change.start}{change.title?` · ${change.title}`:''}</strong><ul>{(change.details||[]).map(d=><li key={d}>{d}</li>)}</ul></div>)}
+    </div>)}
+    {entry.pdfChanged && same.length>0 && <p className="personal-hint">Без изменений: {same.includes(group) ? `твоя группа ${group}, ` : ''}{groupRanges(same.filter(name=>name!==group)) || ''}</p>}
+  </section>;
 }
 function persist(value:Saved) {
   try { localStorage.setItem(storageKey,JSON.stringify(value)); }
@@ -181,9 +214,13 @@ export default function Home() {
   const groupName = String(data.group);
   const history = saved.snapshot.history;
   // Latest version of every class changed by a VMK update within the last week.
-  const recent = history.filter(h=>Date.now()-Date.parse(h.detectedAt)<RECENT).flatMap(h=>h.changes[groupName]||[]);
+  const [seen,setSeen] = useState(loadSeen);
+  // Updates of the last week that were not hidden: their classes are marked, and a banner names them.
+  const unseen = history.filter(h=>Date.now()-Date.parse(h.detectedAt)<RECENT && (!seen || Date.parse(h.detectedAt)>Date.parse(seen)));
+  const recent = unseen.flatMap(h=>h.changes[groupName]||[]);
+  function hideChanges(){const at=history[0]?.detectedAt||'';setSeen(at);try{localStorage.setItem(seenKey,at);}catch{}}
+  function showChanges(){setSeen('');try{localStorage.removeItem(seenKey);}catch{}}
   const changeFor = (id:string) => recent.find(c=>c.id===id);
-  const groupHistory = history.filter(h=>h.changes[groupName]?.length || !Object.keys(h.changes).length);
   const subgroups=useSubgroups(data.lessons,groupName);
   const homework=useHomework(groupName,(date)=>{setView('day');go(date);});
   const calendar=useCalendarExport(data,subgroups.selected);
@@ -397,6 +434,7 @@ export default function Home() {
       <TermCalendar term={faculty.term} session={isCurrent(faculty.session,data.year) ? faculty.session : null} group={groupName} today={today} academicYear={data.year}
         lastWinter={[faculty.session, ...faculty.archive].find(s=>s && s.season==='winter' && s.year===data.year-1) || null}
         classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
+      <TermStats table={table} term={faculty.term} group={groupName} today={today} clock={clock}/>
     </main> : tab==='session' ? <main className="session-main pane" key="session">
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
@@ -429,6 +467,11 @@ export default function Home() {
     </nav>
 
     <main ref={scheduleArea}>
+      {recent.length>0 && <section className="changes-banner" aria-label="Изменения расписания">
+        <div><b>ВМК изменил расписание{unseen[0] ? ` · от ${unseen[0].date}` : ''}</b>
+        <span>У группы {groupName}: {recent.length} {plural(recent.length,['изменение','изменения','изменений'])}. {[...new Set(recent.map(c=>shortDays[c.day]))].join(', ')} — отмечены в расписании.</span></div>
+        <div className="changes-banner-actions"><button onClick={()=>setChangesOpen(true)}>Что поменялось</button><button className="quiet" onClick={hideChanges}>Убрать отметки</button></div>
+      </section>}
       {freshNotices.length>0 && <section className="notices" aria-label="Объявления ВМК">
         <div className="notices-head"><strong>Объявление ВМК</strong><button className="dismiss-message" aria-label="Прочитано" onClick={dismissNotices}><X size={15}/></button></div>
         {freshNotices.map(n=><p key={n}>{n}</p>)}
@@ -438,12 +481,12 @@ export default function Home() {
         <strong>{{now:'до конца пары',before:'до первой пары',break:'до следующей пары'}[glance.kind as 'now']}</strong>
         <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
       </section>}
-      {message && <div className="message" role="status"><span>{message}{groupHistory.length>0 && message!=='Изменений нет' && <button onClick={()=>setChangesOpen(true)}>Подробнее</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
+      {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
       <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} surface={scheduleArea}/>
     </main>
 
     <footer className="footer">
-      <div className="footer-links">{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
+      <div className="footer-links">{history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения</button>}{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
     </footer>
     </>}
 
@@ -462,7 +505,8 @@ export default function Home() {
       </dl>
       {pdfError && <p className="personal-hint">{pdfError}</p>}
       <button className="save-task" onClick={()=>refresh(true)} disabled={busy || !online}><RefreshCw size={15} className={busy?'spin':''}/> {busy?'Обновляем…':'Обновить'}</button>
-      <div className="source-links"><button className="text-button" onClick={()=>{setStatusOpen(false);setChangesOpen(true);}}>История изменений</button><a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>
+      {history.length>0 && <button className="changes-button" onClick={()=>{setStatusOpen(false);setChangesOpen(true);}}><History size={17}/><span><b>Изменения расписания</b><small>последнее — от {history[0].date}, по всем группам</small></span><ChevronRight size={18}/></button>}
+      <div className="source-links"><a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>
     {pdfOpen && pdfUrl && <PdfViewer url={pdfUrl} onClose={closePdf}/>}
     {homework.dialogs}
@@ -482,13 +526,13 @@ export default function Home() {
       <div className="source-links"><a href="https://cs.msu.ru/studies/contacts" target="_blank" rel="noreferrer">Страница на сайте ВМК<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>}
     {onboarding && <Onboarding streams={streams(table)} onGroup={name=>{setGroupState(name);try{localStorage.setItem(groupKey,name);}catch{}}} onDone={()=>setOnboarding(false)}/>}
-    <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog"><DialogTitle>Изменения · группа {groupName}</DialogTitle><DialogDescription>Сервер сравнивает каждую новую версию PDF с предыдущей и записывает, что поменялось.</DialogDescription>
-      {groupHistory.length ? groupHistory.map(entry=><section className="history-entry" key={entry.detectedAt}>
-        <h4>Расписание от {entry.date}{entry.previousDate && entry.previousDate!==entry.date?` (было от ${entry.previousDate})`:''}</h4>
-        <small>замечено {stamp(entry.detectedAt)}</small>
-        {(entry.changes[groupName]||[]).length ? entry.changes[groupName].map(change=><div className="change-item" key={change.id}><strong>{dayNames[change.day]}, {change.start}{change.title?` · ${change.title}`:''}</strong><ul>{(change.details||[]).map(d=><li key={d}>{d}</li>)}</ul></div>)
-          : <p className="personal-hint">{entry.pdfChanged?'PDF обновлён, но у этой группы ничего не поменялось.':'Поменялась только дата на сайте ВМК, сам PDF тот же.'}</p>}
-      </section>) : <p className="personal-hint">С момента запуска проверки ВМК расписание не менял. Сейчас на сайте версия от {data.sourceDate}.</p>}
+    <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog wide"><DialogTitle>Изменения расписания</DialogTitle><DialogDescription>Сервер сравнивает каждую новую версию PDF с предыдущей и записывает, что поменялось у каждой группы. Твоя группа {groupName} — первой.</DialogDescription>
+      {history.length>0 && (recent.length>0
+        ? <button className="changes-button" onClick={()=>{hideChanges();setChangesOpen(false);}}><X size={17}/><span><b>Убрать отметки из расписания</b><small>карточки пар и баннер станут обычными; история останется здесь</small></span></button>
+        : seen && Date.now()-Date.parse(history[0].detectedAt)<RECENT && <button className="changes-button" onClick={showChanges}><History size={17}/><span><b>Снова отметить изменённые пары</b><small>в расписании за последнюю неделю</small></span></button>)}
+      {history.length ? history.map((entry,i)=><UpdateEntry key={entry.detectedAt} entry={entry} group={groupName} all={Object.keys(table.groups)}
+        pdf={entry.pdfChanged ? (i===0 ? 'latest.pdf' : history.slice(0,i).reverse().find(h=>h.pdfChanged)?.previousPdf) : undefined}/>)
+        : <p className="personal-hint">С момента запуска проверки ВМК расписание не менял. Сейчас на сайте версия от {data.sourceDate}.</p>}
     </DialogContent></Dialog>
     <Dialog open={groupsOpen} onOpenChange={setGroupsOpen}><DialogContent className="changes-dialog"><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК по потокам. Доступно и без интернета.</DialogDescription>
       {streams(table).map(stream=><section className="stream" key={stream.page}>

@@ -47,17 +47,21 @@ function dateRule(title,year) {
   if(bare&&Number(bare[2])>=1&&Number(bare[2])<=12)return {from:`${year}-${bare[2]}-${bare[1].padStart(2,'0')}`};
   return null;
 }
+// "Ляховенко О.И.", "Горячая И.В. П-6", "доцент Ким Галина Динховна 624".
+const TEACHER_ONLY=/^(?:(?:доцент|профессор|академик|ассистент)\s+)?[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\s+(?:[А-ЯЁ]\.\s*[А-ЯЁ]\.|[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+)(?:\s*,?\s*(?:П\s*[-–]\s*\d+|\d{2,3}(?:\s*-\s*[а-я])?))*[.,]?$/;
+// Words VMK's PDF prints with their first letters lost.
+const TYPOS=[[/(^|\s)актикум(?=\s|$)/g,'$1Практикум']];
 const ROOM=/\s+(П\s*[-–]\s*\d+|\d{2,3}(?:\s*-\s*[а-я])?(?:\/\d)?)\s*$/i;
 function lesson(day,rowId,start,end,cell,shared,year,suffix){
   const raw=cell.map(l=>l.text).join('\n');
   const titleParts=[];let split=0;
   for(const l of cell){if(titleParts.length&&(/(?:[А-ЯЁ]\.\s*){2}/.test(l.text)||/^(доцент|профессор|академик)\s/i.test(l.text)))break;titleParts.push(l.text);split++;}
-  let title=titleParts.join(' ').replace(/^\.?\s*/,'');
+  let title=TYPOS.reduce((t,[from,to])=>t.replace(from,to),titleParts.join(' ').replace(/^\.?\s*/,''));
   const range=title.match(/^(\d{1,2})[.:](\d{2})\s*[–—-]\s*(\d{1,2})[.:](\d{2})\s*/);
   if(range){start=`${range[1].padStart(2,'0')}:${range[2]}`;end=`${range[3].padStart(2,'0')}:${range[4]}`;title=title.slice(range[0].length);}
-  // "12.15 Алгебра" is a later start time (minutes > 12 cannot be a month).
-  const late=title.match(/^(\d{1,2})\.(\d{2})\s+/);
-  if(late&&Number(late[2])>12&&Number(late[1])>=8&&Number(late[1])<=20){start=`${late[1].padStart(2,'0')}:${late[2]}`;title=title.slice(late[0].length);}
+  // "12.15 Алгебра", "с 11.00 Русский язык" are a later start time (minutes 00 or > 12 cannot be a month).
+  const late=title.match(/^(?:с\s+)?(\d{1,2})\.(\d{2})\s+/i);
+  if(late&&(Number(late[2])>12||late[2]==='00')&&Number(late[1])>=8&&Number(late[1])<=20){start=`${late[1].padStart(2,'0')}:${late[2]}`;title=title.slice(late[0].length);}
   let room=title.match(ROOM)?.[1]?.replace(/\s/g,'').replace('–','-')||'';
   if(room)title=title.replace(ROOM,'');
   const detail=cell.slice(split).map(l=>l.text).join('\n');
@@ -74,7 +78,7 @@ export async function parseAll(pdfjs,data) {
   const task=pdfjs.getDocument({data:new Uint8Array(data),isEvalSupported:false,useSystemFonts:true,verbosity:0});
   const doc=await task.promise;
   try {
-    const groups={};let year=0;
+    const groups={},prevCells=new Map();let year=0;
     for(let pageNo=1;pageNo<=doc.numPages;pageNo++) {
       const page=await doc.getPage(pageNo),content=await page.getTextContent();
       const height=page.view[3],items=content.items.filter(i=>i.str?.trim()).map(i=>({str:i.str,x:i.transform[4],y:height-i.transform[5],width:i.width}));
@@ -115,7 +119,17 @@ export async function parseAll(pdfjs,data) {
               const cell=linesOf(items.filter(i=>i.x+i.width/2>left+1&&i.x+i.width/2<right-1&&i.y>a+2&&i.y<b));
               if(!cell.length)continue;
               const shared=cols.filter(c=>c.x>left&&c.x<right).length>1;
-              (groups[col.group]||={page:pageNo,lessons:[]}).lessons.push(lesson(day,start,start,end,cell,shared,year,n++?`-${n}`:''));
+              const list=(groups[col.group]||={page:pageNo,lessons:[]}).lessons;
+              // A part holding only a teacher (and a room) belongs to the class above it: VMK sometimes fills
+              // one cell as two coloured blocks, and the edge between them is not a split into odd/even weeks.
+              const prev=list.at(-1);
+              if(n&&prev?.day===day&&prev.start===start&&cell.every(l=>TEACHER_ONLY.test(l.text))){
+                const merged=[...prevCells.get(prev),...cell];prevCells.delete(prev);
+                const again=lesson(day,start,start,end,merged,shared,year,prev.id.slice(`${day}-${start}`.length));
+                list[list.length-1]=again;prevCells.set(again,merged);continue;
+              }
+              const made=lesson(day,start,start,end,cell,shared,year,n++?`-${n}`:'');
+              list.push(made);prevCells.set(made,cell);
             }
           }
         }

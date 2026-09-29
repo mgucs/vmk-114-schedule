@@ -192,7 +192,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .week-day .empty { padding:22px; border-radius:22px; }
 [data-style=glass] .week-day .empty svg { display:none; }
 [data-style=glass] .week-day .empty p { margin:0; font-size:15px; font-weight:600; }
-[data-style=glass] .notices, [data-style=glass] .message { border-radius:22px; --g-tint:linear-gradient(120deg,color-mix(in srgb,var(--warn-fg) 18%,transparent),#0000 70%); }
+[data-style=glass] .notices, [data-style=glass] .message, [data-style=glass] .changes-banner { border-radius:22px; --g-tint:linear-gradient(120deg,color-mix(in srgb,var(--warn-fg) 18%,transparent),#0000 70%); }
 [data-style=glass] .footer-links { gap:8px; margin:0 -4px; padding:4px 4px 10px; }
 [data-style=glass] .footer-links button { padding:8px 15px; border-radius:999px; color:var(--foreground); font-size:13.5px; font-weight:550; }
 
@@ -400,3 +400,8 @@ html[data-style=glass] { background:var(--background); }
 }
 /* Лёгкое преломление по краю карточек пар (Chromium); в Safari — то же стекло без искажения. */
 [data-style=glass] .list .lesson[data-glass-optics] { backdrop-filter:blur(9px) var(--g-optics) saturate(1.45); }
+/* Листание дней: пока страница едет, карточки не размывают фон заново на каждом кадре — только плотнее заливка.
+   Преломление кромок в это время тоже снято. */
+[data-style=glass] .pager[data-paging] .pager-track { will-change:transform; }
+[data-style=glass] .pager[data-paging] :is(.lesson,.gap,.empty,.list .lesson[data-glass-optics]) {
+  -webkit-backdrop-filter:none; backdrop-filter:none; --g-fill:color-mix(in srgb,var(--card) 80%,transparent); }

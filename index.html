@@ -12,9 +12,10 @@
     <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
     <script>(function(){var dark=['onyx','night','graphite','msu','winter','autumn','midnight','ocean','forest','steel','msu-classic'],t='msu';try{t=localStorage.getItem('vmk114-theme')||'msu';}catch(e){}if(t==='light')t='paper';if(t==='dark')t='night';if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'midnight':'snow';document.documentElement.dataset.theme=t;document.documentElement.dataset.scheme=dark.indexOf(t)>=0?'dark':'light';var s='glass';try{s=localStorage.getItem('vmk114-style')||s;}catch(e){}if(['atelier','minimal','timeline','cards','glass'].indexOf(s)<0)s='glass';document.documentElement.dataset.style=s;})();</script>
     <title>Расписание ВМК</title>
+    <style>html{background:#090d24;color:#c9cfe6}html[data-scheme=light]{background:#f4f2ec;color:#4a4f5c}.boot{display:grid;place-items:center;min-height:100vh;min-height:100dvh;font:600 15px/1.3 system-ui,sans-serif;letter-spacing:.02em;opacity:.7}</style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot">Расписание ВМК</div></div>
     <script type="module" src="/main.tsx"></script>
   </body>
 </html>

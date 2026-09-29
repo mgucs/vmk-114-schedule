@@ -31,6 +31,15 @@ test('real PDF: correct group, merged lectures, subgroups and date restrictions'
   assert.equal(isActive(find('5-10:30'),'2026-10-03'),false);
   assert.equal(data.lessons.some(l=>l.title.includes('государственности')),false);
 });
+test('29.09 PDF: a teacher on its own line stays with the class, later start times are times',async()=>{
+  const {groups}=await parse(await readFile(new URL('./fixtures/schedule-2909.pdf',import.meta.url)));
+  for(const [name,g] of Object.entries(groups)) for(const l of g.lessons) assert.doesNotMatch(l.title,/^[А-ЯЁ][а-яё]+ [А-ЯЁ].[А-ЯЁ].$/,`${name} ${l.id}`);
+  const sat=groups['101'].lessons.filter(l=>l.day===5&&l.start==='08:45');
+  assert.equal(sat.length,1); assert.equal(sat[0].detail,'Ляховенко О.И.'); assert.equal(sat[0].room,'П-13'); assert.deepEqual(sat[0].rule,{from:'2026-10-01'});
+  assert.equal(groups['110'].lessons.find(l=>l.id==='5-12:50').title,'Конс. Практикум на ЭВМ');
+  const russian=groups['120'].lessons.find(l=>l.id==='1-10:30');
+  assert.equal(russian.start,'11:00'); assert.equal(russian.rule,null); assert.equal(cleanTitle(russian),'Русский язык');
+});
 test('page parser follows the first-course link and reads only the bachelor date',()=>{
   assert.equal(readMetadata(html).date,'21.09.2026');
   assert.equal(readMetadata(html.replace('1_kurs_osen_2026_9.pdf','new.pdf')).url,'https://cs.msu.ru/sites/cmc/files/docs/new.pdf');
@@ -45,6 +54,8 @@ test('a successful unchanged check advances the actual check time',async()=>{
 });
 test('a changed PDF replaces an older timetable, not just its notification',async()=>{
   const old=structuredClone(seed); old.hash=old.schedule.hash='0'.repeat(64);
+  // The stored copy as the current parser reads it, so only the edited class differs.
+  old.schedule.groups=(await parse(pdf)).groups;
   lessons114(old).find(l=>l.id==='3-10:30').raw='Алгебра и геометрия\nМорозова В.А. 500';
   lessons114(old).find(l=>l.id==='3-10:30').detail='Морозова В.А. 500';
   const result=await checkSource({previous:old,fetcher,parse,now});

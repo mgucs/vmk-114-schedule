@@ -35,7 +35,7 @@ jobs:
           if ! git diff --quiet -- public/source.json public/latest.pdf public/initial.json public/people.json; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add public/source.json public/latest.pdf public/initial.json public/people.json
+            git add public/source.json public/latest.pdf public/initial.json public/people.json public/archive
             git commit -m 'Update VMK schedule source'
             git push
           fi

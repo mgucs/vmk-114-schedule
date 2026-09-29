@@ -5,7 +5,13 @@ const surfaces = '.shell > .drag-tabs, .date-navigation, .header-actions, .list 
 
 // A neutral centre and curved displacement at the rounded edge. Drawn once per
 // size at half resolution, never on scroll. Only the backdrop is displaced.
+const maps = new Map<string,string>();
 function edgeMap(width:number, height:number, radius:number) {
+  const key = `${width}:${height}:${radius}`;
+  if (!maps.has(key)) { const map = drawEdgeMap(width, height, radius); if (!map) return null; maps.set(key, map); }
+  return maps.get(key)!;
+}
+function drawEdgeMap(width:number, height:number, radius:number) {
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.ceil(width / 2));
   canvas.height = Math.max(1, Math.ceil(height / 2));
@@ -89,12 +95,14 @@ export function GlassOptics() {
         return;
       }
       if (!watching) {
-        contentObserver.observe(document.getElementById('root')!, {childList:true, subtree:true});
+        contentObserver.observe(document.getElementById('root') || document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['data-paging','data-side']});
         watching = true;
       }
       for (const el of filters.keys()) if (!el.isConnected) remove(el);
+      // Neighbour days shown during a swipe get no optics, and nothing new is drawn while a page moves.
+      if (document.querySelector('.pager[data-paging]')) return;
       document.querySelectorAll<HTMLElement>(surfaces).forEach(el => {
-        if (!filters.has(el)) { observer.observe(el); render(el); }
+        if (!filters.has(el) && !el.closest('.slide[data-side]')) { observer.observe(el); render(el); }
       });
     }
     function schedule() { if (!frame) frame = requestAnimationFrame(sync); }

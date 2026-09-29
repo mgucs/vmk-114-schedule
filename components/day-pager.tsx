@@ -109,7 +109,8 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
   const pages = [{page:shown.page, side:0}];
   if (shown.leaving) pages.push(shown.leaving);
   if (peek) for (const d of [-1, 1]) { const p = neighbour(shown.page, d); if (!pages.some(x => x.page===p)) pages.push({page:p, side:d}); }
-  return <div className="pager">
+  // While a page moves, Стекло drops the per-card backdrop blur (see glass.css): re-blurring every frame is what stutters on phones.
+  return <div className="pager" data-paging={peek || shown.leaving ? '' : undefined}>
     <div className="pager-track" ref={track} onTransitionEnd={e => { if (e.target===track.current && e.propertyName==='transform') finish(); }}>
       {pages.map(p => <div key={p.page} className="slide" data-side={p.side || undefined} aria-hidden={p.side ? true : undefined}
         inert={p.side ? true : undefined} style={p.side ? {transform:`translateX(calc(${p.side} * (100% + ${GAP}px)))`} : undefined}>{render(p.page)}</div>)}
