@@ -456,7 +456,8 @@ textarea { font:inherit; }
 .pager { position:relative; flex:1; display:flex; flex-direction:column; margin:-12px -12px -32px; padding:12px 12px 32px; overflow:hidden; overflow:clip; }
 .pager-track { position:relative; flex:1; display:flex; flex-direction:column; }
 .slide { flex:1; display:flex; flex-direction:column; }
-.slide[data-side] { position:absolute; top:0; left:0; right:0; }
+.slide[data-side] { position:absolute; top:0; left:0; right:0; visibility:hidden; }
+.pager:is([data-paging],[data-drag]) .slide[data-side] { visibility:visible; }
 /* A new week in the strip comes from the side it lies on. */
 .day-lens { display:none; }
 .days[data-from=right] { animation:strip-from-right .42s cubic-bezier(.22,1,.36,1); }
@@ -932,3 +933,24 @@ h1 .h-month { display:none; }
 .changes-banner-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .changes-banner button { padding:8px 15px; border:0; border-radius:999px; background:var(--warn-fg); color:var(--warn-bg); font-size:14px; font-weight:700; }
 .changes-banner button.quiet { background:none; color:inherit; box-shadow:inset 0 0 0 1.5px currentColor; }
+/* ——— «Сколько пар» ——— */
+.stats-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:4px 0 10px; }
+.stats-controls .segmented { margin:0; min-width:170px; flex:1; }
+.segmented button[aria-pressed=true] { background:var(--card); color:var(--foreground); box-shadow:0 1px 2px #0000001f, 0 0 0 .5px var(--hair); }
+.stats-week { display:flex; align-items:center; justify-content:space-between; gap:6px; width:100%; font-size:13.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+.stats-week button { display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:10px; background:var(--muted); color:var(--foreground); }
+.stats-filters { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+.stats-filters .stats-groups { margin-bottom:0; }
+.stats-toggle { display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:550; }
+.stats-toggle input { width:18px; height:18px; accent-color:var(--lecture); }
+.stats-matrix-wrap { overflow-x:auto; margin:0 -24px; padding:0 24px; overscroll-behavior-x:contain; }
+.stats-matrix { border-collapse:separate; border-spacing:0; font-size:13px; font-variant-numeric:tabular-nums; }
+.stats-matrix th, .stats-matrix td { padding:6px 7px; border-top:1px solid var(--border); text-align:center; white-space:nowrap; }
+.stats-matrix thead th { border-top:0; color:var(--muted-foreground); font-size:12px; font-weight:650; }
+.stats-matrix th[scope=row], .stats-matrix thead th:first-child { position:sticky; left:-24px; z-index:1; min-width:120px; max-width:150px; padding-left:0; background:var(--popover, var(--background)); text-align:left; white-space:normal; line-height:1.2; font-weight:550; }
+.stats-matrix td { color:var(--muted-foreground); }
+.stats-matrix .mine { color:var(--foreground); font-weight:750; background:color-mix(in srgb,var(--lecture) 16%,transparent); }
+.stats-matrix td.odd { color:var(--warn-fg); font-weight:750; background:var(--warn-bg); }
+.stats-matrix tfoot th, .stats-matrix tfoot td { border-top:1.5px solid var(--foreground); font-weight:750; }
+.stats-open { margin-top:18px; }
+.footer-links button.footer-count { color:var(--foreground); font-weight:650; }

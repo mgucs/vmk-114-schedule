@@ -402,6 +402,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .list .lesson[data-glass-optics] { backdrop-filter:blur(9px) var(--g-optics) saturate(1.45); }
 /* Листание дней: пока страница едет, карточки не размывают фон заново на каждом кадре — только плотнее заливка.
    Преломление кромок в это время тоже снято. */
-[data-style=glass] .pager[data-paging] .pager-track { will-change:transform; }
-[data-style=glass] .pager[data-paging] :is(.lesson,.gap,.empty,.list .lesson[data-glass-optics]) {
+[data-style=glass] .pager:is([data-paging],[data-drag]) .pager-track { will-change:transform; }
+[data-style=glass] .pager:is([data-paging],[data-drag]) :is(.lesson,.gap,.empty,.list .lesson[data-glass-optics]) {
   -webkit-backdrop-filter:none; backdrop-filter:none; --g-fill:color-mix(in srgb,var(--card) 80%,transparent); }

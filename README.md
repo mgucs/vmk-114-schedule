@@ -41,7 +41,7 @@ PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium no
 | `scripts/archive-session.mjs` | добавить в архив прошлую сессию по сохранённой странице (например, из Wayback Machine) |
 | `lib/term.mjs` | праздники, недели занятий, чётность (у ФИИТ верхняя запись клетки — нечётная неделя) |
 | `components/session.tsx`, `components/term-calendar.tsx` | вкладки «Сессия» и «Календарь» |
-| `components/term-stats.tsx` | «Пары за семестр»: сколько пар каждого предмета у любой группы (лекции, семинары, прошло) |
+| `lib/term-stats.mjs`, `components/term-stats.tsx` | «Сколько пар»: неделя или семестр, по предметам у группы и сравнение всех групп (только отличающиеся) |
 | `components/teacher.tsx`, `components/onboarding.tsx` | карточка преподавателя, первый вход |
 | `lib/search.mjs`, `components/search.tsx` | поиск по всем группам: преподаватель, предмет, аудитория, группа |
 | `lib/calendar.mjs` | экспорт пар группы в `.ics` для календаря телефона |

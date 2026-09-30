@@ -46,9 +46,9 @@ try {
   assert(await page.getByRole('link',{name:'История проверок'}).isVisible());
   await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Неделя',exact:true}).click();
-  assert.equal(await page.locator('.lesson').count(),21);
+  assert.equal(await page.locator('.slide:not([data-side]) .lesson').count(),21);
   assert.equal(await page.getByText('Межфакультетские курсы',{exact:true}).count(),0);
-  assert(await page.locator('.lesson.lecture').count()>0);
+  assert(await page.locator('.slide:not([data-side]) .lesson.lecture').count()>0);
   assert(await page.getByRole('link',{name:'Сайт ВМК'}).isVisible(),'VMK site link is always visible');
   const roomStyles=await page.locator('.room').evaluateAll(rooms=>[...new Set(rooms.map(r=>{const c=getComputedStyle(r);return [c.fontSize,c.fontWeight,c.borderTopWidth,c.borderTopLeftRadius,c.paddingLeft].join();}))]);
   assert.equal(roomStyles.length,1,'lecture halls and seminar rooms look the same');
@@ -83,8 +83,8 @@ try {
   await glance.getByText('10 мин',{exact:true}).waitFor(); await glance.getByText('до первой пары',{exact:true}).waitFor();
   await at('2026-09-25T07:30:00Z');
   await glance.getByText('10 мин',{exact:true}).waitFor(); await glance.getByText('до следующей пары',{exact:true}).waitFor();
-  assert.equal(await page.locator('.lesson.current').count(),0,'finished class is no longer current');
-  assert.equal(await page.locator('.lesson.past').count(),1);
+  assert.equal(await page.locator('.slide:not([data-side]) .lesson.current').count(),0,'finished class is no longer current');
+  assert.equal(await page.locator('.slide:not([data-side]) .lesson.past').count(),1);
   // After the last class the next teaching day opens by itself.
   await at('2026-09-25T11:30:00Z');
   await page.locator('h1',{hasText:'26 сентября'}).waitFor();
@@ -118,7 +118,7 @@ try {
   await page.getByRole('dialog').getByRole('button',{name:'142',exact:true}).click();
   await page.getByRole('button',{name:'Группа 142, сменить'}).waitFor();
   await page.getByRole('heading',{name:'Безопасность жизнедеятельности'}).waitFor();
-  assert.equal(await page.locator('.lesson').first().locator('.range').textContent(),'09:00 – 10:30');
+  assert.equal(await page.locator('.slide:not([data-side]) .lesson').first().locator('.range').textContent(),'09:00 – 10:30');
   await page.locator('.room').filter({hasText:'706'}).waitFor();
   await page.reload();
   await page.getByRole('button',{name:'Группа 142, сменить'}).waitFor();
@@ -190,7 +190,7 @@ try {
   await page.getByRole('button',{name:'Тема оформления',exact:true}).click();
   await page.getByRole('dialog').getByRole('button',{name:'Бумага',exact:true}).click();
   await page.keyboard.press('Escape');
-  assert((await page.locator('.lesson').first().boundingBox()).y<470,'schedule starts on the first screen');
+  assert((await page.locator('.slide:not([data-side]) .lesson').first().boundingBox()).y<470,'schedule starts on the first screen');
   await page.screenshot({path:'test-results/mobile.png',fullPage:true});
   console.log('PASS dark-theme persistence, dated homework, completed tasks');
 
@@ -201,7 +201,7 @@ try {
   assert.equal(await page.getByLabel('Домашнее задание',{exact:true}).inputValue(),'Подготовить вопросы к занятию');
   await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Неделя',exact:true}).click();
-  assert.equal(await page.locator('.lesson').count(),21);
+  assert.equal(await page.locator('.slide:not([data-side]) .lesson').count(),21);
   // The PDF opens inside the app (a home-screen app on iPhone cannot go back from a PDF) and works offline.
   await page.getByRole('button',{name:'PDF',exact:true}).click();
   await page.getByRole('dialog',{name:'PDF расписания'}).locator('canvas').first().waitFor();
@@ -252,7 +252,7 @@ try {
   assert.equal(await page.locator('.room').filter({hasText:'999'}).count(),1);
   assert.deepEqual(errors,[]);await context.close();
   const desktop=await browser.newPage({viewport:{width:1365,height:950}});mode='ok';served=snapshot;
-  await desktop.goto(base);await desktop.locator('.lesson, .empty').first().waitFor();
+  await desktop.goto(base);await desktop.locator('.slide:not([data-side]) :is(.lesson,.empty)').first().waitFor();
   await desktop.screenshot({path:'test-results/desktop.png',fullPage:true});
   console.log('PASS changed timetable survives offline restart; no JavaScript errors');
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}

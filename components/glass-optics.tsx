@@ -95,24 +95,30 @@ export function GlassOptics() {
         return;
       }
       if (!watching) {
-        contentObserver.observe(document.getElementById('root') || document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['data-paging','data-side']});
+        contentObserver.observe(document.getElementById('root') || document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['data-paging','data-drag','data-side']});
         watching = true;
       }
       for (const el of filters.keys()) if (!el.isConnected) remove(el);
       // Neighbour days shown during a swipe get no optics, and nothing new is drawn while a page moves.
-      if (document.querySelector('.pager[data-paging]')) return;
+      if (document.querySelector('.pager:is([data-paging],[data-drag])')) return;
       document.querySelectorAll<HTMLElement>(surfaces).forEach(el => {
         if (!filters.has(el) && !el.closest('.slide[data-side]')) { observer.observe(el); render(el); }
       });
     }
-    function schedule() { if (!frame) frame = requestAnimationFrame(sync); }
+    // After a page stops, new cards get their optics a moment later, not in the frame the slide ends.
+    let later = 0;
+    function schedule() {
+      if (frame || later) return;
+      if (document.querySelector('.pager:is([data-paging],[data-drag])')) { later = window.setTimeout(() => { later = 0; schedule(); }, 350); return; }
+      frame = requestAnimationFrame(sync);
+    }
     const styleObserver = new MutationObserver(schedule);
     styleObserver.observe(root, {attributes:true, attributeFilter:['data-style']});
     const contentObserver = new MutationObserver(schedule);
     reduced.addEventListener('change', schedule); motion.addEventListener('change', schedule);
     sync();
     return () => {
-      cancelAnimationFrame(frame); styleObserver.disconnect(); contentObserver.disconnect();
+      cancelAnimationFrame(frame); clearTimeout(later); styleObserver.disconnect(); contentObserver.disconnect();
       reduced.removeEventListener('change', schedule); motion.removeEventListener('change', schedule);
       for (const el of filters.keys()) remove(el);
       observer.disconnect();

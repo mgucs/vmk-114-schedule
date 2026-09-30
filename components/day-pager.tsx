@@ -1,7 +1,9 @@
-import {useEffect,useLayoutEffect,useRef,useState,type ReactNode,type RefObject} from 'react';
+import {useDeferredValue,useEffect,useLayoutEffect,useRef,useState,type ReactNode,type RefObject} from 'react';
 
 // Pages are "day:2026-09-28" or "week:2026-09-28" (its Monday). Days lie side by side like pages of a book:
 // a horizontal swipe drags the neighbours in with the finger, and any change of day slides the new one in from its side.
+// The neighbours are rendered ahead of time, in the background and hidden: a swipe only reveals them (data-drag),
+// so its first frame does no React work.
 const GAP = 32;
 const side = (a:string, b:string) => a.slice(0,4)!==b.slice(0,4) ? 0 : b>a ? 1 : b<a ? -1 : 0;
 const offset = (el:HTMLElement) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
@@ -11,11 +13,15 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
   neighbour:(page:string, d:number)=>string; onTurn:(d:number)=>void; surface:RefObject<HTMLElement|null>}) {
   const track = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState<{page:string; leaving:{page:string; side:number}|null}>({page, leaving:null});
-  const [peek, setPeek] = useState(false);
+  const pager = useRef<HTMLDivElement>(null);
+  const drag = (on:boolean) => { if (on) pager.current?.setAttribute('data-drag', ''); else pager.current?.removeAttribute('data-drag'); };
+  const near = useDeferredValue(shown.page);
   // Where the track stood when the page changed: after a drag the new day continues from under the finger.
   const from = useRef<number|null>(null);
   const turn = useRef(onTurn); turn.current = onTurn;
   const after = useRef<(()=>void)|null>(null);
+  // Finger speed at release (px/ms): the page keeps moving at it instead of jumping to a fixed curve.
+  const release = useRef(0);
   if (shown.page!==page) {
     const d = side(shown.page, page);
     from.current = track.current ? offset(track.current) : 0;
@@ -36,10 +42,14 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
   function settle(to:number, then?:()=>void) {
     const el = track.current!;
     after.current = then || null;
-    if (calm() || Math.abs(offset(el)-to)<.5) { finish(); return; }
-    el.style.transition = 'transform .46s cubic-bezier(.22,1,.36,1)';
+    const from = offset(el), distance = Math.abs(to-from), v = release.current; release.current = 0;
+    if (calm() || distance<.5) { finish(); return; }
+    // An ease-out whose start is 3× its average speed: the duration makes that start equal the finger's speed.
+    const toward = v && Math.sign(v)===Math.sign(to-from);
+    const ms = Math.round(Math.min(440, Math.max(toward ? 180 : 300, toward ? 3*distance/Math.abs(v) : 220+distance*.45)));
+    el.style.transition = `transform ${ms}ms cubic-bezier(.25,.75,.35,1)`;
     el.style.transform = `translate3d(${to}px,0,0)`;
-    clearTimeout(guard.current); guard.current = window.setTimeout(finish, 700);
+    clearTimeout(guard.current); guard.current = window.setTimeout(finish, ms+250);
   }
   useEffect(() => () => clearTimeout(guard.current), []);
 
@@ -62,7 +72,7 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
     let g:{x:number; y:number; axis:''|'x'|'y'; base:number; dx:number; lastX:number; lastT:number; v:number}|null = null;
     const start = (e:TouchEvent) => {
       // A second finger ends the drag: the page goes back to its place.
-      if (g?.axis==='x' && track.current) settle(0, () => setPeek(false));
+      if (g?.axis==='x' && track.current) settle(0, () => drag(false));
       const t = e.touches[0];
       g = e.touches.length===1 ? {x:t.clientX, y:t.clientY, axis:'', base:0, dx:0, lastX:t.clientX, lastT:e.timeStamp, v:0} : null;
     };
@@ -75,7 +85,7 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
         if (g.axis==='x') {
           // Catch a page that is still sliding: the finger takes it from where it is.
           g.base = offset(el); g.x = t.clientX; hold();
-          setShown(s => s.leaving ? {...s, leaving:null} : s); setPeek(true);
+          setShown(s => s.leaving ? {...s, leaving:null} : s); drag(true);
         }
       }
       if (g.axis!=='x') return;
@@ -96,8 +106,9 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
       }
       if (s.axis!=='x') return;
       const fling = Math.abs(s.v)>.35 && Math.sign(s.v)===Math.sign(s.dx) && Math.abs(s.dx)>24;
-      if (e.type==='touchend' && (Math.abs(s.dx)>el.offsetWidth*.22 || fling)) { setPeek(false); turn.current(s.dx<0 ? 1 : -1); }
-      else settle(0, () => setPeek(false));
+      const recent = e.timeStamp-s.lastT < 80 ? s.v : 0;
+      if (e.type==='touchend' && (Math.abs(s.dx)>el.offsetWidth*.22 || fling)) { release.current = recent; drag(false); turn.current(s.dx<0 ? 1 : -1); }
+      else { release.current = recent; settle(0, () => drag(false)); }
     };
     area.addEventListener('touchstart', start, {passive:true});
     area.addEventListener('touchmove', move, {passive:false});
@@ -108,9 +119,10 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
 
   const pages = [{page:shown.page, side:0}];
   if (shown.leaving) pages.push(shown.leaving);
-  if (peek) for (const d of [-1, 1]) { const p = neighbour(shown.page, d); if (!pages.some(x => x.page===p)) pages.push({page:p, side:d}); }
+  // Right after a turn the deferred page still lags: its neighbours would stand on the wrong side, so they wait.
+  for (const d of [-1, 1]) { const p = neighbour(shown.page, d); if (p===neighbour(near, d) && !pages.some(x => x.page===p)) pages.push({page:p, side:d}); }
   // While a page moves, Стекло drops the per-card backdrop blur (see glass.css): re-blurring every frame is what stutters on phones.
-  return <div className="pager" data-paging={peek || shown.leaving ? '' : undefined}>
+  return <div className="pager" ref={pager} data-paging={shown.leaving ? '' : undefined}>
     <div className="pager-track" ref={track} onTransitionEnd={e => { if (e.target===track.current && e.propertyName==='transform') finish(); }}>
       {pages.map(p => <div key={p.page} className="slide" data-side={p.side || undefined} aria-hidden={p.side ? true : undefined}
         inert={p.side ? true : undefined} style={p.side ? {transform:`translateX(calc(${p.side} * (100% + ${GAP}px)))`} : undefined}>{render(p.page)}</div>)}

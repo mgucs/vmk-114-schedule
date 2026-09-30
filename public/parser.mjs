@@ -50,7 +50,9 @@ function dateRule(title,year) {
 // "Ляховенко О.И.", "Горячая И.В. П-6", "доцент Ким Галина Динховна 624".
 const TEACHER_ONLY=/^(?:(?:доцент|профессор|академик|ассистент)\s+)?[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\s+(?:[А-ЯЁ]\.\s*[А-ЯЁ]\.|[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+)(?:\s*,?\s*(?:П\s*[-–]\s*\d+|\d{2,3}(?:\s*-\s*[а-я])?))*[.,]?$/;
 // Words VMK's PDF prints with their first letters lost.
-const TYPOS=[[/(^|\s)актикум(?=\s|$)/g,'$1Практикум']];
+const TYPOS=[[/(^|\s)актикум(?=\s|$)/g,'$1Практикум'],[/\sгосуд\.(?=\s|$)/,' государственности']];
+// A teacher printed on the subject line: "История России П-5 Меркулова Анастасия Михайловна", "Английский язык Перцева З..Н.".
+const INLINE_TEACHER=/^(.*?[а-яё)])\.?\s+(?:(П\s*[-–]\s*\d+|\d{3})\s+)?((?:доцент|профессор)?\s*[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\s+(?:[А-ЯЁ]\.+\s*(?:[А-ЯЁ]\.*)?|[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+(?:вич|вна|ич)))$/;
 const ROOM=/\s+(П\s*[-–]\s*\d+|\d{2,3}(?:\s*-\s*[а-я])?(?:\/\d)?)\s*$/i;
 function lesson(day,rowId,start,end,cell,shared,year,suffix){
   const raw=cell.map(l=>l.text).join('\n');
@@ -64,7 +66,15 @@ function lesson(day,rowId,start,end,cell,shared,year,suffix){
   if(late&&(Number(late[2])>12||late[2]==='00')&&Number(late[1])>=8&&Number(late[1])<=20){start=`${late[1].padStart(2,'0')}:${late[2]}`;title=title.slice(late[0].length);}
   let room=title.match(ROOM)?.[1]?.replace(/\s/g,'').replace('–','-')||'';
   if(room)title=title.replace(ROOM,'');
-  const detail=cell.slice(split).map(l=>l.text).join('\n');
+  let detail=cell.slice(split).map(l=>l.text).join('\n');
+  // Two consultations in one cell: the second one goes to the details.
+  const second=title.search(/\s+Консультация\.\s/i);
+  if(second>0){detail=[title.slice(second).trim(),detail].filter(Boolean).join('\n');title=title.slice(0,second);}
+  const trailing=title.match(/\s+(\d{3})$/);
+  if(trailing){room||=trailing[1];title=title.slice(0,trailing.index);}
+  const inline=title.match(INLINE_TEACHER);
+  if(inline){title=inline[1];room||=inline[2]?.replace(/\s/g,'').replace('–','-')||'';detail=[inline[3].replace(/\.{2,}/g,'.'),detail].filter(Boolean).join('\n');}
+  title=title.replace(/(язык|России)\.$/,'$1');
   const type=/^Конс/i.test(title)?'consultation':/Физическая/.test(title)?'sport':(room&&(shared||/^П/.test(room)))||(shared&&/^(доцент|профессор|академик)/im.test(detail))?'lecture':'class';
   return {id:`${day}-${rowId}${suffix}`,day,start,end,title,detail,room,type,rule:dateRule(title,year),raw};
 }

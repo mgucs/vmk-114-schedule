@@ -12,7 +12,8 @@ import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
 import {Onboarding, needsOnboarding} from '@/components/onboarding';
 import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
-import {TermStats} from '@/components/term-stats';
+import {StatsDialog} from '@/components/term-stats';
+import {weekDates} from '@/lib/term-stats.mjs';
 import {DayPager} from '@/components/day-pager';
 import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
@@ -235,12 +236,14 @@ export default function Home() {
   const todayLessons = lessonsOn(data,today) as Lesson[];
   const nextId = todayLessons.find(l=>l.start>clock)?.id;
   const selectedLessons = lessonsOn(data,selected) as Lesson[];
+  const weekCount = weekDates(today).reduce((n,date)=>n+lessonsOn(data,date).length,0);
   // "How long until the end of this class": shown on every tab and in the window title.
   const ongoing = todayLessons.find(l=>clock>=l.start && clock<l.end);
   const ongoingLeft = ongoing ? minutes(ongoing.end)-minutes(clock) : 0;
   const fiit = Number(groupName)>=140, parity = fiit ? weekOf(faculty.term,selected)?.odd : undefined;
   const [readNotices,setReadNotices] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem(noticeKey)||'[]');}catch{return [];}});
   const freshNotices = faculty.notices.filter(n=>!readNotices.includes(n));
+  const [statsOpen,setStatsOpen] = useState(false);
   const [contactsOpen,setContactsOpen] = useState(false), [onboarding,setOnboarding] = useState(needsOnboarding), [shared,setShared] = useState('');
   // Lecturer of each subject this term, by the first letters of its name.
   const lecturers = Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];}));
@@ -434,7 +437,7 @@ export default function Home() {
       <TermCalendar term={faculty.term} session={isCurrent(faculty.session,data.year) ? faculty.session : null} group={groupName} today={today} academicYear={data.year}
         lastWinter={[faculty.session, ...faculty.archive].find(s=>s && s.season==='winter' && s.year===data.year-1) || null}
         classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
-      <TermStats table={table} term={faculty.term} group={groupName} today={today} clock={clock}/>
+      <button className="changes-button stats-open" onClick={()=>setStatsOpen(true)}><CalendarRange size={17}/><span><b>Сколько пар</b><small>за неделю и семестр, по предметам и в сравнении всех групп</small></span><ChevronRight size={18}/></button>
     </main> : tab==='session' ? <main className="session-main pane" key="session">
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
@@ -486,7 +489,7 @@ export default function Home() {
     </main>
 
     <footer className="footer">
-      <div className="footer-links">{history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения</button>}{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
+      <div className="footer-links"><button className="footer-count" onClick={()=>setStatsOpen(true)}>{weekCount} {plural(weekCount,['пара','пары','пар'])} в неделю</button>{history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения</button>}{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
     </footer>
     </>}
 
@@ -508,6 +511,8 @@ export default function Home() {
       {history.length>0 && <button className="changes-button" onClick={()=>{setStatusOpen(false);setChangesOpen(true);}}><History size={17}/><span><b>Изменения расписания</b><small>последнее — от {history[0].date}, по всем группам</small></span><ChevronRight size={18}/></button>}
       <div className="source-links"><a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>
+    <StatsDialog open={statsOpen} onOpenChange={setStatsOpen} table={table} term={faculty.term} group={groupName} today={today} clock={clock}
+      streams={streams(table).map(s=>({title:s.title, groups:s.groups}))}/>
     {pdfOpen && pdfUrl && <PdfViewer url={pdfUrl} onClose={closePdf}/>}
     {homework.dialogs}
     {subgroups.dialog}
