@@ -251,6 +251,14 @@ export default function Home() {
   const stripFrom = useRef({monday, side:0});
   if (stripFrom.current.monday!==monday) stripFrom.current = {monday, side:monday>stripFrom.current.monday?1:-1};
   // Each move of the chosen-day lens restarts its squish (two identical animations, alternating).
+  // The day lens follows a swipe of the days (Стекло): set straight on the strip, no re-render per finger move.
+  const dateNav = useRef<HTMLElement>(null);
+  const followDrag = (fraction:number|null) => {
+    const el = dateNav.current; if (!el) return;
+    if (fraction===null) { el.removeAttribute('data-follow'); el.style.removeProperty('--drag'); el.style.removeProperty('--drag-abs'); return; }
+    const f = Math.max(-1, Math.min(1, fraction));
+    el.setAttribute('data-follow', ''); el.style.setProperty('--drag', f.toFixed(3)); el.style.setProperty('--drag-abs', Math.abs(f).toFixed(3));
+  };
   const lensMoves = useRef({selected, n:0});
   if (lensMoves.current.selected!==selected) lensMoves.current = {selected, n:lensMoves.current.n+1};
 
@@ -436,7 +444,7 @@ export default function Home() {
       <div className="view-switch" role="group" aria-label="Вид расписания"><button aria-pressed={view==='day'} onClick={()=>setView('day')}>День</button><button aria-pressed={view==='week'} onClick={()=>setView('week')}>Неделя</button></div>
     </div>
 
-    <nav className="date-navigation" aria-label="Выбрать день">
+    <nav className="date-navigation" aria-label="Выбрать день" ref={dateNav}>
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
       <div className="days" key={monday} data-from={stripFrom.current.side>0?'right':stripFrom.current.side<0?'left':undefined} style={{'--day':weekday(selected)} as CSSProperties}>
         {view==='day' && <i className={`day-lens ${selected===today?'today':''}`} aria-hidden="true" data-squish={lensMoves.current.n ? lensMoves.current.n%2 : undefined}/>}
@@ -461,7 +469,7 @@ export default function Home() {
         <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
       </section>}
       {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
-      <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} surface={scheduleArea}/>
+      <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} surface={scheduleArea} onDrag={view==='day' ? followDrag : undefined}/>
     </main>
 
     <footer className="footer">

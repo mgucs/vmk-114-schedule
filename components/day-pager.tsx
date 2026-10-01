@@ -9,8 +9,9 @@ const side = (a:string, b:string) => a.slice(0,4)!==b.slice(0,4) ? 0 : b>a ? 1 :
 const offset = (el:HTMLElement) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function DayPager({page, render, neighbour, onTurn, surface}:{page:string; render:(page:string)=>ReactNode;
-  neighbour:(page:string, d:number)=>string; onTurn:(d:number)=>void; surface:RefObject<HTMLElement|null>}) {
+export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{page:string; render:(page:string)=>ReactNode;
+  neighbour:(page:string, d:number)=>string; onTurn:(d:number)=>void; surface:RefObject<HTMLElement|null>;
+  onDrag?:(fraction:number|null)=>void}) {
   const track = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState<{page:string; leaving:{page:string; side:number}|null}>({page, leaving:null});
   const pager = useRef<HTMLDivElement>(null);
@@ -19,6 +20,8 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
   // Where the track stood when the page changed: after a drag the new day continues from under the finger.
   const from = useRef<number|null>(null);
   const turn = useRef(onTurn); turn.current = onTurn;
+  // How far the finger has pulled the page (−1…1 of its width), for the day lens to follow; null when let go.
+  const follow = useRef(onDrag); follow.current = onDrag;
   const after = useRef<(()=>void)|null>(null);
   // Finger speed at release (px/ms): the page keeps moving at it instead of jumping to a fixed curve.
   const release = useRef(0);
@@ -72,7 +75,7 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
     let g:{x:number; y:number; axis:''|'x'|'y'; base:number; dx:number; lastX:number; lastT:number; v:number}|null = null;
     const start = (e:TouchEvent) => {
       // A second finger ends the drag: the page goes back to its place.
-      if (g?.axis==='x' && track.current) settle(0, () => drag(false));
+      if (g?.axis==='x' && track.current) { follow.current?.(null); settle(0, () => drag(false)); }
       const t = e.touches[0];
       g = e.touches.length===1 ? {x:t.clientX, y:t.clientY, axis:'', base:0, dx:0, lastX:t.clientX, lastT:e.timeStamp, v:0} : null;
     };
@@ -94,6 +97,7 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
       g.v = .7*(t.clientX-g.lastX)/dt+.3*g.v; g.lastX = t.clientX; g.lastT = e.timeStamp; g.dx = g.base+t.clientX-g.x;
       el.style.transition = 'none';
       el.style.transform = `translate3d(${g.dx}px,0,0)`;
+      follow.current?.(g.dx/el.offsetWidth);
     };
     const end = (e:TouchEvent) => {
       const s = g, el = track.current; g = null;
@@ -105,6 +109,7 @@ export function DayPager({page, render, neighbour, onTurn, surface}:{page:string
         return;
       }
       if (s.axis!=='x') return;
+      follow.current?.(null);
       const fling = Math.abs(s.v)>.35 && Math.sign(s.v)===Math.sign(s.dx) && Math.abs(s.dx)>24;
       const recent = e.timeStamp-s.lastT < 80 ? s.v : 0;
       if (e.type==='touchend' && (Math.abs(s.dx)>el.offsetWidth*.22 || fling)) { release.current = recent; drag(false); turn.current(s.dx<0 ? 1 : -1); }

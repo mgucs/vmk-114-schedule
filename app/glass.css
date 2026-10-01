@@ -45,7 +45,7 @@
 html[data-style=glass] { background:var(--background); }
 [data-style=glass] body { background:transparent; }
 [data-style=glass] .wallpaper { display:block; position:fixed; inset:0; height:100vh; height:100lvh; z-index:-1; pointer-events:none; overflow:hidden; background:var(--background); }
-[data-style=glass] .glass-campus { position:absolute; inset:0; background-image:var(--photo-night); background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(.3); }
+[data-style=glass] .glass-campus { position:absolute; inset:0; background-image:var(--photo-night); background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(calc(.3 + var(--lg2,0) * .7)); }
 [data-style=glass] .glass-atmosphere { position:absolute; inset:0; background:linear-gradient(180deg,var(--background) 0%,var(--wp-wash) 32%,transparent 65%,var(--background) 100%); }
 [data-style=glass] .glass-horizon { position:absolute; inset:0; background:radial-gradient(ellipse at 0% 40%,color-mix(in srgb,var(--lecture) 10%,transparent),transparent 60%),linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--background) 45%,transparent)); }
 [data-style=glass] :is(.msu-hero,.msu-emblem) { display:none; }
@@ -111,7 +111,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .heading.week .view-switch::after { transform:translateX(100%); }
 
 /* Полоса дней — стеклянная капсула; выбранный день — линза, которая переезжает к нажатому. */
-[data-style=glass] .date-navigation { margin:20px 0 22px; padding:8px 2px; grid-template-columns:26px 1fr 26px; border-radius:26px; overflow:hidden; overflow:clip; }
+[data-style=glass] .date-navigation { margin:20px 0 22px; padding:8px 2px; grid-template-columns:26px 1fr 26px; border-radius:26px; overflow:hidden; overflow-x:clip; overflow-y:visible; }
 [data-style=glass] .date-navigation>.icon-button { width:30px; height:48px; border-radius:14px; background:none; color:var(--muted-foreground); }
 [data-style=glass] .date-navigation>.icon-button svg { width:18px; height:18px; }
 [data-style=glass] .days { position:relative; gap:2px; }
@@ -391,9 +391,10 @@ html[data-style=glass] { background:var(--background); }
    Без ползунка — значения середины, это прежний вид. */
 :root[data-style=glass] {
   --lg:.5; --g-fill-p:42%; --g-thick-p:75%; --g-past-p:33%; --g-tabs-p:62%;
+  --lg2:0; --g-blur-px:13px; --g-blur-thick-px:23px; --wp-photo:calc(.28 + .72 * var(--lg2));
   --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
-  --g-blur:blur(calc(20px - var(--lg) * 14px)) saturate(calc(1.2 + var(--lg) * .55));
-  --g-blur-thick:blur(calc(30px - var(--lg) * 14px)) saturate(calc(1.25 + var(--lg) * .4));
+  --g-blur:blur(var(--g-blur-px)) saturate(calc(1.2 + var(--lg) * .55));
+  --g-blur-thick:blur(var(--g-blur-thick-px)) saturate(calc(1.25 + var(--lg) * .4));
   /* Капля: яркая верхняя кромка, боковой блик и свет, собранный у нижнего края. */
   --g-sheen:linear-gradient(155deg,rgb(255 255 255 / calc(.25 + var(--lg) * .4)),rgb(255 255 255 / calc(.05 + var(--lg) * .1)) 38%,#fff0 70%,rgb(255 255 255 / calc(.08 + var(--lg) * .15)));
   --g-lip:inset 0 1px 1px rgb(255 255 255 / calc(.55 + var(--lg) * .4)), inset 1px 0 1px -.5px rgb(255 255 255 / calc(.2 + var(--lg) * .3));
@@ -402,6 +403,7 @@ html[data-style=glass] { background:var(--background); }
 }
 :root[data-scheme=dark][data-style=glass] {
   --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
+  --wp-photo:calc(.48 + .52 * var(--lg2));
   --g-sheen:linear-gradient(145deg,rgb(255 255 255 / calc(.05 + var(--lg) * .12)),rgb(255 255 255 / calc(.01 + var(--lg) * .03)) 42%,#fff0 70%,rgb(255 255 255 / calc(.02 + var(--lg) * .06)));
   --g-lip:inset 0 1px 1px rgb(255 255 255 / calc(.14 + var(--lg) * .3)), inset 1px 0 1px -.5px rgb(255 255 255 / calc(.04 + var(--lg) * .12));
   --g-pool:inset 0 -1px 1px rgb(255 255 255 / calc(.03 + var(--lg) * .12)), inset 0 -14px 22px -18px rgb(255 255 255 / calc(var(--lg) * .3));
@@ -410,7 +412,10 @@ html[data-style=glass] { background:var(--background); }
 /* Кромка ярче у прозрачного стекла. */
 [data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-day,.term-month,.session-item,.session-next,.date-navigation,.heading .view-switch,.session-empty,.session-what,.term-dates,.header-actions,.footer-links button,.shell>.drag-tabs)::before { opacity:calc(.45 + var(--lg) * .55); }
 /* Прозрачное стекло: подписям немного тени, чтобы читались на фотографии. */
-:root[data-scheme=dark][data-style=glass] :is(.lesson h3,.range,.teacher-row) { text-shadow:0 1px 2px rgb(0 0 0 / calc(var(--lg) * .35)); }
+:root[data-scheme=dark][data-style=glass] :is(.lesson h3,.range,.teacher-row,.lesson-time,.glance-line,.gap) { text-shadow:0 1px 3px rgb(0 0 0 / calc(var(--lg) * .3 + var(--lg2) * .4)); }
+:root[data-scheme=light][data-style=glass] :is(.lesson h3,.range,.teacher-row,.lesson-time,.glance-line,.gap) { text-shadow:0 0 8px rgb(255 255 255 / calc(var(--lg2) * .8)); }
+/* Правая половина ползунка снимает дымку с фотографии: МГУ виден ярко, подписи держит тень выше. */
+[data-style=glass] :is(.glass-atmosphere,.glass-horizon) { opacity:calc(1 - var(--lg2,0) * .75); }
 [data-style=glass] .list { gap:6px; }
 [data-style=glass] .list .lesson { padding:10px 14px 11px; border-radius:20px; }
 [data-style=glass] .list .lesson.current { padding-bottom:18px; }
@@ -435,3 +440,33 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active {
   transform:scale(.94); transition-duration:.12s; }
 @media (prefers-reduced-motion:reduce) { [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active { transform:none; } }
+
+/* Желе. Линзы вкладок и дней переезжают на пружине с перелётом, по приезде качаются и пробегают бликом.
+   Пока палец давит на панель вкладок, линза раздувается за её края; при свайпе дней линза дня едет за пальцем. */
+:root[data-style=glass] { --jelly:cubic-bezier(.34,1.45,.55,1); }
+@supports (transition-timing-function:linear(0, 1)) {
+  :root[data-style=glass] { --jelly:linear(0, 0.069, 0.237, 0.449, 0.662, 0.849, 0.994, 1.092, 1.146, 1.163, 1.153, 1.127, 1.092, 1.057, 1.026, 1.002, 0.986, 0.977, 0.973, 0.975, 0.979, 0.985, 0.99, 0.995, 0.999, 1.002, 1.004, 1.004, 1.004, 1.003, 1); }
+}
+[data-style=glass] .tab-lens { transition:transform .75s var(--jelly), scale .45s var(--jelly), background .3s, box-shadow .3s; }
+[data-style=glass] .day-lens { transition:transform .75s var(--jelly), scale .45s var(--jelly), background .3s; }
+@keyframes lens-squish-a { 0% { scale:1; } 16% { scale:1.2 .86; } 36% { scale:.93 1.08; } 56% { scale:1.05 .96; } 76% { scale:.99 1.01; } 100% { scale:1; } }
+@keyframes lens-squish-b { 0% { scale:1; } 16% { scale:1.2 .86; } 36% { scale:.93 1.08; } 56% { scale:1.05 .96; } 76% { scale:.99 1.01; } 100% { scale:1; } }
+[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="0"] { animation:lens-squish-a .8s cubic-bezier(.3,.7,.4,1); }
+[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="1"] { animation:lens-squish-b .8s cubic-bezier(.3,.7,.4,1); }
+[data-style=glass] .shell>.drag-tabs { overflow:visible; }
+[data-style=glass] .drag-tabs.pressing:not(.dragging) .tab-lens { scale:1.14 1.22; }
+[data-style=glass] .drag-tabs.dragging .tab-lens { scale:1.06 1.16; }
+/* Блик по линзе после переезда. */
+[data-style=glass] :is(.tab-lens,.day-lens)::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:0;
+  background:linear-gradient(105deg,#fff0 35%,rgb(255 255 255 / calc(.35 + var(--lg) * .4)) 50%,#fff0 65%) no-repeat; background-size:260% 100%; background-position:130% 0; }
+[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="0"]::after { animation:lens-glint-a .9s ease-out; }
+[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="1"]::after { animation:lens-glint-b .9s ease-out; }
+@keyframes lens-glint-a { 0% { opacity:0; background-position:130% 0; } 20% { opacity:1; } 100% { opacity:0; background-position:-30% 0; } }
+@keyframes lens-glint-b { 0% { opacity:0; background-position:130% 0; } 20% { opacity:1; } 100% { opacity:0; background-position:-30% 0; } }
+/* Свайп дней: линза дня тянется за пальцем и вытягивается, на отпускании прыгает на пружине к новому дню. */
+[data-style=glass] .date-navigation[data-follow] .day-lens { transition:none; animation:none;
+  transform:translateX(calc((var(--day) - var(--drag,0)) * (100% + 2px))); scale:calc(1 + var(--drag-abs,0) * .4) calc(1 - var(--drag-abs,0) * .1); }
+@media (prefers-reduced-motion:reduce) {
+  [data-style=glass] :is(.tab-lens,.day-lens) { transition-duration:.01s; animation:none!important; }
+  [data-style=glass] :is(.tab-lens,.day-lens)::after { animation:none!important; }
+}
