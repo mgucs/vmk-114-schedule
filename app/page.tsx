@@ -13,6 +13,7 @@ import {Onboarding, needsOnboarding} from '@/components/onboarding';
 import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
 import {StatsDialog} from '@/components/term-stats';
+import {UpdateEntry, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
 import {DayPager} from '@/components/day-pager';
 import {Wallpaper} from '@/components/wallpaper';
@@ -22,14 +23,13 @@ import {PdfViewer} from '@/components/pdf-viewer';
 const CampusMap = lazy(() => import('@/components/campus-map').then(m => ({default:m.CampusMap})));
 import seed from '@/public/source.json';
 
-type Lesson = {id:string; day:number; start:string; end:string; title:string; detail:string; room:string; type:string; raw:string; rule:{from?:string; dates?:string[]}|null};
+type Lesson = {id:string; day:number; start:string; end:string; title:string; detail:string; room:string; type:string; raw:string; rule:{from?:string; until?:string; dates?:string[]}|null};
 type Schedule = {group:number; year:number; page:number; lessons:Lesson[]; sourceDate:string; sourceUrl:string; hash:string; savedAt:string};
 type Table = {year:number; groups:Record<string,{page:number; lessons:Lesson[]}>; sourceDate:string; sourceUrl:string; hash:string; savedAt:string};
-type HistoryEntry = {date:string; previousDate:string|null; detectedAt:string; pdfChanged:boolean; changes:Record<string,Change[]>; previousPdf?:string};
 type Contacts = {room:string; phone:string; head:{name:string; email:string}|null; inspector:{name:string; email:string}|null};
 type Faculty = {term?:{start:string; end:string; odd:boolean}[]; notices?:string[]; contacts?:Contacts; session?:Session; archive?:Session[]};
-type Snapshot = {schema:number; status:string; attemptedAt:string; checkedAt:string|null; error:string|null; date:string; url:string; hash:string; schedule:Table; history:HistoryEntry[]; faculty?:Faculty};
-type Change = {id:string; day:number; start:string; title?:string; before?:string; after?:string; details?:string[]};
+type ParseWarning = {group:string; id:string; title:string; day:number; start:string; text:string};
+type Snapshot = {parseWarnings?:ParseWarning[]; schema:number; status:string; attemptedAt:string; checkedAt:string|null; error:string|null; date:string; url:string; hash:string; schedule:Table; history:HistoryEntry[]; faculty?:Faculty};
 type Saved = {snapshot:Snapshot; syncedAt:string};
 const dayNames = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const shortDays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
@@ -110,35 +110,6 @@ function describeUpdate(entry:HistoryEntry, group:string) {
   if (!list.length) return entry.pdfChanged ? `ВМК обновил PDF (от ${entry.date}) — у группы ${group} ничего не поменялось.` : `На сайте ВМК новая дата расписания (${entry.date}), сам PDF не изменился.`;
   return `ВМК обновил расписание (от ${entry.date}): `+list.slice(0,3).map(c=>`${shortDays[c.day]} ${c.start} ${c.title||''} — ${(c.details||[]).join('; ')}`).join(' · ')+(list.length>3?` и ещё ${list.length-3}`:'');
 }
-// "101–104, 108": consecutive group numbers joined into ranges.
-function groupRanges(names:string[]) {
-  const out:string[] = [];
-  for (const n of [...names].sort()) {
-    const last = out.at(-1)?.split('–'), end = last && Number(last.at(-1));
-    if (last && end === Number(n)-1) out[out.length-1] = `${last[0]}–${n}`; else out.push(n);
-  }
-  return out.join(', ');
-}
-// One VMK update for the whole course: the chosen group first, then every other group in turn.
-function UpdateEntry({entry, group, all, pdf}:{entry:HistoryEntry; group:string; all:string[]; pdf?:string}) {
-  const changed = Object.keys(entry.changes).filter(name => entry.changes[name].length).sort((a,b) => Number(b===group)-Number(a===group) || a.localeCompare(b));
-  const same = all.filter(name => !changed.includes(name));
-  return <section className="history-entry">
-    <h4>Расписание от {entry.date}{entry.previousDate && entry.previousDate!==entry.date?` (было от ${entry.previousDate})`:''}</h4>
-    <small>замечено {stamp(entry.detectedAt)}{changed.length ? ` · изменения у ${changed.length} ${plural(changed.length,['группы','групп','групп'])}` : ''}</small>
-    {!entry.pdfChanged && <p className="personal-hint">Поменялась только дата на сайте ВМК, сам PDF тот же.</p>}
-    {(entry.previousPdf || pdf) && <div className="source-links archive-links">
-      {entry.previousPdf && <a href={asset(entry.previousPdf)} target="_blank" rel="noreferrer">PDF до изменений{entry.previousDate ? ` (от ${entry.previousDate})` : ''}<ArrowUpRight size={14}/></a>}
-      {pdf && <a href={asset(pdf)} target="_blank" rel="noreferrer">PDF этой версии<ArrowUpRight size={14}/></a>}
-    </div>}
-    {changed.length>1 && <nav className="change-jump" aria-label="Перейти к группе">{changed.map(name=><a key={name} href={`#ch-${entry.detectedAt}-${name}`} className={name===group?'mine':''}>{name}</a>)}</nav>}
-    {changed.map(name=><div className={`change-group ${name===group?'mine':''}`} key={name} id={`ch-${entry.detectedAt}-${name}`}>
-      <h5>Группа {name}{name===group && <span>моя</span>}</h5>
-      {[...entry.changes[name]].sort((a,b)=>a.day-b.day||a.start.localeCompare(b.start)).map(change=><div className="change-item" key={change.id}><strong>{dayNames[change.day]}, {change.start}{change.title?` · ${change.title}`:''}</strong><ul>{(change.details||[]).map(d=><li key={d}>{d}</li>)}</ul></div>)}
-    </div>)}
-    {entry.pdfChanged && same.length>0 && <p className="personal-hint">Без изменений: {same.includes(group) ? `твоя группа ${group}, ` : ''}{groupRanges(same.filter(name=>name!==group)) || ''}</p>}
-  </section>;
-}
 function persist(value:Saved) {
   try { localStorage.setItem(storageKey,JSON.stringify(value)); }
   catch { throw Error('Не удалось сохранить расписание на устройстве. Освободи место и повтори обновление.'); }
@@ -162,7 +133,7 @@ function Room({room,note=''}:{room:string; note?:string}) {
     : <span className="room" aria-label={`Аудитория ${room}${note?', '+note:''}`}>{content}</span>;
 }
 type Editor = {task?:Task; editing:boolean; open:()=>void; editor:React.ReactNode};
-function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,stacked,notice}:{lesson:Lesson;date:string;today:string;clock:string;change?:Change;next:boolean;hw:Editor;preferredTeacher?:string;stacked:''|'odd'|'even'|'both';notice?:string}) {
+function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,stacked,notice,check}:{check?:string[]; lesson:Lesson;date:string;today:string;clock:string;change?:Change;next:boolean;hw:Editor;preferredTeacher?:string;stacked:''|'odd'|'even'|'both';notice?:string}) {
   const now = date===today && !!clock && clock>=lesson.start && clock<lesson.end;
   const past = date<today || (date===today && !!clock && clock>=lesson.end);
   const left = clock ? minutes(now?lesson.end:lesson.start)-minutes(clock) : 0;
@@ -171,7 +142,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
   const matched = allRows.filter(row=>row.teacher===preferredTeacher);
   const rows = allRows.length>1 && matched.length ? matched : allRows;
   const missingTeacher = !!preferredTeacher && allRows.length>0 && lesson.type!=='lecture' && !matched.length;
-  const note = lesson.rule?.dates ? 'Только '+lesson.rule.dates.map(d=>formatDate(d,{day:'numeric',month:'short'})).join(', ') : lesson.rule?.from ? 'С '+formatDate(lesson.rule.from) : '';
+  const note = lesson.rule?.dates ? 'Только '+lesson.rule.dates.map(d=>formatDate(d,{day:'numeric',month:'short'})).join(', ') : lesson.rule?.from || lesson.rule?.until ? [lesson.rule.from && 'С '+formatDate(lesson.rule.from), lesson.rule.until && (lesson.rule.from ? 'по ' : 'По ')+formatDate(lesson.rule.until)].filter(Boolean).join(' ') : '';
   // Time left is in the bar under the header; the card only says the class is on.
   const label = now ? 'идёт' : next ? `через ${duration(left)}` : '';
   return <LessonAt.Provider value={{date,start:lesson.start}}><article className={`lesson ${lesson.type} ${now?'current':''} ${past?'past':''}`} onClick={event=>{if(!hw.editing && !(event.target as HTMLElement).closest('button,a,textarea,input,label'))hw.open();}}>
@@ -192,6 +163,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
       {stacked==='even' && <p className="rule-note">По чётным неделям</p>}
       {stacked==='both' && <p className="rule-note">В PDF в этой клетке две записи одна под другой — обычно это чередование недель.</p>}
       {notice && <p className="notice-note">Объявление ВМК: {notice}</p>}
+      {check && check.length>0 && <p className="check-note">Возможно, прочитано неточно ({check.join('; ')}). Сверь с PDF.</p>}
       {hw.task && !hw.editing && <button className={`hw-preview ${hw.task.done?'task-done':''}`} onClick={hw.open}>{hw.task.text}</button>}
       {hw.editing && hw.editor}
   </article></LessonAt.Provider>;
@@ -249,6 +221,8 @@ export default function Home() {
   const lecturers = Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];}));
   const teacherCard = useTeacherCard({table, session:isCurrent(faculty.session,data.year) ? faculty.session : null, dates:searchWeek, term:faculty.term, room:(name,day,start)=><LessonAt.Provider value={{date:searchWeek[day],start}}><Room room={name}/></LessonAt.Provider>});
   const status = verification(saved.snapshot);
+  // Places of this group's timetable the server could not read with confidence.
+  const checks = (saved.snapshot.parseWarnings || []).filter(w => w.group===groupName);
   const glance = view==='day' && (selected===today || selected===focus) ? dayGlance(data,today,clock,subgroups.selected) : null;
   function dismissNotices(){const next=[...readNotices,...freshNotices].slice(-30);setReadNotices(next);try{localStorage.setItem(noticeKey,JSON.stringify(next));}catch{}}
   async function shareGroup(){
@@ -265,8 +239,8 @@ export default function Home() {
   const dayStart = selectedLessons.reduce((s,l)=>!s||l.start<s?l.start:s,''), dayEnd = selectedLessons.reduce((e,l)=>l.end>e?l.end:e,'');
   const checkedAgo = ago(saved.snapshot.checkedAt || null);
   const statusText = !online ? 'Без интернета' : busy ? 'Обновляем…' : syncError ? 'Не удалось получить обновления'
-    : saved.snapshot.status==='error' ? 'Не удалось проверить ВМК' : checkedAgo ? `Сверено ${checkedAgo}` : status.title;
-  const tone = !online ? 'offline' : syncError ? 'warn' : status.tone;
+    : saved.snapshot.status==='error' ? 'Не удалось проверить ВМК' : checks.length ? 'Сверь с PDF' : checkedAgo ? `Сверено ${checkedAgo}` : status.title;
+  const tone = !online ? 'offline' : syncError || checks.length ? 'warn' : status.tone;
 
   function go(date:string) { setPinned(date===focus?null:date); }
   // From the latest pinned day, so two quick swipes move two days even before a re-render.
@@ -399,7 +373,7 @@ export default function Home() {
         const now=date===today && !!clock && clock>=until && clock<l.start;
         items.push(<div key={'gap'+l.id} className={`gap ${now?'now':''}`}><span>Окно</span><b>{now?`ещё ${duration(minutes(l.start)-minutes(clock))}`:duration(gap)}</b><small>{until}–{l.start}</small></div>);
       }
-      items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={!isStacked(l,data.lessons) ? '' : fiit && weekOf(faculty.term,date) ? (/-\d$/.test(l.id)?'even':'odd') : list.filter(o=>o.id.replace(/-\d$/,'')===l.id.replace(/-\d$/,'')).length>1 ? 'both' : ''} notice={noticeFor(faculty.notices,l,date)}/>);
+      items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={!isStacked(l,data.lessons) ? '' : fiit && weekOf(faculty.term,date) ? (/-\d$/.test(l.id)?'even':'odd') : list.filter(o=>o.id.replace(/-\d$/,'')===l.id.replace(/-\d$/,'')).length>1 ? 'both' : ''} notice={noticeFor(faculty.notices,l,date)} check={checks.filter(w=>w.id===l.id).map(w=>w.text)}/>);
       if (l.end>until) until=l.end;
     }
     const density = weekly ? 'compact' : list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
@@ -507,6 +481,7 @@ export default function Home() {
         <div><dt>Без интернета</dt><dd>{offlineReady?'работает':'ещё не готово'}</dd></div>
       </dl>
       {pdfError && <p className="personal-hint">{pdfError}</p>}
+      {checks.length>0 && <div className="status-error check-list"><b>Стоит сверить с PDF</b>{checks.map(w=><p key={w.id+w.text}>{dayNames[w.day]}, {w.start} · {w.title}: {w.text}</p>)}</div>}
       <button className="save-task" onClick={()=>refresh(true)} disabled={busy || !online}><RefreshCw size={15} className={busy?'spin':''}/> {busy?'Обновляем…':'Обновить'}</button>
       {history.length>0 && <button className="changes-button" onClick={()=>{setStatusOpen(false);setChangesOpen(true);}}><History size={17}/><span><b>Изменения расписания</b><small>последнее — от {history[0].date}, по всем группам</small></span><ChevronRight size={18}/></button>}
       <div className="source-links"><a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>
@@ -531,13 +506,13 @@ export default function Home() {
       <div className="source-links"><a href="https://cs.msu.ru/studies/contacts" target="_blank" rel="noreferrer">Страница на сайте ВМК<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>}
     {onboarding && <Onboarding streams={streams(table)} onGroup={name=>{setGroupState(name);try{localStorage.setItem(groupKey,name);}catch{}}} onDone={()=>setOnboarding(false)}/>}
-    <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog wide"><DialogTitle>Изменения расписания</DialogTitle><DialogDescription>Сервер сравнивает каждую новую версию PDF с предыдущей и записывает, что поменялось у каждой группы. Твоя группа {groupName} — первой.</DialogDescription>
+    <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog wide"><DialogTitle>Изменения расписания</DialogTitle><DialogDescription>Что ВМК поменял в каждой новой версии PDF: было → стало. Сначала твоя группа, остальные — кнопками.</DialogDescription>
+      {history.length ? history.map((entry,i)=><UpdateEntry key={entry.detectedAt} open={i===0} entry={entry} group={groupName} all={Object.keys(table.groups)}
+        pdf={entry.pdfChanged ? (i===0 ? 'latest.pdf' : history.slice(0,i).reverse().find(h=>h.pdfChanged)?.previousPdf) : undefined}/>)
+        : <p className="personal-hint">С момента запуска проверки ВМК расписание не менял. Сейчас на сайте версия от {data.sourceDate}.</p>}
       {history.length>0 && (recent.length>0
         ? <button className="changes-button" onClick={()=>{hideChanges();setChangesOpen(false);}}><X size={17}/><span><b>Убрать отметки из расписания</b><small>карточки пар и баннер станут обычными; история останется здесь</small></span></button>
         : seen && Date.now()-Date.parse(history[0].detectedAt)<RECENT && <button className="changes-button" onClick={showChanges}><History size={17}/><span><b>Снова отметить изменённые пары</b><small>в расписании за последнюю неделю</small></span></button>)}
-      {history.length ? history.map((entry,i)=><UpdateEntry key={entry.detectedAt} entry={entry} group={groupName} all={Object.keys(table.groups)}
-        pdf={entry.pdfChanged ? (i===0 ? 'latest.pdf' : history.slice(0,i).reverse().find(h=>h.pdfChanged)?.previousPdf) : undefined}/>)
-        : <p className="personal-hint">С момента запуска проверки ВМК расписание не менял. Сейчас на сайте версия от {data.sourceDate}.</p>}
     </DialogContent></Dialog>
     <Dialog open={groupsOpen} onOpenChange={setGroupsOpen}><DialogContent className="changes-dialog"><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК по потокам. Доступно и без интернета.</DialogDescription>
       {streams(table).map(stream=><section className="stream" key={stream.page}>

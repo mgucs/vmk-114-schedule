@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {checkTable} from '../lib/parse-check.mjs';
 import {DEFAULT_GROUP, HISTORY_LIMIT, PARSER_VERSION, diffTables, validHistory, validTable} from '../lib/schedule-model.mjs';
 
 export const PAGE = 'https://cs.msu.ru/studies/schedule';
@@ -74,11 +75,13 @@ export async function checkSource({previous, parse, fetcher = fetch, now = () =>
       if (pdfChanged) for (const name of Object.keys(changes)) if (!before.groups[name] && Object.keys(before.groups).length === 1) delete changes[name];
       nextHistory = [{date:metadata.date, previousDate:before.sourceDate || null, detectedAt:attemptedAt, pdfChanged, changes}, ...history].slice(0, HISTORY_LIMIT);
     }
-    return {pdf, snapshot:{schema:3, status:'ok', attemptedAt, checkedAt:attemptedAt, error:null, date:metadata.date, url:metadata.url, hash, schedule, history:nextHistory}};
+    // Places that look misread: shown in the app next to the class and in the GitHub log.
+    const parseWarnings = checkTable(schedule.groups).slice(0, 60);
+    return {pdf, snapshot:{schema:3, status:'ok', attemptedAt, checkedAt:attemptedAt, error:null, date:metadata.date, url:metadata.url, hash, schedule, history:nextHistory, parseWarnings}};
   } catch (error) {
     if (!before) throw error;
     return {pdf:null, snapshot:{schema:3, status:'error', attemptedAt:now(), checkedAt:previous.checkedAt || null,
       error:error instanceof Error ? error.message : 'Не удалось проверить сайт ВМК.',
-      date:before.sourceDate, url:before.sourceUrl, hash:before.hash, schedule:before, history}};
+      date:before.sourceDate, url:before.sourceUrl, hash:before.hash, schedule:before, history, parseWarnings:Array.isArray(previous.parseWarnings) ? previous.parseWarnings : []}};
   }
 }

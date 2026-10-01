@@ -36,17 +36,6 @@ function linesOf(items) {
   }
   return lines.map(l=>({...l,text:clean(l.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' '))}));
 }
-function dateRule(title,year) {
-  const explicit=title.match(/((?:\d{1,2}[.,]?\s*,\s*)+\d{1,2})\s*\.\s*(\d{2})/);
-  if(explicit){const month=explicit[2];return {dates:explicit[1].match(/\d+/g).map(d=>`${year}-${month}-${d.padStart(2,'0')}`)};}
-  const since=title.match(/(?:^|\s)с\s+(\d{1,2})\s*\.\s*(\d{2})/i);
-  if(since)return {from:`${year}-${since[2]}-${since[1].padStart(2,'0')}`};
-  if(/с октября/i.test(title))return {from:`${year}-10-01`};
-  // A bare "10.09 Title" marks the first date of a weekly class.
-  const bare=title.match(/^(\d{1,2})\.(\d{2})\s/);
-  if(bare&&Number(bare[2])>=1&&Number(bare[2])<=12)return {from:`${year}-${bare[2]}-${bare[1].padStart(2,'0')}`};
-  return null;
-}
 // "Ляховенко О.И.", "Горячая И.В. П-6", "доцент Ким Галина Динховна 624".
 const TEACHER_ONLY=/^(?:(?:доцент|профессор|академик|ассистент)\s+)?[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\s+(?:[А-ЯЁ]\.\s*[А-ЯЁ]\.|[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+)(?:\s*,?\s*(?:П\s*[-–]\s*\d+|\d{2,3}(?:\s*-\s*[а-я])?))*[.,]?$/;
 // Words VMK's PDF prints with their first letters lost.
@@ -56,25 +45,56 @@ const INLINE_TEACHER=/^(.*?[а-яё)])\.?\s+(?:(П\s*[-–]\s*\d+|\d{3})\s+)?((?
 const ROOM=/\s+(П\s*[-–]\s*\d+|\d{2,3}(?:\s*-\s*[а-я])?(?:\/\d)?)\s*$/i;
 const MONTHS=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const minutes=t=>Number(t.slice(0,2))*60+Number(t.slice(3));
+// Dates and times VMK writes into a subject line, at its start, end or in brackets:
+// "16.50-18.20", "с 12.15", "9.00", "с 10.09", "с 3 октября", "с октября", "до 15 октября", "по 20.10",
+// "только 5.09", "5, 12, 19.09", "5.09, 12.09 и 3.10", "12 и 19 сентября". Returns the title without them.
+const MONTH='(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)';
+const monthOf=name=>MONTHS.indexOf(name.toLowerCase())+1;
+const hhmm=(h,m)=>`${String(h).padStart(2,'0')}:${m}`;
+export function readQualifiers(text,year,start,end){
+  const iso=(d,m)=>{d=Number(d);m=Number(m);if(!(m>=1&&m<=12&&d>=1&&d<=31))return null;return `${m<8?year+1:year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;};
+  // A number pair is a time when it cannot be a date: minutes 00 or above 12, or written with a colon.
+  const isTime=(h,m,sep=':')=>Number(h)>=8&&Number(h)<=21&&Number(m)<60&&(sep===':'||m==='00'||Number(m)>12);
+  let title=text,from=null,until=null,dates=null,startAt=null;
+  const take=re=>{const m=title.match(re);if(m)title=(title.slice(0,m.index)+' '+title.slice(m.index+m[0].length)).replace(/\s+/g,' ').trim();return m;};
+  const B=String.raw`(?:^|[\s(,;])`,E=String.raw`(?=$|[\s),;.])`;
+  let m;
+  // Time range of a class that does not follow the rows: "16.50-18.20 Физическая культура".
+  if((m=take(/^(\d{1,2})[.:](\d{2})\s*[–—-]\s*(\d{1,2})[.:](\d{2})/))){start=hhmm(m[1],m[2]);end=hhmm(m[3],m[4]);}
+  // Lists of dates: only these days.
+  if((m=take(new RegExp(B+String.raw`(?:только\s+)?((?:\d{1,2}\s*\.\s*\d{1,2}\s*(?:,|и)\s*)+\d{1,2}\s*\.\s*\d{1,2})`+E,'i')))){
+    const list=[...m[1].matchAll(/(\d{1,2})\s*\.\s*(\d{1,2})/g)].map(x=>iso(x[1],x[2]));if(list.every(Boolean))dates=list;}
+  if(!dates&&(m=take(new RegExp(B+String.raw`(?:только\s+)?((?:\d{1,2}\s*\.?\s*(?:,|и)\s*)+\d{1,2})\s*\.\s*(\d{2})`+E,'i')))){
+    const list=m[1].match(/\d+/g).map(d=>iso(d,m[2]));if(list.every(Boolean))dates=list;}
+  if(!dates&&(m=take(new RegExp(B+String.raw`(?:только\s+)?((?:\d{1,2}\s*(?:,|и)\s*)+\d{1,2})\s+`+MONTH+E,'i')))){
+    const list=m[1].match(/\d+/g).map(d=>iso(d,monthOf(m[2])));if(list.every(Boolean))dates=list;}
+  if(!dates&&(m=take(new RegExp(B+String.raw`только\s+(\d{1,2})(?:\s*\.\s*(\d{2})|\s+`+MONTH+String.raw`)`+E,'i')))){
+    const d=iso(m[1],m[2]||monthOf(m[3]));if(d)dates=[d];}
+  // First and last dates.
+  if((m=take(new RegExp(B+String.raw`(?:до|по)\s+(\d{1,2})(?:\s*\.\s*(\d{2})(?!\s*[-–])|\s+`+MONTH+String.raw`)`+E,'i'))))until=iso(m[1],m[2]||monthOf(m[3]));
+  if((m=take(new RegExp(B+String.raw`со?\s+(\d{1,2})\s+`+MONTH+E,'i'))))from=iso(m[1],monthOf(m[2]));
+  if(!from&&(m=title.match(new RegExp(B+String.raw`со?\s+(\d{1,2})\s*([.:])\s*(\d{2})`+E,'i')))&&!isTime(m[1],m[3],m[2])){take(new RegExp(B+String.raw`со?\s+\d{1,2}\s*[.:]\s*\d{2}`+E,'i'));from=iso(m[1],m[3]);}
+  if(!from&&(m=take(new RegExp(B+String.raw`со?\s+`+MONTH+E,'i'))))from=iso(1,monthOf(m[1]));
+  // A start time: "с 12.15", "9.00", "в 9:00". VMK may copy one cell into two rows: the time moves the start
+  // only in the row it falls in (or an hour before it); elsewhere it is dropped from the title.
+  if((m=title.match(/^(?:с|в)?\s*(\d{1,2})([.:])(\d{2})(?=\s|$)/i))&&isTime(m[1],m[3],m[2])){take(/^(?:с|в)?\s*\d{1,2}[.:]\d{2}/i);startAt=hhmm(m[1],m[3]);}
+  // A bare "10.09 Title" marks the first date of a weekly class.
+  if(!from&&!dates&&(m=title.match(/^(\d{1,2})\.(\d{2})(?=\s)/))&&iso(m[1],m[2])){take(/^\d{1,2}\.\d{2}/);from=iso(m[1],m[2]);}
+  if(startAt&&minutes(startAt)>=minutes(start)-60&&minutes(startAt)<minutes(end))start=startAt;
+  // A bracket whose partner went away with a date.
+  if(!title.includes('('))title=title.replace(/\)/g,' ');
+  if(!title.includes(')'))title=title.replace(/\(/g,' ');
+  title=title.replace(/\(\s*\)/g,'').replace(/^[\s,;.:–—-]+|[\s,;:–—-]+$/g,'').replace(/\s+/g,' ');
+  const rule=dates?{dates}:from||until?{...(from?{from}:{}),...(until?{until}:{})}:null;
+  return {title,start,end,rule};
+}
 function lesson(day,rowId,start,end,cell,shared,year,suffix){
   const raw=cell.map(l=>l.text).join('\n');
   const titleParts=[];let split=0;
   for(const l of cell){if(titleParts.length&&(/(?:[А-ЯЁ]\.\s*){2}/.test(l.text)||/^(доцент|профессор|академик)\s/i.test(l.text)))break;titleParts.push(l.text);split++;}
   let title=TYPOS.reduce((t,[from,to])=>t.replace(from,to),titleParts.join(' ').replace(/^\.?\s*/,''));
-  const range=title.match(/^(\d{1,2})[.:](\d{2})\s*[–—-]\s*(\d{1,2})[.:](\d{2})\s*/);
-  if(range){start=`${range[1].padStart(2,'0')}:${range[2]}`;end=`${range[3].padStart(2,'0')}:${range[4]}`;title=title.slice(range[0].length);}
-  // "с 3 октября 9.00 Основы …": the first date written with the month's name.
-  let from=null;
-  const since=title.match(/^с\s+(\d{1,2})\s+([а-я]+)\s+/i),month=since?MONTHS.indexOf(since[2].toLowerCase())+1:0;
-  if(month){from=`${month<8?year+1:year}-${String(month).padStart(2,'0')}-${since[1].padStart(2,'0')}`;title=title.slice(since[0].length);}
-  // "12.15 Алгебра", "с 11.00 Русский язык" are a later start time (minutes 00 or > 12 cannot be a month).
-  // VMK may copy one cell into two rows: the time moves the start only in the row it falls in (or an hour before it).
-  const late=title.match(/^(?:с\s+)?(\d{1,2})\.(\d{2})\s+/i);
-  if(late&&(Number(late[2])>12||late[2]==='00')&&Number(late[1])>=8&&Number(late[1])<=20){
-    const at=`${late[1].padStart(2,'0')}:${late[2]}`;
-    if(minutes(at)>=minutes(start)-60&&minutes(at)<minutes(end))start=at;
-    title=title.slice(late[0].length);
-  }
+  let rule;
+  ({title,start,end,rule}=readQualifiers(title,year,start,end));
   let room=title.match(ROOM)?.[1]?.replace(/\s/g,'').replace('–','-')||'';
   if(room)title=title.replace(ROOM,'');
   let detail=cell.slice(split).map(l=>l.text).join('\n');
@@ -87,7 +107,7 @@ function lesson(day,rowId,start,end,cell,shared,year,suffix){
   if(inline){title=inline[1];room||=inline[2]?.replace(/\s/g,'').replace('–','-')||'';detail=[inline[3].replace(/\.{2,}/g,'.'),detail].filter(Boolean).join('\n');}
   title=title.replace(/(язык|России)\.$/,'$1');
   const type=/^Конс/i.test(title)?'consultation':/Физическая/.test(title)?'sport':(room&&(shared||/^П/.test(room)))||(shared&&/^(доцент|профессор|академик)/im.test(detail))?'lecture':'class';
-  return {id:`${day}-${rowId}${suffix}`,day,start,end,title,detail,room,type,rule:from?{from}:dateRule(title,year),raw};
+  return {id:`${day}-${rowId}${suffix}`,day,start,end,title,detail,room,type,rule,raw};
 }
 function uniqueRows(items){
   const rows=[];
@@ -149,6 +169,8 @@ export async function parseAll(pdfjs,data) {
                 const again=lesson(day,start,start,end,merged,shared,year,prev.id.slice(`${day}-${start}`.length));
                 list[list.length-1]=again;prevCells.set(again,merged);continue;
               }
+              // The same text repeated in the lower part of a cell is one class, not two.
+              if(n&&prev?.day===day&&prev.start===start&&prev.raw===cell.map(l=>l.text).join('\n'))continue;
               const made=lesson(day,start,start,end,cell,shared,year,n++?`-${n}`:'');
               list.push(made);prevCells.set(made,cell);
             }
@@ -164,4 +186,4 @@ export async function parseAll(pdfjs,data) {
   }finally{await doc.destroy();}
 }
 export async function parseSchedule(pdfjs,data,group='114'){const all=await parseAll(pdfjs,data);return {group:Number(group),year:all.year,...all.groups[group]};}
-export function isActive(lesson,date){const day=date.slice(0,10);return !lesson.rule || ((!lesson.rule.from||day>=lesson.rule.from)&&(!lesson.rule.dates||lesson.rule.dates.includes(day)));}
+export function isActive(lesson,date){const day=date.slice(0,10),r=lesson.rule;return !r||((!r.from||day>=r.from)&&(!r.until||day<=r.until)&&(!r.dates||r.dates.includes(day)));}

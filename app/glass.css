@@ -390,7 +390,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .teacher-row { margin-top:5px; font-size:12.5px; line-height:1.3; }
 [data-style=glass] .teacher-row + .teacher-row { margin-top:2px; }
 [data-style=glass] .room { min-height:0; padding:2px 9px; border-radius:9px; font-size:12.5px; }
-[data-style=glass] .rule-note, [data-style=glass] .changed-note, [data-style=glass] .notice-note { margin-top:4px; font-size:12px; }
+[data-style=glass] .rule-note, [data-style=glass] .changed-note, [data-style=glass] .notice-note, [data-style=glass] .check-note { margin-top:4px; font-size:12px; }
 [data-style=glass] .lesson .progress { bottom:8px; }
 [data-style=glass] .gap { padding:2px 11px; }
 @media (min-width:760px) {

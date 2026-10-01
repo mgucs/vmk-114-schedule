@@ -36,4 +36,7 @@ if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT,`commi
 console.log(snapshot.status === 'ok'
   ? `ВМК проверен ${snapshot.checkedAt}: ${Object.keys(snapshot.schedule.groups).length} групп, PDF ${snapshot.hash}`
   : `Проверка не удалась; сохранена предыдущая версия: ${snapshot.error}`);
+// GitHub shows these as warnings on the run: the timetable was published, but these places should be checked against the PDF.
+const days = ['Пн','Вт','Ср','Чт','Пт','Сб'];
+for (const w of snapshot.parseWarnings || []) console.log(`::warning title=Проверь разбор PDF::${w.group}, ${days[w.day]} ${w.start} «${w.title}»: ${w.text}`);
 if (snapshot.faculty?.errors) console.log('Дополнительные данные ВМК:', JSON.stringify(snapshot.faculty.errors));

@@ -77,6 +77,7 @@ button:focus-visible, a:focus-visible { outline:2px solid var(--ring); outline-o
 
 /* Dialogs */
 .changes-dialog { max-height:85dvh; overflow-y:auto; }
+.changes-dialog > * { min-width:0; }
 .change-item { padding:14px 0; border-top:1px solid var(--border); font-size:14px; }
 .change-item ul { margin:6px 0 0; padding-left:18px; }
 .change-item p { white-space:pre-line; color:var(--muted-foreground); margin:8px 0 0; }
@@ -954,3 +955,49 @@ h1 .h-month { display:none; }
 .stats-matrix tfoot th, .stats-matrix tfoot td { border-top:1.5px solid var(--foreground); font-weight:750; }
 .stats-open { margin-top:18px; }
 .footer-links button.footer-count { color:var(--foreground); font-weight:650; }
+.check-note { margin:8px 0 0; padding:6px 10px; border-radius:10px; background:var(--warn-bg); color:var(--warn-fg); font-size:13px; }
+.check-list p { margin:4px 0 0; }
+/* ——— Изменения расписания: версия, чьи изменения, карточки «было → стало» ——— */
+.update { padding:14px 0 6px; border-top:1px solid var(--border); }
+.update-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.update-head h4 { margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em; }
+.update-head small { color:var(--muted-foreground); font-size:12.5px; }
+.update-pdfs { display:flex; flex-shrink:0; gap:6px; }
+.update-pdfs a { display:inline-flex; align-items:center; gap:2px; padding:5px 10px; border-radius:999px; background:var(--muted); color:var(--foreground); font-size:12.5px; font-weight:650; text-decoration:none; }
+.update-scope { display:flex; gap:6px; margin:12px -24px 0; padding:0 24px 2px; overflow-x:auto; scrollbar-width:none; }
+.update-scope::-webkit-scrollbar { display:none; }
+.update-scope button { flex-shrink:0; padding:7px 12px; border:0; border-radius:999px; background:var(--muted); color:var(--muted-foreground); font-size:13.5px; font-weight:650; font-variant-numeric:tabular-nums; }
+.update-scope button.mine { color:var(--foreground); }
+.update-scope button[aria-pressed=true] { background:var(--foreground); color:var(--background); }
+.update-summary { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:12px 0 0; font-size:13.5px; color:var(--muted-foreground); }
+.update-summary .sum { padding:2px 9px; border-radius:999px; font-weight:700; }
+.sum.added { background:color-mix(in srgb,var(--ok) 16%,transparent); color:var(--ok); }
+.sum.changed { background:var(--warn-bg); color:var(--warn-fg); }
+.sum.removed { background:color-mix(in srgb,var(--danger) 14%,transparent); color:var(--danger); }
+.change-list { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.change-card { position:relative; padding:11px 13px 12px 16px; border-radius:16px; background:var(--muted); overflow:hidden; }
+.change-card::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:0 3px 3px 0; background:var(--warn-fg); }
+.change-card.added::before { background:var(--ok); }
+.change-card.removed::before { background:var(--danger); }
+.change-card header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.change-when { color:var(--muted-foreground); font-size:13px; font-variant-numeric:tabular-nums; }
+.change-when b { color:var(--foreground); font-weight:750; }
+.change-kind { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:700; }
+.change-kind.changed { background:var(--warn-bg); color:var(--warn-fg); }
+.change-kind.added { background:color-mix(in srgb,var(--ok) 16%,transparent); color:var(--ok); }
+.change-kind.removed { background:color-mix(in srgb,var(--danger) 14%,transparent); color:var(--danger); }
+.change-card h5 { margin:4px 0 0; font-size:15.5px; font-weight:750; line-height:1.25; }
+.change-card h5.gone { color:var(--muted-foreground); text-decoration:line-through; text-decoration-thickness:1.5px; }
+.change-rows { display:flex; flex-direction:column; gap:5px; margin:8px 0 0; }
+.change-rows div { display:grid; grid-template-columns:96px minmax(0,1fr); gap:8px; align-items:baseline; font-size:13.5px; line-height:1.3; }
+.change-rows dt { color:var(--muted-foreground); font-size:12.5px; }
+.change-rows dd { display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; margin:0; min-width:0; }
+.change-rows dd s { color:var(--muted-foreground); text-decoration-color:color-mix(in srgb,var(--muted-foreground) 70%,transparent); }
+.change-rows dd svg { flex-shrink:0; color:var(--muted-foreground); }
+.change-rows dd b { font-weight:700; }
+.change-rows div.plain { grid-template-columns:1fr; color:var(--muted-foreground); }
+.change-groups { margin:8px 0 0; color:var(--muted-foreground); font-size:12.5px; font-variant-numeric:tabular-nums; }
+.change-groups.mine { color:var(--foreground); font-weight:650; }
+.update-none { margin:4px 0 0; color:var(--muted-foreground); font-size:14px; }
+@media (max-width:380px) { .change-rows div { grid-template-columns:1fr; gap:1px; } .update-head { flex-direction:column; } }
+[data-style=glass] .change-card, [data-style=glass] .update-pdfs a, [data-style=glass] .update-scope button:not([aria-pressed=true]) { background:var(--g-chip, var(--muted)); }
