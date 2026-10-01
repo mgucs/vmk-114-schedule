@@ -3,8 +3,9 @@ import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {countLessons, courseCounts, differs, termDates, usual, weekDates} from '../lib/term-stats.mjs';
 
-const source = JSON.parse(await readFile(new URL('../public/source.json', import.meta.url), 'utf8'));
-const table = source.schedule, term = source.faculty.term;
+// A frozen copy (timetable of 30.09): live data changes with every VMK update.
+const source = JSON.parse(await readFile(new URL('./fixtures/stats-30.09.json', import.meta.url), 'utf8'));
+const table = source.schedule, term = source.term;
 
 test('subjects: one clean name per subject for every group', () => {
   const {subjects} = courseCounts(table, term, weekDates('2026-10-05'));

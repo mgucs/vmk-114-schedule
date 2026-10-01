@@ -54,6 +54,8 @@ const TYPOS=[[/(^|\s)актикум(?=\s|$)/g,'$1Практикум'],[/\sгос
 // A teacher printed on the subject line: "История России П-5 Меркулова Анастасия Михайловна", "Английский язык Перцева З..Н.".
 const INLINE_TEACHER=/^(.*?[а-яё)])\.?\s+(?:(П\s*[-–]\s*\d+|\d{3})\s+)?((?:доцент|профессор)?\s*[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\s+(?:[А-ЯЁ]\.+\s*(?:[А-ЯЁ]\.*)?|[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+(?:вич|вна|ич)))$/;
 const ROOM=/\s+(П\s*[-–]\s*\d+|\d{2,3}(?:\s*-\s*[а-я])?(?:\/\d)?)\s*$/i;
+const MONTHS=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const minutes=t=>Number(t.slice(0,2))*60+Number(t.slice(3));
 function lesson(day,rowId,start,end,cell,shared,year,suffix){
   const raw=cell.map(l=>l.text).join('\n');
   const titleParts=[];let split=0;
@@ -61,9 +63,18 @@ function lesson(day,rowId,start,end,cell,shared,year,suffix){
   let title=TYPOS.reduce((t,[from,to])=>t.replace(from,to),titleParts.join(' ').replace(/^\.?\s*/,''));
   const range=title.match(/^(\d{1,2})[.:](\d{2})\s*[–—-]\s*(\d{1,2})[.:](\d{2})\s*/);
   if(range){start=`${range[1].padStart(2,'0')}:${range[2]}`;end=`${range[3].padStart(2,'0')}:${range[4]}`;title=title.slice(range[0].length);}
+  // "с 3 октября 9.00 Основы …": the first date written with the month's name.
+  let from=null;
+  const since=title.match(/^с\s+(\d{1,2})\s+([а-я]+)\s+/i),month=since?MONTHS.indexOf(since[2].toLowerCase())+1:0;
+  if(month){from=`${month<8?year+1:year}-${String(month).padStart(2,'0')}-${since[1].padStart(2,'0')}`;title=title.slice(since[0].length);}
   // "12.15 Алгебра", "с 11.00 Русский язык" are a later start time (minutes 00 or > 12 cannot be a month).
+  // VMK may copy one cell into two rows: the time moves the start only in the row it falls in (or an hour before it).
   const late=title.match(/^(?:с\s+)?(\d{1,2})\.(\d{2})\s+/i);
-  if(late&&(Number(late[2])>12||late[2]==='00')&&Number(late[1])>=8&&Number(late[1])<=20){start=`${late[1].padStart(2,'0')}:${late[2]}`;title=title.slice(late[0].length);}
+  if(late&&(Number(late[2])>12||late[2]==='00')&&Number(late[1])>=8&&Number(late[1])<=20){
+    const at=`${late[1].padStart(2,'0')}:${late[2]}`;
+    if(minutes(at)>=minutes(start)-60&&minutes(at)<minutes(end))start=at;
+    title=title.slice(late[0].length);
+  }
   let room=title.match(ROOM)?.[1]?.replace(/\s/g,'').replace('–','-')||'';
   if(room)title=title.replace(ROOM,'');
   let detail=cell.slice(split).map(l=>l.text).join('\n');
@@ -76,7 +87,7 @@ function lesson(day,rowId,start,end,cell,shared,year,suffix){
   if(inline){title=inline[1];room||=inline[2]?.replace(/\s/g,'').replace('–','-')||'';detail=[inline[3].replace(/\.{2,}/g,'.'),detail].filter(Boolean).join('\n');}
   title=title.replace(/(язык|России)\.$/,'$1');
   const type=/^Конс/i.test(title)?'consultation':/Физическая/.test(title)?'sport':(room&&(shared||/^П/.test(room)))||(shared&&/^(доцент|профессор|академик)/im.test(detail))?'lecture':'class';
-  return {id:`${day}-${rowId}${suffix}`,day,start,end,title,detail,room,type,rule:dateRule(title,year),raw};
+  return {id:`${day}-${rowId}${suffix}`,day,start,end,title,detail,room,type,rule:from?{from}:dateRule(title,year),raw};
 }
 function uniqueRows(items){
   const rows=[];

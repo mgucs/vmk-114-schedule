@@ -142,3 +142,8 @@ test('the old single-group snapshot is upgraded without reporting other groups a
   assert.equal(result.snapshot.status,'ok'); assert.equal(Object.keys(result.snapshot.schedule.groups).length,22);
   assert.deepEqual(Object.keys(result.snapshot.history[0].changes),[]);
 });
+test('01.10 PDF: «с 3 октября 9.00» is a first date and a start time; a copy in the next row keeps that row', async()=>{
+  const {groups}=await parse(await readFile(new URL('./fixtures/schedule-0110.pdf',import.meta.url)));
+  const sat=groups['101'].lessons.filter(l=>l.day===5&&/государственности/.test(l.title));
+  assert.deepEqual(sat.map(l=>[l.start,l.end,cleanTitle(l),l.rule]),[['09:00','10:20','Основы российской государственности',{from:'2026-10-03'}],['10:30','12:05','Основы российской государственности',{from:'2026-10-03'}]]);
+});
