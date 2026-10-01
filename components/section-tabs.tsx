@@ -36,7 +36,7 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
       e.preventDefault();
       const pos=locate(e),speed=Math.abs(e.clientX-g.lastX)/Math.max(8,e.timeStamp-g.lastT);
       g.lastX=e.clientX;g.lastT=e.timeStamp;
-      setPosition(pos);setStretch(1+Math.min(.45,speed*.35));
+      setPosition(pos);setStretch(1+Math.min(.08,speed*.07));
       const n=Math.round(pos);
       if(n!==g.live){g.live=n;if(document.documentElement.dataset.style!=='glass')onChange(items[n][0]);navigator.vibrate?.(4);}
     }}

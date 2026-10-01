@@ -60,6 +60,7 @@ export function GlassOptics() {
     const root = document.documentElement;
     const reduced = matchMedia('(prefers-reduced-transparency: reduce)');
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const contrast = matchMedia('(prefers-contrast: more)');
     // SVG backdrop filters are a Chromium enhancement. Safari/Firefox retain
     // the CSS blur + highlights instead of accepting an unsupported URL.
     const supported = /Chrome\/|Chromium\/|Edg\//.test(navigator.userAgent)
@@ -68,7 +69,7 @@ export function GlassOptics() {
     const sizes = new Map<HTMLElement, string>();
     let nextId = 0, frame = 0;
     let watching = false;
-    const active = () => supported && root.dataset.style === 'glass' && !reduced.matches && !motion.matches;
+    const active = () => supported && root.dataset.style === 'glass' && !reduced.matches && !motion.matches && !contrast.matches;
     function remove(el:HTMLElement) {
       observer.unobserve(el);
       filters.get(el)?.remove(); filters.delete(el); sizes.delete(el);
@@ -82,7 +83,7 @@ export function GlassOptics() {
       const kind = el.classList.contains('tab-lens') ? 'drop' : 'edge';
       const radius = parseFloat(getComputedStyle(el).borderRadius) || 24;
       // Clearer glass bends more and over a wider rim.
-      const band = Math.round(10 + level * 16), scale = Math.round(kind === 'drop' ? 14 + level * 30 : 6 + level * 34);
+      const band = Math.round(6 + level * 8), scale = Math.round(kind === 'drop' ? 3 + level * 7 : 3 + level * 11);
       const key = `${kind}:${width}:${height}:${radius}:${band}:${scale}`;
       if (sizes.get(el) === key) return;
       const map = displacementMap(kind, width, height, radius, band);
@@ -128,12 +129,12 @@ export function GlassOptics() {
     const styleObserver = new MutationObserver(schedule);
     styleObserver.observe(root, {attributes:true, attributeFilter:['data-style']});
     const contentObserver = new MutationObserver(schedule);
-    reduced.addEventListener('change', schedule); motion.addEventListener('change', schedule);
+    reduced.addEventListener('change', schedule); motion.addEventListener('change', schedule); contrast.addEventListener('change', schedule);
     window.addEventListener('vmk-liquid-change', relevel);
     sync();
     return () => {
       cancelAnimationFrame(frame); styleObserver.disconnect(); contentObserver.disconnect();
-      reduced.removeEventListener('change', schedule); motion.removeEventListener('change', schedule);
+      reduced.removeEventListener('change', schedule); motion.removeEventListener('change', schedule); contrast.removeEventListener('change', schedule);
       window.removeEventListener('vmk-liquid-change', relevel);
       for (const el of filters.keys()) remove(el);
       observer.disconnect();
