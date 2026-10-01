@@ -1,8 +1,8 @@
 import {useEffect, useRef} from 'react';
 
 const NS = 'http://www.w3.org/2000/svg';
-// Refraction is for the glass chrome that stays in place. Lesson cards move with every swipe:
-// displacing their backdrop each frame is what made swipes stutter, so they keep plain frosted glass.
+// Phones refract the stationary controls. Fine-pointer desktops also refract the
+// visible lesson cards; hidden neighbours and touch devices avoid that extra work.
 const surfaces = '.shell > .drag-tabs, .date-navigation, .header-actions, .heading .view-switch, .tab-lens';
 // «Жидкое стекло» (the slider) as 0…1: how clear the glass is and how strongly it bends what is behind.
 export const liquidLevel = () => {
@@ -56,11 +56,39 @@ function draw(kind:'edge'|'drop', width:number, height:number, radius:number, ba
 
 export function GlassOptics() {
   const defs = useRef<SVGDefsElement>(null);
+  // This layer also runs in Safari: highlights follow the actual touch, without a shader.
+  useEffect(() => {
+    let frame=0, target:HTMLElement|null=null, x=0, y=0;
+    let pressed:HTMLElement|null=null;
+    const motion=matchMedia('(prefers-reduced-motion: reduce)'), contrast=matchMedia('(prefers-contrast: more)');
+    const selector='.lesson,.date-navigation,.header-actions,.heading .view-switch,.shell>.drag-tabs';
+    function paint() {
+      frame=0;if(!target?.isConnected)return;
+      const rect=target.getBoundingClientRect();
+      const dx=Math.max(0,Math.min(1,(x-rect.left)/rect.width)), dy=Math.max(0,Math.min(1,(y-rect.top)/rect.height));
+      target.style.setProperty('--mx',`${dx*100}%`);target.style.setProperty('--my',`${dy*100}%`);
+      target.style.setProperty('--light-angle',`${115+dx*60}deg`);
+    }
+    function move(event:PointerEvent) {
+      if(document.documentElement.dataset.style!=='glass'||motion.matches||contrast.matches)return null;
+      const element=event.target instanceof Element?event.target.closest<HTMLElement>(selector):null;
+      if(!element)return null;
+      target=element;x=event.clientX;y=event.clientY;
+      if(!frame)frame=requestAnimationFrame(paint);
+      return element;
+    }
+    function down(event:PointerEvent) {pressed=move(event);pressed?.setAttribute('data-glass-touch','');}
+    function up() {pressed?.removeAttribute('data-glass-touch');pressed=null;}
+    window.addEventListener('pointermove',move,{passive:true});window.addEventListener('pointerdown',down,{passive:true});
+    window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+    return()=>{cancelAnimationFrame(frame);up();window.removeEventListener('pointermove',move);window.removeEventListener('pointerdown',down);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);};
+  },[]);
   useEffect(() => {
     const root = document.documentElement;
     const reduced = matchMedia('(prefers-reduced-transparency: reduce)');
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     const contrast = matchMedia('(prefers-contrast: more)');
+    const desktop = matchMedia('(hover: hover) and (pointer: fine)');
     // SVG backdrop filters are a Chromium enhancement. Safari/Firefox retain
     // the CSS blur + highlights instead of accepting an unsupported URL.
     const supported = /Chrome\/|Chromium\/|Edg\//.test(navigator.userAgent)
@@ -83,7 +111,7 @@ export function GlassOptics() {
       const kind = el.classList.contains('tab-lens') ? 'drop' : 'edge';
       const radius = parseFloat(getComputedStyle(el).borderRadius) || 24;
       // Clearer glass bends more and over a wider rim.
-      const band = Math.round(6 + level * 8), scale = Math.round(kind === 'drop' ? 3 + level * 7 : 3 + level * 11);
+      const band = Math.round(8 + level * 14), scale = Math.round(kind === 'drop' ? 12 + level * 26 : 8 + level * 26);
       const key = `${kind}:${width}:${height}:${radius}:${band}:${scale}`;
       if (sizes.get(el) === key) return;
       const map = displacementMap(kind, width, height, radius, band);
@@ -115,11 +143,12 @@ export function GlassOptics() {
         return;
       }
       if (!watching) {
-        contentObserver.observe(document.getElementById('root') || document.body, {childList:true, subtree:true});
+        contentObserver.observe(document.getElementById('root') || document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['aria-hidden']});
         watching = true;
       }
-      for (const el of filters.keys()) if (!el.isConnected) remove(el);
-      document.querySelectorAll<HTMLElement>(surfaces).forEach(el => {
+      const visible = new Set(document.querySelectorAll<HTMLElement>(surfaces + (desktop.matches ? ', .slide:not([aria-hidden=true]) .lesson' : '')));
+      for (const el of filters.keys()) if (!visible.has(el)) remove(el);
+      visible.forEach(el => {
         if (!filters.has(el)) { observer.observe(el); render(el); }
       });
     }
@@ -129,6 +158,7 @@ export function GlassOptics() {
     const styleObserver = new MutationObserver(schedule);
     styleObserver.observe(root, {attributes:true, attributeFilter:['data-style']});
     const contentObserver = new MutationObserver(schedule);
+    desktop.addEventListener('change',schedule);
     reduced.addEventListener('change', schedule); motion.addEventListener('change', schedule); contrast.addEventListener('change', schedule);
     window.addEventListener('vmk-liquid-change', relevel);
     sync();
@@ -136,6 +166,7 @@ export function GlassOptics() {
       cancelAnimationFrame(frame); styleObserver.disconnect(); contentObserver.disconnect();
       reduced.removeEventListener('change', schedule); motion.removeEventListener('change', schedule); contrast.removeEventListener('change', schedule);
       window.removeEventListener('vmk-liquid-change', relevel);
+      desktop.removeEventListener('change',schedule);
       for (const el of filters.keys()) remove(el);
       observer.disconnect();
     };

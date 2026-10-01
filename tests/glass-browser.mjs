@@ -72,6 +72,8 @@ try {
     const rect=await nav.boundingBox();assert(rect.x>=0&&rect.x+rect.width<=width,'dock stays in viewport');
   }
   await page.setViewportSize({width:390,height:844});
+  await page.getByRole('button',{name:initialDay,exact:true}).click();
+  await page.waitForTimeout(650);
   await mkdir('test-results/glass',{recursive:true});
   const shot=async name=>page.screenshot({path:`test-results/glass/${safari?'webkit':'chromium'}-${name}.png`,fullPage:true});
   await shot('night');
@@ -79,20 +81,29 @@ try {
   assert.match(await page.locator('.style-gallery button').first().getAttribute('aria-label'),/^Стекло:/);
   const slider=page.getByRole('slider',{name:'Жидкое стекло: от матового к прозрачному'});
   await slider.focus();await slider.press('End');
-  const alpha=async selector=>page.locator(selector).first().evaluate(el=>{
-    const c=getComputedStyle(el).backgroundColor;
+  const alpha=async(selector,pseudo=null)=>page.locator(selector).first().evaluate((el,pseudo)=>{
+    const c=getComputedStyle(el,pseudo).backgroundColor;
     const m=c.match(/\/\s*([\d.]+)\s*\)/)||c.match(/^rgba\(.+,\s*([\d.]+)\)$/);
     return m?Number(m[1]):1;
-  });
-  assert(await alpha('[data-slot=dialog-content]')>=.84,'clear overlays retain a reading layer');
+  },pseudo);
+  assert(await alpha('[data-slot=dialog-content]')>=.62,'clear overlays retain a reading layer');
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
-  assert(await alpha('.lesson')>=.72,'clear cards retain a reading layer');
-  await shot('night-clear');await page.reload();await page.locator('.lesson').first().waitFor();
-  assert(await alpha('.lesson')>=.72,'saved clarity is applied safely before hydration');
+  assert(await alpha('.lesson')<=.05,'clear cards reveal the photo');
+  assert(await alpha('.lesson h3','::before')>=.79,'clarity protects ink locally');
+  assert.match(await nav.evaluate(el=>getComputedStyle(el).backdropFilter||getComputedStyle(el).webkitBackdropFilter),/blur\(10px\)/,'dock blurs scrolling text even when clear');
+  await shot('night-clear');
+  await nav.getByRole('button',{name:'Календарь',exact:true}).click();
+  assert(await alpha('.term-month')>=.34,'dense calendar grid retains a reading field');
+  assert.match(await page.locator('.term-month').first().evaluate(el=>getComputedStyle(el).backdropFilter||getComputedStyle(el).webkitBackdropFilter),/blur\(10px\)/);
+  await nav.getByRole('button',{name:'Расписание',exact:true}).click();
+  await page.reload();await page.locator('.lesson').first().waitFor();
+  assert(await alpha('.lesson')<=.05,'saved clarity stays clear before hydration');
+  assert(await alpha('.lesson h3','::before')>=.79,'saved clarity retains the local text veil');
   await page.getByRole('button',{name:'Оформление',exact:true}).click();
   await slider.focus();await slider.press('Home');
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
-  assert(await alpha('.lesson')>=.88,'matte cards are denser');
+  assert(await alpha('.lesson')>=.84,'matte and clear have a visibly different material');
+  await shot('night-matte');
   await page.getByRole('button',{name:'Оформление',exact:true}).click();
   await page.getByRole('button',{name:'Сбросить',exact:true}).click();
   await page.getByRole('tab',{name:'Тема',exact:true}).click();
@@ -103,9 +114,10 @@ try {
   await page.getByRole('tab',{name:'Стиль',exact:true}).click();
   await slider.focus();await slider.press('End');
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
-  assert(await alpha('.lesson')>=.72,'light cards retain the same reading layer');
+  assert(await alpha('.lesson')<=.05,'day photo shines through clear cards too');
+  assert(await alpha('.lesson h3','::before')>=.79,'light ink has a local veil');
   await shot('day-clear');
-  console.log('PASS clarity extremes, readable cards/dialogs, saved clarity, glass-first picker');
+  console.log('PASS wide clarity range, local reading veils, clear dock, persistence, glass-first picker');
   await page.getByRole('button',{name:'Оформление',exact:true}).click();
   await page.getByRole('tab',{name:'Тема',exact:true}).click();
   await page.getByRole('button',{name:'Снег',exact:true}).click();
@@ -143,4 +155,30 @@ try {
   await page.screenshot({path:'test-results/glass/light.png',fullPage:true});
   assert.deepEqual(errors,[]);
   await context.close();
+  const desktop=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'});
+  await desktop.addInitScript(()=>{
+    localStorage.setItem('vmk-group','114');localStorage.setItem('vmk-onboarded','1');
+    localStorage.setItem('vmk114-style','glass');
+  });
+  const wide=await desktop.newPage();
+  await wide.clock.setFixedTime(new Date('2026-09-28T07:45:00Z'));
+  await wide.goto(base);await wide.locator('.slide:not([aria-hidden=true]) .lesson').first().waitFor();
+  const card=wide.locator('.slide:not([aria-hidden=true]) .lesson').first();
+  if(!safari)await wide.waitForFunction(()=>!!document.querySelector('.slide:not([aria-hidden=true]) .lesson[data-glass-optics]'));
+  const rect=await card.boundingBox();
+  await wide.mouse.move(rect.x+rect.width*.8,rect.y+rect.height*.3);await wide.mouse.down();
+  await wide.waitForFunction(()=>!!document.querySelector('.lesson[data-glass-touch]'));
+  await wide.waitForFunction(()=>document.querySelector('.lesson[data-glass-touch]')?.style.getPropertyValue('--mx'));
+  assert(Math.abs(await card.evaluate(el=>parseFloat(el.style.getPropertyValue('--mx')))-80)<1,'highlight follows pointer position');
+  await wide.mouse.up();
+  assert.equal(await card.getAttribute('data-glass-touch'),null,'touch illumination cleans up after release');
+  await wide.getByRole('button',{name:'Следующий день',exact:true}).click();
+  await wide.waitForTimeout(700);
+  if(!safari){
+    await wide.waitForFunction(()=>!!document.querySelector('.slide:not([aria-hidden=true]) .lesson[data-glass-optics]'));
+    assert.equal(await wide.locator('.slide[aria-hidden=true] .lesson[data-glass-optics]').count(),0,'hidden neighbour cards do not retain filters');
+  }
+  await wide.screenshot({path:`test-results/glass/${safari?'webkit':'chromium'}-desktop.png`});
+  await desktop.close();
+  console.log('PASS desktop edge refraction and pointer illumination');
 } finally {await browser.close();await new Promise(r=>server.close(r));}

@@ -31,7 +31,7 @@ export function LiquidSlider(){
   const [value,setValue]=useState(loadLiquid);
   const change=(v:number)=>{setValue(v);applyLiquid(v);};
   return <div className="liquid-slider">
-    <div className="liquid-head"><strong>Жидкое стекло</strong><span>{value<25?'матовое':value<45?'мягкое':value<=55?'сбалансированное':value<80?'прозрачное':'чистое'}</span></div>
+    <div className="liquid-head"><strong>Жидкое стекло</strong><span>{value<25?'матовое':value<45?'мягкое':value<=55?'жидкое':value<80?'прозрачное':'чистое'}</span></div>
     <input type="range" min={0} max={100} step={1} value={value} aria-label="Жидкое стекло: от матового к прозрачному"
       style={{'--v':`${value}%`} as React.CSSProperties}
       onChange={e=>change(Number(e.target.value))} onPointerUp={()=>applyLiquid(value,true)} onKeyUp={()=>applyLiquid(value,true)} onBlur={()=>applyLiquid(value,true)}/>
