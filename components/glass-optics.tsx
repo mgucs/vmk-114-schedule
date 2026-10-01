@@ -1,17 +1,25 @@
 import {useEffect, useRef} from 'react';
 
 const NS = 'http://www.w3.org/2000/svg';
-const surfaces = '.shell > .drag-tabs, .date-navigation, .header-actions, .list .lesson';
+// Refraction is for the glass chrome that stays in place. Lesson cards move with every swipe:
+// displacing their backdrop each frame is what made swipes stutter, so they keep plain frosted glass.
+const surfaces = '.shell > .drag-tabs, .date-navigation, .header-actions, .heading .view-switch, .tab-lens';
+// «Жидкое стекло» (the slider) as 0…1: how clear the glass is and how strongly it bends what is behind.
+export const liquidLevel = () => {
+  const value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--lg'));
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : .5;
+};
 
-// A neutral centre and curved displacement at the rounded edge. Drawn once per
-// size at half resolution, never on scroll. Only the backdrop is displaced.
+// Displacement maps are drawn once per size at half resolution, never on scroll. Only the backdrop is displaced.
+// "edge": a neutral centre and a curved bend at the rounded rim, like the thick edge of a glass slab.
+// "drop": a water drop — the whole lens magnifies, most strongly towards its rim.
 const maps = new Map<string,string>();
-function edgeMap(width:number, height:number, radius:number) {
-  const key = `${width}:${height}:${radius}`;
-  if (!maps.has(key)) { const map = drawEdgeMap(width, height, radius); if (!map) return null; maps.set(key, map); }
+function displacementMap(kind:'edge'|'drop', width:number, height:number, radius:number, band:number) {
+  const key = `${kind}:${width}:${height}:${radius}:${band}`;
+  if (!maps.has(key)) { const map = draw(kind, width, height, radius, band); if (!map) return null; maps.set(key, map); }
   return maps.get(key)!;
 }
-function drawEdgeMap(width:number, height:number, radius:number) {
+function draw(kind:'edge'|'drop', width:number, height:number, radius:number, band:number) {
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.ceil(width / 2));
   canvas.height = Math.max(1, Math.ceil(height / 2));
@@ -25,13 +33,20 @@ function drawEdgeMap(width:number, height:number, radius:number) {
     const qx = Math.abs(px) - (width / 2 - r), qy = Math.abs(py) - (height / 2 - r);
     const ax = Math.max(qx, 0), ay = Math.max(qy, 0), len = Math.hypot(ax, ay);
     const distance = len + Math.min(Math.max(qx, qy), 0) - r;
-    const nx = len ? ax / len : qx > qy ? 1 : 0;
-    const ny = len ? ay / len : qy >= qx ? 1 : 0;
-    const edge = Math.max(0, 1 - Math.abs(distance) / 14);
-    const bend = Math.sin(edge * Math.PI / 2) * .8;
+    const edge = Math.max(0, 1 - Math.abs(distance) / band);
     const i = (y * canvas.width + x) * 4;
-    pixels.data[i] = 128 + Math.sign(px) * nx * bend * 127;
-    pixels.data[i + 1] = 128 + Math.sign(py) * ny * bend * 127;
+    if (kind === 'drop') {
+      // Sample closer to the centre (magnify), more so near the rim where a drop is steepest.
+      const m = .55 + .45 * Math.sin(edge * Math.PI / 2);
+      pixels.data[i] = 128 - 127 * m * px / (width / 2);
+      pixels.data[i + 1] = 128 - 127 * m * py / (height / 2);
+    } else {
+      const nx = len ? ax / len : qx > qy ? 1 : 0;
+      const ny = len ? ay / len : qy >= qx ? 1 : 0;
+      const bend = Math.sin(edge * Math.PI / 2) * .85;
+      pixels.data[i] = 128 + Math.sign(px) * nx * bend * 127;
+      pixels.data[i + 1] = 128 + Math.sign(py) * ny * bend * 127;
+    }
     pixels.data[i + 2] = 128;
     pixels.data[i + 3] = 255;
   }
@@ -63,10 +78,14 @@ export function GlassOptics() {
       if (!active()) return;
       const width = el.offsetWidth, height = el.offsetHeight;
       if (!width || !height) return;
+      const level = liquidLevel();
+      const kind = el.classList.contains('tab-lens') ? 'drop' : 'edge';
       const radius = parseFloat(getComputedStyle(el).borderRadius) || 24;
-      const key = `${width}:${height}:${radius}`;
+      // Clearer glass bends more and over a wider rim.
+      const band = Math.round(10 + level * 16), scale = Math.round(kind === 'drop' ? 14 + level * 30 : 6 + level * 34);
+      const key = `${kind}:${width}:${height}:${radius}:${band}:${scale}`;
       if (sizes.get(el) === key) return;
-      const map = edgeMap(width, height, radius);
+      const map = displacementMap(kind, width, height, radius, band);
       if (!map) return;
       let filter = filters.get(el);
       if (!filter) {
@@ -80,7 +99,7 @@ export function GlassOptics() {
       const image = document.createElementNS(NS, 'feImage');
       for (const [name, value] of Object.entries({href:map, x:0, y:0, width, height, result:'edge', preserveAspectRatio:'none'})) image.setAttribute(name, String(value));
       const displacement = document.createElementNS(NS, 'feDisplacementMap');
-      for (const [name, value] of Object.entries({in:'SourceGraphic', in2:'edge', scale:18, xChannelSelector:'R', yChannelSelector:'G'})) displacement.setAttribute(name, String(value));
+      for (const [name, value] of Object.entries({in:'SourceGraphic', in2:'edge', scale, xChannelSelector:'R', yChannelSelector:'G'})) displacement.setAttribute(name, String(value));
       filter.replaceChildren(image, displacement);
       sizes.set(el, key);
       el.style.setProperty('--g-optics', `url("#${filter.id}")`);
@@ -95,31 +114,27 @@ export function GlassOptics() {
         return;
       }
       if (!watching) {
-        contentObserver.observe(document.getElementById('root') || document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['data-paging','data-drag','data-side']});
+        contentObserver.observe(document.getElementById('root') || document.body, {childList:true, subtree:true});
         watching = true;
       }
       for (const el of filters.keys()) if (!el.isConnected) remove(el);
-      // Neighbour days shown during a swipe get no optics, and nothing new is drawn while a page moves.
-      if (document.querySelector('.pager:is([data-paging],[data-drag])')) return;
       document.querySelectorAll<HTMLElement>(surfaces).forEach(el => {
-        if (!filters.has(el) && !el.closest('.slide[data-side]')) { observer.observe(el); render(el); }
+        if (!filters.has(el)) { observer.observe(el); render(el); }
       });
     }
-    // After a page stops, new cards get their optics a moment later, not in the frame the slide ends.
-    let later = 0;
-    function schedule() {
-      if (frame || later) return;
-      if (document.querySelector('.pager:is([data-paging],[data-drag])')) { later = window.setTimeout(() => { later = 0; schedule(); }, 350); return; }
-      frame = requestAnimationFrame(sync);
-    }
+    function schedule() { if (!frame) frame = requestAnimationFrame(sync); }
+    // The slider redraws every surface with the new strength.
+    function relevel() { sizes.clear(); for (const el of filters.keys()) render(el); schedule(); }
     const styleObserver = new MutationObserver(schedule);
     styleObserver.observe(root, {attributes:true, attributeFilter:['data-style']});
     const contentObserver = new MutationObserver(schedule);
     reduced.addEventListener('change', schedule); motion.addEventListener('change', schedule);
+    window.addEventListener('vmk-liquid-change', relevel);
     sync();
     return () => {
-      cancelAnimationFrame(frame); clearTimeout(later); styleObserver.disconnect(); contentObserver.disconnect();
+      cancelAnimationFrame(frame); styleObserver.disconnect(); contentObserver.disconnect();
       reduced.removeEventListener('change', schedule); motion.removeEventListener('change', schedule);
+      window.removeEventListener('vmk-liquid-change', relevel);
       for (const el of filters.keys()) remove(el);
       observer.disconnect();
     };

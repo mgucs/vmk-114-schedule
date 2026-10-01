@@ -31,6 +31,13 @@ function rowsOf(change:Change):{kind:'added'|'removed'|'changed'; when?:string; 
     return m ? {label:m[1], from:m[2], to:m[3]} : {label:'', text:d==='Изменена запись в PDF' ? 'Текст в PDF изменился, но время, место и преподаватель те же' : d};
   })};
 }
+// «Изменилось: предмет, время, аудитория» — what changed, in a few words for the lesson card.
+export function changeLabels(change:Change) {
+  const {kind, rows} = rowsOf(change);
+  if (kind!=='changed') return kind==='added' ? 'Новая пара' : 'Пара убрана';
+  const labels = [...new Set(rows.map(r => r.label.replace(/\s*\(.*\)$/, '').toLowerCase()).filter(Boolean))];
+  return 'Изменилось: ' + (labels.length ? labels.join(', ') : 'запись в PDF');
+}
 const kindNames = {added:'Новая пара', removed:'Пары больше нет', changed:'Изменилась'};
 const kindIcons = {added:<Plus size={13}/>, removed:<Minus size={13}/>, changed:<RefreshCw size={12}/>};
 

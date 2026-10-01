@@ -146,7 +146,7 @@ html[data-style=glass] { background:var(--background); }
   --g-rim:linear-gradient(155deg,color-mix(in srgb,var(--now) 85%,#fff),color-mix(in srgb,var(--now) 24%,transparent) 30%,#ffffff12 55%,color-mix(in srgb,var(--now) 48%,transparent));
   box-shadow:var(--g-lip),var(--g-pool),0 0 0 1px color-mix(in srgb,var(--now) 12%,transparent),var(--g-drop); }
 [data-style=glass] .list .lesson.current { padding-bottom:30px; }
-[data-style=glass] .lesson.past { opacity:1; --g-fill:color-mix(in srgb,var(--card) 42%,transparent); color:var(--muted-foreground); }
+[data-style=glass] .lesson.past { opacity:1; --g-fill:color-mix(in srgb,var(--card) var(--g-past-p),transparent); color:var(--muted-foreground); }
 [data-style=glass] .lesson-time { gap:6px; min-height:24px; color:var(--muted-foreground); font-size:14px; }
 [data-style=glass] .lesson-time > :nth-child(2) { margin-left:auto; }
 [data-style=glass] .range { color:var(--foreground); font-size:13px; font-weight:650; letter-spacing:.01em; white-space:nowrap; }
@@ -200,7 +200,7 @@ html[data-style=glass] { background:var(--background); }
    а пока палец её тащит — становится прозрачной каплей крупнее панели. */
 [data-style=glass] .shell { max-width:660px; padding:0 20px calc(110px + env(safe-area-inset-bottom)); }
 [data-style=glass] .shell>.drag-tabs { left:50%; right:auto; bottom:calc(16px + env(safe-area-inset-bottom)); translate:-50% 0; width:min(420px,calc(100% - 32px)); height:70px; padding:6px; gap:0; border-radius:28px;
-  --g-fill:color-mix(in srgb,var(--card) 64%,transparent);
+  --g-fill:color-mix(in srgb,var(--card) var(--g-tabs-p),transparent);
   box-shadow:var(--g-lip), var(--g-pool), 0 2px 6px -2px #0000002e, 0 20px 44px -18px #000000b3; }
 [data-style=glass] .drag-tabs button { flex:1; width:auto; min-width:0; height:58px; justify-content:center; gap:4px; padding:0; border-radius:22px; font-size:9px; font-weight:550; transition:color .3s; }
 [data-style=glass] .drag-tabs button svg { width:24px; height:24px; transition:transform .45s var(--spring); }
@@ -278,9 +278,16 @@ html[data-style=glass] { background:var(--background); }
 
 /* Optics only on small navigation surfaces: the centre remains frosted enough
    to read scrolling content. WebKit keeps the prefixed CSS-only treatment. */
-[data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)[data-glass-optics] {
-  backdrop-filter:blur(10px) var(--g-optics) saturate(1.25);
+[data-style=glass] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs)[data-glass-optics] {
+  backdrop-filter:blur(calc(14px - var(--lg) * 8px)) var(--g-optics) saturate(calc(1.2 + var(--lg) * .5));
 }
+/* Линза вкладок, пока её тащат пальцем, — капля воды поверх иконок: увеличивает и изгибает то, что под ней
+   (Chromium). В Safari остаётся прежняя прозрачная линза. */
+[data-style=glass] .tab-lens { pointer-events:none; }
+[data-style=glass] .drag-tabs button { position:relative; z-index:1; }
+[data-style=glass] .drag-tabs.dragging .tab-lens[data-glass-optics] { z-index:2;
+  -webkit-backdrop-filter:var(--g-optics) saturate(1.2) brightness(1.06); backdrop-filter:var(--g-optics) saturate(1.2) brightness(1.06);
+  background:radial-gradient(120% 90% at 50% 0%,#ffffff26,#ffffff00 60%); }
 [data-style=glass] .lesson-time { flex-wrap:wrap; }
 [data-style=glass] .lesson .homework-button { font-size:10px; padding:0 7px; }
 [data-style=glass] .footer { padding-top:24px; }
@@ -380,8 +387,30 @@ html[data-style=glass] { background:var(--background); }
 
 /* Ещё плотнее и прозрачнее: карточки — тонкое стекло, сквозь которое видно здание;
    строки подгрупп идут вплотную друг к другу. */
-:root[data-style=glass] { --g-fill:color-mix(in srgb,var(--card) 42%,transparent); --g-blur:blur(12px) saturate(1.45); }
-:root[data-scheme=dark][data-style=glass] { --g-fill:color-mix(in srgb,var(--card) 40%,transparent); }
+/* «Жидкое стекло» (ползунок в «Оформлении», lib/liquid.mjs): --lg 0…1 и готовые проценты заливки.
+   Без ползунка — значения середины, это прежний вид. */
+:root[data-style=glass] {
+  --lg:.5; --g-fill-p:42%; --g-thick-p:75%; --g-past-p:33%; --g-tabs-p:62%;
+  --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
+  --g-blur:blur(calc(20px - var(--lg) * 14px)) saturate(calc(1.2 + var(--lg) * .55));
+  --g-blur-thick:blur(calc(30px - var(--lg) * 14px)) saturate(calc(1.25 + var(--lg) * .4));
+  /* Капля: яркая верхняя кромка, боковой блик и свет, собранный у нижнего края. */
+  --g-sheen:linear-gradient(155deg,rgb(255 255 255 / calc(.25 + var(--lg) * .4)),rgb(255 255 255 / calc(.05 + var(--lg) * .1)) 38%,#fff0 70%,rgb(255 255 255 / calc(.08 + var(--lg) * .15)));
+  --g-lip:inset 0 1px 1px rgb(255 255 255 / calc(.55 + var(--lg) * .4)), inset 1px 0 1px -.5px rgb(255 255 255 / calc(.2 + var(--lg) * .3));
+  --g-pool:inset 0 -1px 1px rgb(255 255 255 / calc(.2 + var(--lg) * .4)), inset 0 -14px 20px -18px rgb(255 255 255 / calc(var(--lg) * .9));
+  --g-lens:linear-gradient(160deg,rgb(255 255 255 / calc(.75 + var(--lg) * .2)),rgb(255 255 255 / calc(.25 + var(--lg) * .25)));
+}
+:root[data-scheme=dark][data-style=glass] {
+  --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
+  --g-sheen:linear-gradient(145deg,rgb(255 255 255 / calc(.05 + var(--lg) * .12)),rgb(255 255 255 / calc(.01 + var(--lg) * .03)) 42%,#fff0 70%,rgb(255 255 255 / calc(.02 + var(--lg) * .06)));
+  --g-lip:inset 0 1px 1px rgb(255 255 255 / calc(.14 + var(--lg) * .3)), inset 1px 0 1px -.5px rgb(255 255 255 / calc(.04 + var(--lg) * .12));
+  --g-pool:inset 0 -1px 1px rgb(255 255 255 / calc(.03 + var(--lg) * .12)), inset 0 -14px 22px -18px rgb(255 255 255 / calc(var(--lg) * .3));
+  --g-lens:linear-gradient(150deg,rgb(255 255 255 / calc(.12 + var(--lg) * .16)),rgb(255 255 255 / calc(.03 + var(--lg) * .08)));
+}
+/* Кромка ярче у прозрачного стекла. */
+[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-day,.term-month,.session-item,.session-next,.date-navigation,.heading .view-switch,.session-empty,.session-what,.term-dates,.header-actions,.footer-links button,.shell>.drag-tabs)::before { opacity:calc(.45 + var(--lg) * .55); }
+/* Прозрачное стекло: подписям немного тени, чтобы читались на фотографии. */
+:root[data-scheme=dark][data-style=glass] :is(.lesson h3,.range,.teacher-row) { text-shadow:0 1px 2px rgb(0 0 0 / calc(var(--lg) * .35)); }
 [data-style=glass] .list { gap:6px; }
 [data-style=glass] .list .lesson { padding:10px 14px 11px; border-radius:20px; }
 [data-style=glass] .list .lesson.current { padding-bottom:18px; }
@@ -398,10 +427,11 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] .list .lesson.current { padding-bottom:22px; }
   [data-style=glass] .lesson h3 { font-size:20px; }
 }
-/* Лёгкое преломление по краю карточек пар (Chromium); в Safari — то же стекло без искажения. */
-[data-style=glass] .list .lesson[data-glass-optics] { backdrop-filter:blur(9px) var(--g-optics) saturate(1.45); }
-/* Листание дней: пока страница едет, карточки не размывают фон заново на каждом кадре — только плотнее заливка.
-   Преломление кромок в это время тоже снято. */
+/* Листание дней: стекло карточек не меняется, пока день едет; дорожка — отдельный слой для видеокарты. */
 [data-style=glass] .pager:is([data-paging],[data-drag]) .pager-track { will-change:transform; }
-[data-style=glass] .pager:is([data-paging],[data-drag]) :is(.lesson,.gap,.empty,.list .lesson[data-glass-optics]) {
-  -webkit-backdrop-filter:none; backdrop-filter:none; --g-fill:color-mix(in srgb,var(--card) 80%,transparent); }
+/* Кнопки на стекле пружинят под пальцем, как капля. */
+[data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button) {
+  transition:transform .45s var(--spring), background .2s, color .2s; }
+[data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active {
+  transform:scale(.94); transition-duration:.12s; }
+@media (prefers-reduced-motion:reduce) { [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active { transform:none; } }

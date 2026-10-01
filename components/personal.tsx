@@ -1,8 +1,9 @@
-import {useEffect,useRef,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {Palette,NotebookPen,Check,CalendarPlus} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {StylePreview} from './style-preview';
 import {calendarFile} from '../lib/calendar.mjs';
+import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
 
 // name, label, scheme, swatch colours (background, lecture, now)
 export const THEMES = [
@@ -22,9 +23,21 @@ export const STYLES = [
   ['glass','Стекло','Жидкое стекло, как в iOS 26'],
   ['minimal','Минимал','Время, предмет, аудитория'],
   ['timeline','Лента','Шкала времени и карточки'],
-  ['cards','Карточки','Как в приложениях iOS'],
+  ['cards','Карточки','Как в приложениях iOS'],
 ] as const;
 const themeKey='vmk114-theme',styleKey='vmk114-style';
+// «Жидкое стекло»: matte ↔ clear, applied live while the thumb moves and saved when it is let go.
+export function LiquidSlider(){
+  const [value,setValue]=useState(loadLiquid);
+  const change=(v:number)=>{setValue(v);applyLiquid(v);};
+  return <div className="liquid-slider">
+    <div className="liquid-head"><strong>Жидкое стекло</strong><span>{value<25?'матовое':value<45?'плотное':value<=55?'обычное':value<80?'прозрачное':'как капля'}</span></div>
+    <input type="range" min={0} max={100} step={1} value={value} aria-label="Жидкое стекло: от матового к прозрачному"
+      style={{'--v':`${value}%`} as React.CSSProperties}
+      onChange={e=>change(Number(e.target.value))} onPointerUp={()=>applyLiquid(value,true)} onKeyUp={()=>applyLiquid(value,true)} onBlur={()=>applyLiquid(value,true)}/>
+    <div className="liquid-ends"><span>Матовое</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);applyLiquid(LIQUID_DEFAULT,true);}}>Сбросить</button><span>Прозрачное</span></div>
+  </div>;
+}
 const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'glass';}catch{return 'glass';}};
 // Older versions stored plain "light"/"dark".
 const legacy=(value:string|null)=>value==='light'?'paper':value==='dark'?'night':value;
@@ -76,7 +89,7 @@ export function ThemeButton() {
         <button role="tab" aria-selected={section==='theme'} onClick={()=>setSection('theme')}>Тема</button>
       </div>
       <div className="settings-scroll">
-      {section==='style' ? <StylePicker value={style} onChange={pickStyle}/>
+      {section==='style' ? <>{style==='glass' && <LiquidSlider/>}<StylePicker value={style} onChange={pickStyle}/></>
       : (['light','dark'] as const).map(scheme=><div key={scheme}>
         <h4 className="theme-section">{scheme==='light'?'Светлые':'Тёмные'}</h4>
         <div className="theme-grid">

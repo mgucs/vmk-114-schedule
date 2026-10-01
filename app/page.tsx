@@ -13,7 +13,7 @@ import {Onboarding, needsOnboarding} from '@/components/onboarding';
 import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
 import {StatsDialog} from '@/components/term-stats';
-import {UpdateEntry, type Change, type HistoryEntry} from '@/components/changes';
+import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
 import {DayPager} from '@/components/day-pager';
 import {Wallpaper} from '@/components/wallpaper';
@@ -156,7 +156,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
       {rows.map((row,i)=><div className="teacher-row" key={i}><span>{row.teacher ? <TeacherName name={row.teacher}/> : null}</span>{(row.room || (i===0 && lesson.room)) && <Room room={row.room || lesson.room} note={row.note}/>}</div>)}
       {!rows.length && lesson.room && <div className="teacher-row"><span/><Room room={lesson.room}/></div>}
       {now && <div className="progress" aria-hidden="true"><i style={{'--p':progress.toFixed(3)} as CSSProperties}/></div>}
-      {change && <p className="changed-note">Изменено: {(change.details?.length?change.details:['обновлена запись в PDF']).join('; ')}</p>}
+      {change && <button className="changed-note" onClick={()=>window.dispatchEvent(new Event('vmk-open-changes'))}>{changeLabels(change)}<span>подробнее</span></button>}
       {missingTeacher && <p className="rule-note subgroup-warning">Преподаватель подгруппы изменился — показаны все варианты.</p>}
       {note && <p className="rule-note">{note}</p>}
       {stacked==='odd' && <p className="rule-note">По нечётным неделям</p>}
@@ -178,7 +178,9 @@ export default function Home() {
   const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'map'>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
-  const [changesOpen,setChangesOpen] = useState(false), [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
+  const [changesOpen,setChangesOpen] = useState(false);
+  useEffect(()=>{const open=()=>setChangesOpen(true);window.addEventListener('vmk-open-changes',open);return()=>window.removeEventListener('vmk-open-changes',open);},[]);
+  const [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
   const checking = useRef(false), lastAttempt = useRef(0), scheduleArea = useRef<HTMLElement>(null);
   const [group,setGroupState] = useState(loadGroup), [groupsOpen,setGroupsOpen] = useState(false);
   const table = saved.snapshot.schedule;

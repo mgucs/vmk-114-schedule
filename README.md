@@ -51,7 +51,8 @@ PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium no
 | `components/day-pager.tsx` | дни листаются пальцем: соседний день въезжает вслед за жестом |
 | `app/glass.css` | изолированное оформление «Стекло», светлые/тёмные поверхности и доступные упрощённые эффекты |
 | `components/wallpaper.tsx` | фон «Стекла»: локальная фотография МГУ под спокойной дымкой |
-| `components/glass-optics.tsx` | преломление кромок панелей в Chromium; в Safari/Firefox — CSS-стекло |
+| `components/glass-optics.tsx` | преломление кромок шапки, полосы дней и вкладок, «капля» на линзе вкладок (Chromium); в Safari/Firefox — CSS-стекло. Карточки пар без искажения: они двигаются при листании |
+| `lib/liquid.mjs` | ползунок «Жидкое стекло» в «Оформлении»: от матового к прозрачному (заливка, размытие, блики, сила преломления) |
 | `components/campus-map.tsx`, `components/map-scene.ts` | карта корпуса (three.js) |
 | `tools/build_map.py` | разметка кабинетов по планам этажей из `tools/floor-plans.pdf` |
 | `tools/build-map-models.mjs` | объёмные модели этажей из разметки (см. `tools/map-models.md`) |
