@@ -4,6 +4,7 @@ import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {StylePreview} from './style-preview';
 import {calendarFile} from '../lib/calendar.mjs';
 import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
+import {TILT_KEY,disableTilt,enableTilt,tiltNeedsPermission,tiltWanted} from '../lib/tilt.mjs';
 
 // name, label, scheme, swatch colours (background, lecture, now)
 export const THEMES = [
@@ -29,13 +30,19 @@ const themeKey='vmk114-theme',styleKey='vmk114-style';
 // «Жидкое стекло»: matte ↔ clear, applied live while the thumb moves and saved when it is let go.
 export function LiquidSlider(){
   const [value,setValue]=useState(loadLiquid);
+  const [tilt,setTilt]=useState(()=>tiltWanted()&&(!tiltNeedsPermission()||(()=>{try{return localStorage.getItem(TILT_KEY)==='on';}catch{return false;}})()));
   const change=(v:number)=>{setValue(v);applyLiquid(v);};
   return <div className="liquid-slider">
-    <div className="liquid-head"><strong>Жидкое стекло</strong><span>{value<25?'матовое':value<45?'плотное':value<=55?'обычное':value<80?'прозрачное':'как капля'}</span></div>
-    <input type="range" min={0} max={100} step={1} value={value} aria-label="Жидкое стекло: от матового к прозрачному"
+    <div className="liquid-head"><strong>Прозрачность</strong><span>{value<25?'плотное стекло':value<45?'приглушённое':value<=55?'обычное':value<80?'прозрачное':'видно МГУ'}</span></div>
+    <input type="range" min={0} max={100} step={1} value={value} aria-label="Прозрачность стекла: от плотного к прозрачному"
       style={{'--v':`${value}%`} as React.CSSProperties}
       onChange={e=>change(Number(e.target.value))} onPointerUp={()=>applyLiquid(value,true)} onKeyUp={()=>applyLiquid(value,true)} onBlur={()=>applyLiquid(value,true)}/>
-    <div className="liquid-ends"><span>Матовое</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);applyLiquid(LIQUID_DEFAULT,true);}}>Сбросить</button><span>Прозрачное</span></div>
+    <div className="liquid-ends"><span>Плотное</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);applyLiquid(LIQUID_DEFAULT,true);}}>Сбросить</button><span>Прозрачное</span></div>
+    <p className="liquid-hint">Правее — ярче виден МГУ. Под текстом пар всегда остаётся затемнение, чтобы он читался.</p>
+    {typeof window!=='undefined' && 'DeviceOrientationEvent' in window && <label className="liquid-tilt">
+      <span><b>Блики от наклона телефона</b><small>Свет на стекле смещается, когда наклоняешь телефон</small></span>
+      <input type="checkbox" role="switch" checked={tilt} onChange={async e=>{if(e.target.checked)setTilt(await enableTilt());else{disableTilt();setTilt(false);}}}/>
+    </label>}
   </div>;
 }
 const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'glass';}catch{return 'glass';}};

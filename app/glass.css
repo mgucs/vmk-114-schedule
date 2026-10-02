@@ -385,38 +385,111 @@ html[data-style=glass] { background:var(--background); }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.heading,.topbar) { text-shadow:0 1px 10px color-mix(in srgb,var(--background) 85%,transparent); }
 }
 
-/* Ещё плотнее и прозрачнее: карточки — тонкое стекло, сквозь которое видно здание;
-   строки подгрупп идут вплотную друг к другу. */
-/* «Жидкое стекло» (ползунок в «Оформлении», lib/liquid.mjs): --lg 0…1 и готовые проценты заливки.
-   Без ползунка — значения середины, это прежний вид. */
+/* ═══ Liquid Glass по правилам Apple (WWDC25 «Meet Liquid Glass») ═══
+   • Стекло — только слой навигации, который плавает над контентом: шапка, полоса дней, «День/Неделя»,
+     вкладки, кнопки внизу, окна. Карточки пар — слой контента: «стекло на всём» спорит с иерархией.
+   • Контент лежит на затемняющей подложке (dimming layer): текст читается при любой фотографии.
+   • Объём стекла: блик сверху, свет, собранный у нижнего края, тонкая кромка, мягкая тень; линзирование
+     (искажение фона по краю) — там, где браузер умеет (Chromium). Большие элементы — «толще».
+   • Движение — как гель: тянется вслед за пальцем и мягко встаёт на место, без качки.
+   Ползунок «Прозрачность» (lib/liquid.mjs) решает, насколько виден МГУ: снимает дымку с фото
+   и делает подложки тоньше, но не ниже порога читаемости. */
 :root[data-style=glass] {
-  --lg:.5; --g-fill-p:42%; --g-thick-p:75%; --g-past-p:33%; --g-tabs-p:62%;
-  --lg2:0; --g-blur-px:13px; --g-blur-thick-px:23px; --wp-photo:calc(.28 + .72 * var(--lg2));
+  --lg:.5; --lg2:0;
+  --c-fill-d:64%; --c-fill-l:77%; --c-past-d:50%; --c-past-l:67%; --c-blur-px:17px;
+  --g-fill-p:40%; --g-blur-px:10px; --g-thick-p:78%; --g-blur-thick-px:22px; --g-tabs-p:48%;
+  --tilt:0deg; --hx:30%;
+  --wp-photo:calc(.28 + .72 * var(--lg2));
+  /* Слой контента */
+  --c-fill:color-mix(in srgb,var(--card) var(--c-fill-l),transparent);
+  --c-past:color-mix(in srgb,var(--card) var(--c-past-l),transparent);
+  --c-shadow:inset 0 0 0 .5px rgb(255 255 255 / .5), 0 1px 2px rgb(20 40 60 / .06), 0 12px 28px -18px rgb(20 40 60 / .35);
+  /* Слой навигации: обычное стекло */
   --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
-  --g-blur:blur(var(--g-blur-px)) saturate(calc(1.2 + var(--lg) * .55));
-  --g-blur-thick:blur(var(--g-blur-thick-px)) saturate(calc(1.25 + var(--lg) * .4));
-  /* Капля: яркая верхняя кромка, боковой блик и свет, собранный у нижнего края. */
-  --g-sheen:linear-gradient(155deg,rgb(255 255 255 / calc(.25 + var(--lg) * .4)),rgb(255 255 255 / calc(.05 + var(--lg) * .1)) 38%,#fff0 70%,rgb(255 255 255 / calc(.08 + var(--lg) * .15)));
-  --g-lip:inset 0 1px 1px rgb(255 255 255 / calc(.55 + var(--lg) * .4)), inset 1px 0 1px -.5px rgb(255 255 255 / calc(.2 + var(--lg) * .3));
-  --g-pool:inset 0 -1px 1px rgb(255 255 255 / calc(.2 + var(--lg) * .4)), inset 0 -14px 20px -18px rgb(255 255 255 / calc(var(--lg) * .9));
-  --g-lens:linear-gradient(160deg,rgb(255 255 255 / calc(.75 + var(--lg) * .2)),rgb(255 255 255 / calc(.25 + var(--lg) * .25)));
+  --g-blur:blur(var(--g-blur-px)) saturate(1.8) brightness(1.04);
+  --g-blur-thick:blur(var(--g-blur-thick-px)) saturate(1.5);
+  --g-sheen:radial-gradient(130% 120% at var(--hx) -30%,rgb(255 255 255 / .55),rgb(255 255 255 / 0) 55%),
+            linear-gradient(180deg,rgb(255 255 255 / .12),rgb(255 255 255 / 0) 45%,rgb(255 255 255 / .1));
+  --g-rim:linear-gradient(calc(145deg + var(--tilt)),#ffffffff,#ffffff99 20%,#ffffff1a 48%,#ffffff40 78%,#ffffffd0);
+  --g-lip:inset 0 1px 0 rgb(255 255 255 / .9), inset 0 7px 12px -10px rgb(255 255 255 / .9);
+  --g-pool:inset 0 -1px 0 rgb(255 255 255 / .35), inset 0 -12px 16px -14px rgb(255 255 255 / .7);
+  --g-drop:0 1px 2px rgb(20 40 60 / .1), 0 14px 34px -14px rgb(20 40 60 / .4);
+  --g-lens:radial-gradient(120% 120% at 50% -10%,rgb(255 255 255 / .95),rgb(255 255 255 / .55));
+  --g-lens-shadow:inset 0 1px 0 #fff, inset 0 -1px 0 rgb(255 255 255 / .6), inset 0 -8px 12px -10px rgb(255 255 255 / .9), 0 1px 2px rgb(20 40 60 / .12), 0 6px 14px -6px rgb(20 40 60 / .3);
+  --gel:cubic-bezier(.3,1.2,.5,1);
+}
+@supports (transition-timing-function:linear(0, 1)) {
+  :root[data-style=glass] { --gel:linear(0, 0.077, 0.246, 0.44, 0.622, 0.772, 0.883, 0.959, 1.005, 1.029, 1.038, 1.037, 1.032, 1.024, 1.017, 1.011, 1.006, 1.003, 1, 0.999, 0.999, 0.999, 0.999, 0.999, 1); }
 }
 :root[data-scheme=dark][data-style=glass] {
-  --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
   --wp-photo:calc(.48 + .52 * var(--lg2));
-  --g-sheen:linear-gradient(145deg,rgb(255 255 255 / calc(.05 + var(--lg) * .12)),rgb(255 255 255 / calc(.01 + var(--lg) * .03)) 42%,#fff0 70%,rgb(255 255 255 / calc(.02 + var(--lg) * .06)));
-  --g-lip:inset 0 1px 1px rgb(255 255 255 / calc(.14 + var(--lg) * .3)), inset 1px 0 1px -.5px rgb(255 255 255 / calc(.04 + var(--lg) * .12));
-  --g-pool:inset 0 -1px 1px rgb(255 255 255 / calc(.03 + var(--lg) * .12)), inset 0 -14px 22px -18px rgb(255 255 255 / calc(var(--lg) * .3));
-  --g-lens:linear-gradient(150deg,rgb(255 255 255 / calc(.12 + var(--lg) * .16)),rgb(255 255 255 / calc(.03 + var(--lg) * .08)));
+  /* Затемнение под текстом: цвет карточки, смешанный с чёрным. */
+  --c-fill:color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-fill-d),transparent);
+  --c-past:color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-past-d),transparent);
+  --c-shadow:inset 0 0 0 .5px rgb(255 255 255 / .09), inset 0 1px 0 rgb(255 255 255 / .06), 0 1px 2px rgb(0 0 0 / .2), 0 14px 30px -18px rgb(0 0 0 / .7);
+  --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
+  --g-blur:blur(var(--g-blur-px)) saturate(1.7) brightness(1.08);
+  --g-sheen:radial-gradient(130% 120% at var(--hx) -30%,rgb(255 255 255 / .2),rgb(255 255 255 / 0) 55%),
+            linear-gradient(180deg,rgb(255 255 255 / .06),rgb(255 255 255 / 0) 45%,rgb(255 255 255 / .05));
+  --g-rim:linear-gradient(calc(145deg + var(--tilt)),#ffffffa8,#ffffff4a 20%,#ffffff0c 48%,#ffffff1e 78%,#ffffff70);
+  --g-lip:inset 0 1px 0 rgb(255 255 255 / .35), inset 0 7px 12px -10px rgb(255 255 255 / .3);
+  --g-pool:inset 0 -1px 0 rgb(255 255 255 / .1), inset 0 -12px 16px -14px rgb(255 255 255 / .28);
+  --g-drop:0 1px 2px rgb(0 0 0 / .25), 0 16px 36px -14px rgb(0 0 0 / .75);
+  --g-lens:radial-gradient(120% 120% at 50% -10%,rgb(255 255 255 / .3),rgb(255 255 255 / .1));
+  --g-lens-shadow:inset 0 1px 0 rgb(255 255 255 / .45), inset 0 -1px 0 rgb(255 255 255 / .12), inset 0 -8px 12px -10px rgb(255 255 255 / .35), 0 6px 14px -6px rgb(0 0 0 / .45);
 }
-/* Кромка ярче у прозрачного стекла. */
-[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-day,.term-month,.session-item,.session-next,.date-navigation,.heading .view-switch,.session-empty,.session-what,.term-dates,.header-actions,.footer-links button,.shell>.drag-tabs)::before { opacity:calc(.45 + var(--lg) * .55); }
-/* Прозрачное стекло: подписям немного тени, чтобы читались на фотографии. */
-:root[data-scheme=dark][data-style=glass] :is(.lesson h3,.range,.teacher-row,.lesson-time,.glance-line,.gap) { text-shadow:0 1px 3px rgb(0 0 0 / calc(var(--lg) * .3 + var(--lg2) * .4)); }
-:root[data-scheme=light][data-style=glass] :is(.lesson h3,.range,.teacher-row,.lesson-time,.glance-line,.gap) { text-shadow:0 0 8px rgb(255 255 255 / calc(var(--lg2) * .8)); }
-/* Правая половина ползунка снимает дымку с фотографии: МГУ виден ярко, подписи держит тень выше. */
-[data-style=glass] :is(.glass-atmosphere,.glass-horizon) { opacity:calc(1 - var(--lg2,0) * .75); }
-[data-style=glass] .list { gap:6px; }
+
+/* Слой контента: карточки без стеклянной кромки, на подложке, которая держит текст. */
+[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates) {
+  background:var(--g-tint, linear-gradient(#0000,#0000)), var(--c-fill);
+  -webkit-backdrop-filter:blur(var(--c-blur-px)) saturate(1.3); backdrop-filter:blur(var(--c-blur-px)) saturate(1.3);
+  box-shadow:var(--c-shadow); }
+[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates)::before { display:none; }
+[data-style=glass] .lesson.past { background:var(--c-past); }
+[data-style=glass] .lesson.current, [data-style=glass] .lesson.lecture.current { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--now) 45%,transparent), var(--c-shadow); }
+[data-style=glass] .gap { background:var(--c-fill); -webkit-backdrop-filter:blur(var(--c-blur-px)); backdrop-filter:blur(var(--c-blur-px)); box-shadow:var(--c-shadow); }
+/* Подписи прямо на фотографии (заголовок, дата) — с мягкой тенью; чем ярче фото, тем она сильнее. */
+:root[data-scheme=dark][data-style=glass] :is(.heading,.topbar,.day-title,.term-sub,.session-title) { text-shadow:0 1px 12px rgb(0 0 0 / calc(.35 + var(--lg2) * .35)); }
+/* Правая половина ползунка снимает дымку с фотографии. */
+[data-style=glass] .glass-atmosphere { opacity:calc(1 - var(--lg2,0) * .6); }
+[data-style=glass] .glass-horizon { opacity:calc(1 - var(--lg2,0) * .8); }
+
+/* Слой навигации: объёмное стекло. Кромка (::before) повторяет наклон телефона, блик сверху тоже. */
+[data-style=glass] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs,.footer-links button) {
+  background:var(--g-sheen), var(--g-fill); box-shadow:var(--g-lip), var(--g-pool), var(--g-drop); }
+[data-style=glass] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs,.footer-links button)::before { opacity:1; }
+/* Под пальцем стекло светится изнутри, свет расходится от точки касания. */
+[data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after { content:''; position:absolute; inset:0; z-index:0; border-radius:inherit; pointer-events:none;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgb(255 255 255 / .28),rgb(255 255 255 / 0) 60%); opacity:0; transition:opacity .6s; }
+[data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs):active::after { opacity:1; transition-duration:.1s; }
+:root[data-scheme=dark][data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after { background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgb(255 255 255 / .16),rgb(255 255 255 / 0) 60%); }
+
+/* Панель вкладок: тонкая капсула, как в iOS 26. При прокрутке вниз сжимается до маленькой пилюли с иконками. */
+[data-style=glass] .shell>.drag-tabs { height:60px; width:min(372px,calc(100% - 40px)); padding:5px; border-radius:999px; overflow:visible;
+  --g-fill:color-mix(in srgb,var(--card) var(--g-tabs-p),transparent);
+  transition:width .55s var(--gel), height .55s var(--gel), bottom .55s var(--gel); }
+[data-style=glass] .drag-tabs button { height:50px; border-radius:999px; gap:2px; font-size:9.5px; }
+[data-style=glass] .drag-tabs button svg { width:22px; height:22px; }
+[data-style=glass] .drag-tabs button span { transition:opacity .3s, max-height .45s var(--gel); max-height:14px; overflow:hidden; }
+[data-style=glass] .tab-lens { top:5px; bottom:5px; left:5px; width:calc((100% - 10px)/4); border-radius:999px; }
+[data-style=glass] .shell>.drag-tabs.compact { height:50px; width:min(232px,calc(100% - 40px)); bottom:calc(10px + env(safe-area-inset-bottom)); }
+[data-style=glass] .drag-tabs.compact button { height:40px; }
+[data-style=glass] .drag-tabs.compact button span { opacity:0; max-height:0; }
+
+/* Гель. Линзы едут на мягкой пружине (перелёт ~4%), вытягиваются по ходу движения и встают на место. */
+[data-style=glass] .tab-lens { transition:transform .6s var(--gel), scale .4s var(--gel), background .3s, box-shadow .3s; }
+[data-style=glass] .day-lens { transition:transform .6s var(--gel), scale .4s var(--gel), background .3s; }
+@keyframes lens-squish-a { 30% { scale:1.07 .95; } 100% { scale:1; } }
+@keyframes lens-squish-b { 30% { scale:1.07 .95; } 100% { scale:1; } }
+[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="0"] { animation:lens-squish-a .5s ease-out; }
+[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="1"] { animation:lens-squish-b .5s ease-out; }
+[data-style=glass] .drag-tabs.pressing:not(.dragging) .tab-lens { scale:1.06 1.1; }
+[data-style=glass] .drag-tabs.dragging .tab-lens { scale:1.04 1.12; }
+[data-style=glass] .date-navigation[data-follow] .day-lens { transition:none; animation:none;
+  transform:translateX(calc((var(--day) - var(--drag,0)) * (100% + 2px))); scale:calc(1 + var(--drag-abs,0) * .16) calc(1 - var(--drag-abs,0) * .05); }
+
+/* Плотные карточки пар */
+[data-style=glass] .list { gap:7px; }
 [data-style=glass] .list .lesson { padding:10px 14px 11px; border-radius:20px; }
 [data-style=glass] .list .lesson.current { padding-bottom:18px; }
 [data-style=glass] .lesson-time { min-height:20px; }
@@ -432,41 +505,19 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] .list .lesson.current { padding-bottom:22px; }
   [data-style=glass] .lesson h3 { font-size:20px; }
 }
-/* Листание дней: стекло карточек не меняется, пока день едет; дорожка — отдельный слой для видеокарты. */
+/* Листание дней: дорожка — отдельный слой для видеокарты. */
 [data-style=glass] .pager:is([data-paging],[data-drag]) .pager-track { will-change:transform; }
-/* Кнопки на стекле пружинят под пальцем, как капля. */
+/* Кнопки пружинят под пальцем. */
 [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button) {
-  transition:transform .45s var(--spring), background .2s, color .2s; }
+  transition:transform .4s var(--gel), background .2s, color .2s; }
 [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active {
-  transform:scale(.94); transition-duration:.12s; }
-@media (prefers-reduced-motion:reduce) { [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active { transform:none; } }
-
-/* Желе. Линзы вкладок и дней переезжают на пружине с перелётом, по приезде качаются и пробегают бликом.
-   Пока палец давит на панель вкладок, линза раздувается за её края; при свайпе дней линза дня едет за пальцем. */
-:root[data-style=glass] { --jelly:cubic-bezier(.34,1.45,.55,1); }
-@supports (transition-timing-function:linear(0, 1)) {
-  :root[data-style=glass] { --jelly:linear(0, 0.069, 0.237, 0.449, 0.662, 0.849, 0.994, 1.092, 1.146, 1.163, 1.153, 1.127, 1.092, 1.057, 1.026, 1.002, 0.986, 0.977, 0.973, 0.975, 0.979, 0.985, 0.99, 0.995, 0.999, 1.002, 1.004, 1.004, 1.004, 1.003, 1); }
-}
-[data-style=glass] .tab-lens { transition:transform .75s var(--jelly), scale .45s var(--jelly), background .3s, box-shadow .3s; }
-[data-style=glass] .day-lens { transition:transform .75s var(--jelly), scale .45s var(--jelly), background .3s; }
-@keyframes lens-squish-a { 0% { scale:1; } 16% { scale:1.2 .86; } 36% { scale:.93 1.08; } 56% { scale:1.05 .96; } 76% { scale:.99 1.01; } 100% { scale:1; } }
-@keyframes lens-squish-b { 0% { scale:1; } 16% { scale:1.2 .86; } 36% { scale:.93 1.08; } 56% { scale:1.05 .96; } 76% { scale:.99 1.01; } 100% { scale:1; } }
-[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="0"] { animation:lens-squish-a .8s cubic-bezier(.3,.7,.4,1); }
-[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="1"] { animation:lens-squish-b .8s cubic-bezier(.3,.7,.4,1); }
-[data-style=glass] .shell>.drag-tabs { overflow:visible; }
-[data-style=glass] .drag-tabs.pressing:not(.dragging) .tab-lens { scale:1.14 1.22; }
-[data-style=glass] .drag-tabs.dragging .tab-lens { scale:1.06 1.16; }
-/* Блик по линзе после переезда. */
-[data-style=glass] :is(.tab-lens,.day-lens)::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:0;
-  background:linear-gradient(105deg,#fff0 35%,rgb(255 255 255 / calc(.35 + var(--lg) * .4)) 50%,#fff0 65%) no-repeat; background-size:260% 100%; background-position:130% 0; }
-[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="0"]::after { animation:lens-glint-a .9s ease-out; }
-[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="1"]::after { animation:lens-glint-b .9s ease-out; }
-@keyframes lens-glint-a { 0% { opacity:0; background-position:130% 0; } 20% { opacity:1; } 100% { opacity:0; background-position:-30% 0; } }
-@keyframes lens-glint-b { 0% { opacity:0; background-position:130% 0; } 20% { opacity:1; } 100% { opacity:0; background-position:-30% 0; } }
-/* Свайп дней: линза дня тянется за пальцем и вытягивается, на отпускании прыгает на пружине к новому дню. */
-[data-style=glass] .date-navigation[data-follow] .day-lens { transition:none; animation:none;
-  transform:translateX(calc((var(--day) - var(--drag,0)) * (100% + 2px))); scale:calc(1 + var(--drag-abs,0) * .4) calc(1 - var(--drag-abs,0) * .1); }
+  transform:scale(.95); transition-duration:.12s; }
 @media (prefers-reduced-motion:reduce) {
-  [data-style=glass] :is(.tab-lens,.day-lens) { transition-duration:.01s; animation:none!important; }
-  [data-style=glass] :is(.tab-lens,.day-lens)::after { animation:none!important; }
+  [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active { transform:none; }
+  [data-style=glass] :is(.tab-lens,.day-lens) { transition-duration:.01s; animation:none!important; scale:1!important; }
+  [data-style=glass] .shell>.drag-tabs { transition:none; }
+}
+/* Без прозрачности (настройка системы): подложки и стекло сплошные. */
+@media (prefers-reduced-transparency:reduce) {
+  :root[data-style=glass] { --c-fill:var(--card); --c-past:var(--card); --g-fill:var(--card); --g-thick:var(--card); }
 }

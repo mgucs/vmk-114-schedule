@@ -4,12 +4,13 @@ import Home from './app/page';
 import './app/fonts.css';
 import './app/globals.css';
 import './app/glass.css';
+import {TILT_KEY, startTilt, tiltNeedsPermission, tiltWanted} from './lib/tilt.mjs';
 
 createRoot(document.getElementById('root')!).render(<React.StrictMode><Home/></React.StrictMode>);
 
-// Стекло: a glass card lights up where the finger presses it, or under the mouse.
+// Стекло: glass lights up from within where the finger presses it, or under the mouse.
 // Only on press and on mouse moves: nothing runs while a finger scrolls.
-const glassy = '.lesson, .term-facts div, .session-item';
+const glassy = '.lesson, .term-facts div, .session-item, .header-actions, .date-navigation, .shell > .drag-tabs';
 function light(event:PointerEvent) {
   if (document.documentElement.dataset.style !== 'glass') return;
   if (event.type === 'pointermove' && event.pointerType !== 'mouse') return;
@@ -21,3 +22,6 @@ function light(event:PointerEvent) {
 }
 addEventListener('pointerdown', light, {passive: true});
 addEventListener('pointermove', light, {passive: true});
+
+// Highlights follow the phone's tilt; on iOS only after the switch in «Оформление» was turned on once.
+try { if (tiltWanted() && (!tiltNeedsPermission() || localStorage.getItem(TILT_KEY) === 'on')) startTilt(); } catch {}

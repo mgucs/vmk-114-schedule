@@ -82,7 +82,7 @@ export function GlassOptics() {
       const kind = el.classList.contains('tab-lens') ? 'drop' : 'edge';
       const radius = parseFloat(getComputedStyle(el).borderRadius) || 24;
       // Clearer glass bends more and over a wider rim.
-      const band = Math.round(10 + level * 16), scale = Math.round(kind === 'drop' ? 14 + level * 30 : 6 + level * 34);
+      const band = Math.round(12 + level * 14), scale = Math.round(kind === 'drop' ? 18 + level * 30 : 14 + level * 30);
       const key = `${kind}:${width}:${height}:${radius}:${band}:${scale}`;
       if (sizes.get(el) === key) return;
       const map = displacementMap(kind, width, height, radius, band);
@@ -105,7 +105,12 @@ export function GlassOptics() {
       el.style.setProperty('--g-optics', `url("#${filter.id}")`);
       el.setAttribute('data-glass-optics', '');
     }
-    const observer = new ResizeObserver(entries => entries.forEach(({target}) => render(target as HTMLElement)));
+    // A surface that animates its size (the tab bar shrinking on scroll) is redrawn once it settles, not every frame.
+    const resized = new Map<HTMLElement, number>();
+    const observer = new ResizeObserver(entries => entries.forEach(({target}) => {
+      const el = target as HTMLElement;
+      clearTimeout(resized.get(el)); resized.set(el, window.setTimeout(() => { resized.delete(el); render(el); }, 160));
+    }));
     function sync() {
       frame = 0;
       if (!active()) {
