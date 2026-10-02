@@ -17,8 +17,9 @@ try{
   await page.clock.setFixedTime(new Date('2026-12-12T12:00:00Z'));
   await page.goto(`http://127.0.0.1:${server.address().port}/vmk-schedule/`);
   await page.locator('.onboarding').getByRole('button',{name:'114',exact:true}).click();
-  if(await page.locator('.onboarding').getByText('Пропустить',{exact:true}).isVisible())await page.locator('.onboarding').getByText('Пропустить',{exact:true}).click();
-  await page.getByText('Твоё расписание. Твой стиль.').waitFor();
+  await page.locator('.onboarding').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Оформление',exact:true}).click();
+  assert.match(await page.locator('.style-gallery button').first().getAttribute('aria-label'),/^Стекло:/);
   assert.equal(await page.locator('.style-live-preview iframe').count(),5);
   const frames=page.locator('.style-live-preview iframe');
   for(let i=0;i<5;i++){
@@ -26,10 +27,9 @@ try{
     await frame.getByText('Математический анализ').waitFor();
     assert.equal(await frame.locator('.lesson').count(),2);
   }
-  await page.locator('.onboarding').getByRole('button',{name:/^Стекло:/}).click();
+  await page.getByRole('button',{name:/^Стекло:/}).click();
   assert.equal(await page.locator('html').getAttribute('data-style'),'glass');
-  await page.getByRole('button',{name:'Продолжить',exact:true}).click();
-  await page.locator('.onboarding').getByRole('button',{name:'Готово',exact:true}).click();
+  await page.keyboard.press('Escape');
   await page.reload();assert.equal(await page.locator('.onboarding').count(),0);
   assert.equal(await page.locator('html').getAttribute('data-style'),'glass');
   console.log('PASS first-visit style previews, selection and persistence');
