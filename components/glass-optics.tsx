@@ -111,7 +111,7 @@ export function GlassOptics() {
       const kind = el.classList.contains('tab-lens') ? 'drop' : 'edge';
       const radius = parseFloat(getComputedStyle(el).borderRadius) || 24;
       // Clearer glass bends more and over a wider rim.
-      const band = Math.round(8 + level * 14), scale = Math.round(kind === 'drop' ? 12 + level * 26 : 8 + level * 26);
+      const band = Math.round(8 + level * 14), scale = Math.round(kind === 'drop' ? 12 + level * 26 : 8 + level * (el.classList.contains('lesson') ? 10 : 26));
       const key = `${kind}:${width}:${height}:${radius}:${band}:${scale}`;
       if (sizes.get(el) === key) return;
       const map = displacementMap(kind, width, height, radius, band);

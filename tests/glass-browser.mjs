@@ -21,6 +21,7 @@ const server=createServer(async(req,res)=>{
 });
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await (safari?webkit:chromium).launch(safari?{headless:true}:{channel:process.env.BROWSER_CHANNEL||'msedge',headless:true});
+let debugPage;
 try {
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});
   await context.addInitScript(()=>{
@@ -28,6 +29,7 @@ try {
     if(!localStorage.getItem('vmk114-style'))localStorage.setItem('vmk114-style','glass');
   });
   const page=await context.newPage(),errors=[];
+  debugPage=page;
   page.on('pageerror',e=>errors.push(e.message));
   await page.clock.setFixedTime(new Date('2026-09-28T07:45:00Z'));
   const base=`http://127.0.0.1:${server.address().port}${prefix}`;
@@ -79,7 +81,7 @@ try {
   await shot('night');
   await page.getByRole('button',{name:'Оформление',exact:true}).click();
   assert.match(await page.locator('.style-gallery button').first().getAttribute('aria-label'),/^Стекло:/);
-  const slider=page.getByRole('slider',{name:'Жидкое стекло: от матового к прозрачному'});
+  const slider=page.getByRole('slider',{name:'Жидкое стекло: от матового к лёгкому'});
   await slider.focus();await slider.press('End');
   const alpha=async(selector,pseudo=null)=>page.locator(selector).first().evaluate((el,pseudo)=>{
     const c=getComputedStyle(el,pseudo).backgroundColor;
@@ -88,21 +90,23 @@ try {
   },pseudo);
   assert(await alpha('[data-slot=dialog-content]')>=.62,'clear overlays retain a reading layer');
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
-  assert(await alpha('.lesson')<=.05,'clear cards reveal the photo');
-  assert(await alpha('.lesson h3','::before')>=.79,'clarity protects ink locally');
+  assert(await alpha('.lesson')>=.25&&await alpha('.lesson')<=.3,'clearest cards retain a continuous material');
+  assert.equal(await page.locator('.lesson h3').first().evaluate(el=>getComputedStyle(el,'::before').content),'none','no isolated patches behind labels');
+  assert.match(await page.locator('.lesson').first().evaluate(el=>getComputedStyle(el).backdropFilter||getComputedStyle(el).webkitBackdropFilter),/blur\(7px\)/,'maximum clarity still softens the photo');
   assert.match(await nav.evaluate(el=>getComputedStyle(el).backdropFilter||getComputedStyle(el).webkitBackdropFilter),/blur\(10px\)/,'dock blurs scrolling text even when clear');
   await shot('night-clear');
+  const lightAlpha=await alpha('.lesson');
   await nav.getByRole('button',{name:'Календарь',exact:true}).click();
-  assert(await alpha('.term-month')>=.34,'dense calendar grid retains a reading field');
-  assert.match(await page.locator('.term-month').first().evaluate(el=>getComputedStyle(el).backdropFilter||getComputedStyle(el).webkitBackdropFilter),/blur\(10px\)/);
+  assert.equal(await alpha('.term-month'),lightAlpha,'calendar and schedule share one material');
+  assert.match(await page.locator('.term-month').first().evaluate(el=>getComputedStyle(el).backdropFilter||getComputedStyle(el).webkitBackdropFilter),/blur\(7px\)/);
+  await shot('calendar-clear');
   await nav.getByRole('button',{name:'Расписание',exact:true}).click();
   await page.reload();await page.locator('.lesson').first().waitFor();
-  assert(await alpha('.lesson')<=.05,'saved clarity stays clear before hydration');
-  assert(await alpha('.lesson h3','::before')>=.79,'saved clarity retains the local text veil');
+  assert(await alpha('.lesson')>=.25,'saved maximum clarity retains the surface before hydration');
   await page.getByRole('button',{name:'Оформление',exact:true}).click();
   await slider.focus();await slider.press('Home');
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
-  assert(await alpha('.lesson')>=.84,'matte and clear have a visibly different material');
+  assert(await alpha('.lesson')>=.8,'matte and light glass have a visibly different material');
   await shot('night-matte');
   await page.getByRole('button',{name:'Оформление',exact:true}).click();
   await page.getByRole('button',{name:'Сбросить',exact:true}).click();
@@ -114,10 +118,25 @@ try {
   await page.getByRole('tab',{name:'Стиль',exact:true}).click();
   await slider.focus();await slider.press('End');
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
-  assert(await alpha('.lesson')<=.05,'day photo shines through clear cards too');
-  assert(await alpha('.lesson h3','::before')>=.79,'light ink has a local veil');
+  assert(await alpha('.lesson')>=.25&&await alpha('.lesson')<=.3,'day glass also has a clarity floor');
+  assert.equal(await page.locator('.lesson h3').first().evaluate(el=>getComputedStyle(el,'::before').content),'none');
   await shot('day-clear');
-  console.log('PASS wide clarity range, local reading veils, clear dock, persistence, glass-first picker');
+  console.log('PASS bounded clarity, continuous calendar/card material, unchanged dock, persistence');
+  await page.getByRole('button',{name:'Пятница, 2 октября',exact:true}).click();
+  await page.waitForTimeout(650);
+  const hide=page.getByRole('button',{name:'Убрать отметки',exact:true});if(await hide.count())await hide.click();
+  const visibleCards=page.locator('.slide:not([aria-hidden=true]) .lesson');
+  const last=await visibleCards.last().boundingBox(),dock=await nav.boundingBox();
+  assert(last.y+last.height<dock.y,'all three Friday classes fit above the dock at 390×844');
+  await shot('compact');
+  await page.getByRole('button',{name:'Группа 114, сменить',exact:true}).click();
+  await page.getByRole('button',{name:'101',exact:true}).click();
+  await page.getByRole('button',{name:'Суббота, 3 октября',exact:true}).click();
+  await page.waitForTimeout(650);
+  assert.equal(await page.locator('.slide:not([aria-hidden=true]) .list.roomy').count(),1);
+  assert.equal(await visibleCards.first().locator('h3').evaluate(el=>getComputedStyle(el).fontSize),'17px','short days keep compact typography');
+  await page.getByRole('button',{name:'Группа 101, сменить',exact:true}).click();
+  await page.getByRole('button',{name:'114',exact:true}).click();
   await page.getByRole('button',{name:'Оформление',exact:true}).click();
   await page.getByRole('tab',{name:'Тема',exact:true}).click();
   await page.getByRole('button',{name:'Снег',exact:true}).click();
@@ -142,6 +161,11 @@ try {
   assert.equal(await page.locator('.wallpaper').isVisible(),false);
   assert.equal(await nav.evaluate(e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter),'none');
   assert.equal(await alpha('.lesson'),1,'contrast preference takes precedence over saved maximum clarity');
+  await nav.getByRole('button',{name:'Календарь',exact:true}).click();
+  assert.equal(await alpha('.term-month'),1,'calendar honours contrast preference too');
+  await nav.getByRole('button',{name:'Календарь',exact:true}).focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.locator('.heading').waitFor();
   await page.emulateMedia({contrast:'no-preference'});
   if(cdp){
   await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
@@ -179,6 +203,16 @@ try {
     assert.equal(await wide.locator('.slide[aria-hidden=true] .lesson[data-glass-optics]').count(),0,'hidden neighbour cards do not retain filters');
   }
   await wide.screenshot({path:`test-results/glass/${safari?'webkit':'chromium'}-desktop.png`});
+  await wide.emulateMedia({contrast:'more'});
+  const wideNav=wide.getByRole('navigation',{name:'Разделы'});
+  await wideNav.getByRole('button',{name:'Календарь',exact:true}).click();
+  await wideNav.getByRole('button',{name:'Расписание',exact:true}).click();
+  await wide.locator('.heading').waitFor();
   await desktop.close();
   console.log('PASS desktop edge refraction and pointer illumination');
+} catch(error) {
+  if(debugPage&&!debugPage.isClosed()) {
+    await debugPage.screenshot({path:`test-results/glass/${safari?'webkit':'chromium'}-failure.png`});
+  }
+  throw error;
 } finally {await browser.close();await new Promise(r=>server.close(r));}

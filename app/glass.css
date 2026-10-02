@@ -1,5 +1,5 @@
 /* Liquid Glass. This file owns only the glass style; colour palettes and other
-   layouts remain in globals.css. Clear surfaces use local veils under the ink;
+   layouts remain in globals.css. Content uses a continuous translucent material;
    edge refraction is a progressive enhancement (GlassOptics). */
 .glass-only, .wallpaper { display:none; }
 .glass-optics { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
@@ -365,15 +365,14 @@ html[data-style=glass] { background:var(--background); }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.heading,.topbar) { text-shadow:0 1px 10px color-mix(in srgb,var(--background) 85%,transparent); }
 }
 
-/* Clear liquid material: the photo stays visible through the middle.
-   Contrast belongs to soft local veils around text, not a blue/white slab. */
+/* A continuous material. The clearest end still softens the photograph, while
+   navigation retains its brighter optical rim and elastic lenses. */
 :root[data-style=glass] {
   --lg:.5; --lg2:0;
-  --g-fill-p:20%; --g-reading-p:24%; --g-thick-p:74%; --g-past-p:24%; --g-tabs-p:22%;
-  --g-text-p:57%; --g-text-blur-px:12px; --g-blur-px:5px; --g-blur-thick-px:18px;
+  --g-fill-p:42%; --g-reading-p:42%; --g-thick-p:74%; --g-past-p:42%; --g-tabs-p:22%;
+  --g-blur-px:10px; --g-blur-thick-px:18px;
   --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent);
   --g-reading:color-mix(in srgb,var(--card) var(--g-reading-p),transparent);
-  --g-text-fill:color-mix(in srgb,var(--card) var(--g-text-p),transparent);
   --g-secondary:var(--foreground);
   --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
   --g-blur:blur(var(--g-blur-px)) saturate(calc(1.15 + var(--lg) * .5));
@@ -401,64 +400,70 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.changes-banner,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap) {
   --g-fill:var(--g-reading);
 }
-/* Dense calendars and prose need a continuous reading field, with the same coloured glass. */
-[data-style=glass] :is(.term-month,.term-facts div,.session-item,.session-next,.session-empty,.session-what,.term-dates,.notices,.message,.empty) {
-  --g-fill:color-mix(in srgb,var(--card) calc(34% + (1 - var(--lg)) * 50%),transparent);
-  --g-blur:blur(max(10px,var(--g-blur-px))) saturate(1.4);
+/* Content shares one material, including calendar grids and long descriptions. */
+[data-style=glass] :is(.lesson,.term-month,.term-facts div,.session-item,.session-next,.session-empty,.session-what,.term-dates,.notices,.message,.empty,.changes-banner) {
+  --g-sheen:linear-gradient(145deg,#ffffff1f,#ffffff03 38%,#fff0 65%,#ffffff0a);
+  --g-lip:inset 0 1px .5px #ffffff45;
+  --g-pool:inset 0 -1px .5px #ffffff30,inset 0 -8px 14px -14px #ffffff75;
+}
+[data-style=glass] :is(.lesson,.term-month,.term-facts div,.session-item,.session-next,.session-empty,.session-what,.term-dates,.notices,.message,.empty,.changes-banner)::before { padding:.75px; opacity:.8; }
+:root[data-scheme=light][data-style=glass] :is(.lesson,.term-month,.term-facts div,.session-item,.session-next,.session-empty,.session-what,.term-dates,.notices,.message,.empty,.changes-banner) {
+  --g-sheen:linear-gradient(145deg,#ffffff45,#ffffff0a 38%,#fff0 65%,#ffffff1a);
+  --g-lip:inset 0 1px .5px #ffffffa3;
 }
 [data-style=glass] .shell { text-shadow:var(--g-text-shadow); }
 [data-style=glass] :is(.glass-atmosphere,.glass-horizon) { opacity:calc(.9 - var(--lg) * .5); }
 [data-style=glass] :is(.heading,.topbar,.lesson,.shell>.drag-tabs,.date-navigation) { text-shadow:var(--g-text-shadow); }
 :root[data-scheme=light][data-style=glass] :is(.glass-date,.eyebrow,.eyebrow .status,.brand .glass-only) { color:var(--foreground); }
-/* Soft glass under the ink. No sharp pill or border around the words. */
-[data-style=glass] .lesson :is(h3,.range,.teacher-row>span:first-child:not(:empty),.rule-note),
-[data-style=glass] .changes-banner :is(b,div>span) {
-  position:relative; z-index:1; width:fit-content; max-width:100%;
-}
-[data-style=glass] .lesson :is(h3,.range,.teacher-row>span:first-child:not(:empty),.rule-note)::before,
-[data-style=glass] .changes-banner :is(b,div>span)::before {
-  content:''; position:absolute; z-index:-1; inset:-10px -18px; border-radius:20px; pointer-events:none;
-  background:var(--g-text-fill); -webkit-backdrop-filter:blur(var(--g-text-blur-px)); backdrop-filter:blur(var(--g-text-blur-px));
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent),linear-gradient(0deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);
-  -webkit-mask-composite:source-in;
-  mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent),linear-gradient(0deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);
-  mask-composite:intersect; filter:blur(4px);
-}
 [data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after {
   content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:.3;
   background:radial-gradient(ellipse at var(--mx,50%) var(--my,0%),#ffffff50,transparent 65%); transition:opacity .35s;
 }
 [data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs,.lesson)[data-glass-touch]::after { opacity:1; transition-duration:.08s; }
-[data-style=glass] .changes-banner { color:var(--foreground); gap:8px;
-  --g-fill:color-mix(in srgb,var(--card) calc(30% + (1 - var(--lg)) * 40%),transparent); }
+[data-style=glass] .changes-banner { color:var(--foreground); gap:6px; padding:11px 14px; font-size:12.5px; line-height:1.4; }
 [data-style=glass] .changes-banner b { font-size:14px; font-weight:650; color:var(--foreground); }
 [data-style=glass] .changes-banner div>span { display:block; }
-[data-style=glass] .changes-banner button { font-size:12px; font-weight:600; background:var(--g-chip); color:var(--foreground); }
+[data-style=glass] .changes-banner button { padding:6px 12px; font-size:11.5px; font-weight:600; background:var(--g-chip); color:var(--foreground); }
 [data-style=glass] .changes-banner button.quiet { box-shadow:inset 0 0 0 1px #ffffff30; }
-[data-style=glass] .list { gap:9px; }
-[data-style=glass] .list .lesson { padding:13px 16px 14px; border-radius:24px; }
-[data-style=glass] .list .lesson.current { padding-bottom:25px; }
-[data-style=glass] .lesson-time { min-height:20px; }
-[data-style=glass] .lesson h3 { margin-top:4px; font-size:18px; line-height:1.28; letter-spacing:-.025em; font-weight:650; }
-[data-style=glass] .teacher-row { margin-top:9px; font-size:12.5px; line-height:1.4; }
-[data-style=glass] .teacher-row + .teacher-row { margin-top:6px; }
+[data-style=glass] .list { gap:7px; }
+[data-style=glass] .list .lesson, [data-style=glass] .list.roomy .lesson { padding:10px 14px 11px; border-radius:20px; }
+[data-style=glass] .list .lesson.current { padding-bottom:20px; }
+[data-style=glass] .lesson-time { min-height:18px; gap:5px; }
+[data-style=glass] .range { font-size:12px; }
+[data-style=glass] .lesson :is(.tag,.live) { min-height:19px; padding:2px 6px; font-size:9px; }
+[data-style=glass] .lesson h3, [data-style=glass] .list.roomy .lesson h3 { margin-top:3px; font-size:17px; line-height:1.25; letter-spacing:-.02em; font-weight:650; }
+[data-style=glass] .teacher-row, [data-style=glass] .list.roomy .teacher-row { margin-top:4px; font-size:12px; line-height:1.35; gap:8px; }
+[data-style=glass] .teacher-row + .teacher-row { margin-top:3px; }
 [data-style=glass] :is(.teacher-row,.rule-note,.gap) { color:var(--g-secondary); }
 [data-style=glass] .room-note { color:var(--g-secondary); opacity:1; }
-[data-style=glass] .room { min-height:28px; padding:4px 10px; border-radius:999px; font-size:12.5px;
-  background:var(--g-text-fill); -webkit-backdrop-filter:blur(var(--g-text-blur-px)); backdrop-filter:blur(var(--g-text-blur-px));
-  box-shadow:inset 0 1px 0 #ffffff50,inset 0 -1px 0 #ffffff12; }
-[data-style=glass] .rule-note, [data-style=glass] .changed-note, [data-style=glass] .notice-note, [data-style=glass] .check-note { margin-top:6px; font-size:12px; }
+[data-style=glass] .room, [data-style=glass] .list.roomy .room { min-height:24px; padding:3px 9px; border-radius:999px; font-size:12px;
+  background:color-mix(in srgb,var(--foreground) 9%,transparent); -webkit-backdrop-filter:none; backdrop-filter:none;
+  box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--foreground) 14%,transparent); }
+[data-style=glass] .rule-note, [data-style=glass] .changed-note, [data-style=glass] .notice-note, [data-style=glass] .check-note { margin-top:4px; font-size:11.5px; }
 [data-style=glass] .lesson .progress { bottom:10px; }
-[data-style=glass] .gap { padding:4px 12px; --g-fill:var(--g-text-fill); }
+[data-style=glass] .gap { padding:3px 10px; --g-fill:var(--g-reading); }
+[data-style=glass] .session-main { padding-top:12px; }
+[data-style=glass] .session-title { font-size:30px; }
+[data-style=glass] .term-facts { margin-top:10px; gap:8px; }
+[data-style=glass] .term-facts div { padding:10px 12px; border-radius:18px; font-size:12px; }
+[data-style=glass] .term-facts b { font-size:16px; }
+[data-style=glass] .term-day { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; margin-top:10px; padding:10px 12px; border-radius:18px; font-size:12px; }
+[data-style=glass] .term-day strong { grid-column:1; margin:0; font-size:13px; }
+[data-style=glass] .term-day p { grid-column:1; }
+[data-style=glass] .term-day .text-button { grid-column:2; grid-row:1/span 2; align-self:center; max-width:116px; margin:0; padding:7px 10px; border-radius:999px; background:var(--g-chip); font-size:11px; line-height:1.25; text-align:center; }
+[data-style=glass] .term-month { margin-top:10px; padding:12px 10px 10px; border-radius:20px; }
+[data-style=glass] .term-month h2 { font-size:16px; }
+[data-style=glass] .calendar-history { margin:6px 0 0; padding:6px 2px; font-size:12px; }
 [data-style=glass] .shell>.drag-tabs { --g-blur:blur(calc(18px - var(--lg) * 8px)) saturate(1.5); --g-blur-thick:var(--g-blur); }
 [data-style=glass] .shell>.drag-tabs::before { padding:1px; }
 [data-style=glass] .drag-tabs button { color:var(--foreground); text-shadow:var(--g-text-shadow); }
 [data-style=glass] .drag-tabs button[aria-pressed=true] { color:var(--foreground); }
 [data-style=glass] .drag-tabs button[aria-pressed=true] svg { color:var(--g-accent); }
 @media (min-width:760px) {
-  [data-style=glass] .list .lesson { padding:16px 22px 17px; }
-  [data-style=glass] .list .lesson.current { padding-bottom:28px; }
-  [data-style=glass] .lesson h3 { font-size:21px; }
+  [data-style=glass] .list .lesson, [data-style=glass] .list.roomy .lesson { padding:12px 18px 13px; }
+  [data-style=glass] .list .lesson.current { padding-bottom:22px; }
+  [data-style=glass] .lesson h3, [data-style=glass] .list.roomy .lesson h3 { font-size:19px; }
+  [data-style=glass] .teacher-row, [data-style=glass] .list.roomy .teacher-row { font-size:13px; }
 }
 [data-style=glass] .pager:is([data-paging],[data-drag]) .pager-track { will-change:transform; }
 [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button) {
@@ -491,18 +496,12 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.list .lesson):active { transform:none; }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more) {
-  :root[data-style=glass] { --g-fill:var(--card); --g-reading:var(--card); --g-thick:var(--card); --g-text-fill:var(--card); --g-blur:none; --g-blur-thick:none; }
+  :root[data-style=glass] { --g-fill:var(--card); --g-reading:var(--card); --g-thick:var(--card); --g-blur:none; --g-blur-thick:none; }
   [data-style=glass] .wallpaper { display:none; }
   [data-style=glass] :is(.lesson.past,.shell>.drag-tabs,.changes-banner) { --g-fill:var(--card); --g-blur-thick:none; }
-  [data-style=glass] :is(.term-month,.term-facts div,.session-item,.session-next,.session-empty,.session-what,.term-dates,.notices,.message,.empty) { --g-fill:var(--card); --g-blur:none; }
   [data-style=glass] :is([data-glass-optics],.room) { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
-  [data-style=glass] .lesson :is(h3,.range,.teacher-row>span:first-child,.rule-note)::before,
-  [data-style=glass] .changes-banner :is(b,div>span)::before { display:none; }
 }
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-  :root[data-style=glass] { --g-fill:var(--card); --g-reading:var(--card); --g-thick:var(--card); --g-text-fill:var(--card); }
+  :root[data-style=glass] { --g-fill:var(--card); --g-reading:var(--card); --g-thick:var(--card); }
   [data-style=glass] :is(.lesson.past,.shell>.drag-tabs,.changes-banner) { --g-fill:var(--card); }
-  [data-style=glass] :is(.term-month,.term-facts div,.session-item,.session-next,.session-empty,.session-what,.term-dates,.notices,.message,.empty) { --g-fill:var(--card); }
-  [data-style=glass] .lesson :is(h3,.range,.teacher-row>span:first-child,.rule-note)::before,
-  [data-style=glass] .changes-banner :is(b,div>span)::before { display:none; }
 }
