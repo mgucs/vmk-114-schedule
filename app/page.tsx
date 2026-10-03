@@ -1,4 +1,4 @@
-import React, {Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type CSSProperties} from 'react';
+import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties} from 'react';
 import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
@@ -33,7 +33,7 @@ type Snapshot = {parseWarnings?:ParseWarning[]; schema:number; status:string; at
 type Saved = {snapshot:Snapshot; syncedAt:string};
 const dayNames = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const shortDays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-const typeNames:Record<string,string> = {lecture:'Лекция', consultation:'Консультация'};
+const typeNames:Record<string,string> = {lecture:'Лекция', class:'Семинар', consultation:'Консультация'};
 const storageKey = 'vmk-v2';
 const groupKey = 'vmk-group';
 const RECENT = 7*86400000;
@@ -148,7 +148,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
   return <LessonAt.Provider value={{date,start:lesson.start}}><article className={`lesson ${lesson.type} ${now?'current':''} ${past?'past':''}`} onClick={event=>{if(!hw.editing && !(event.target as HTMLElement).closest('button,a,textarea,input,label'))hw.open();}}>
     <div className="lesson-time">
       <span className="range">{lesson.start}<span><i> – </i>{lesson.end}</span></span>
-      {typeNames[lesson.type] && <span className="tag">{typeNames[lesson.type]}</span>}
+      {typeNames[lesson.type] && <span className={`tag ${lesson.type}`}>{typeNames[lesson.type]}</span>}
       {label && <span className="live">{label}</span>}
       <HomeworkButton task={hw.task} onClick={hw.open}/>
     </div>
@@ -175,7 +175,7 @@ export default function Home() {
   const [today,setToday] = useState(isoMoscow), [clock,setClock] = useState(clockMoscow);
   // null = follow the current time (today, or the next teaching day once today's classes are over).
   const [pinned,setPinned] = useState<string|null>(null);
-  const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'map'>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
+  const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'map'>('schedule'), [mapFrom,setMapFrom] = useState<Section>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
   const [changesOpen,setChangesOpen] = useState(false);
@@ -255,9 +255,15 @@ export default function Home() {
   const dateNav = useRef<HTMLElement>(null);
   // Only the lens itself is moved (transform/scale are composited): changing a variable on the blurred strip
   // would restyle and repaint the whole strip on every finger move. Letting go hands it back to its CSS spring.
-  const followDrag = (fraction:number|null) => {
+  // On a turn the lens stays where the finger left it until the new day is on screen, then springs straight there
+  // (it used to spring back to the old day first and then forward, a visible twitch).
+  const lensRelease = useRef(0);
+  const releaseLens = () => { clearTimeout(lensRelease.current); lensRelease.current = 0; const lens = dateNav.current?.querySelector<HTMLElement>('.day-lens');
+    if (lens) { lens.style.removeProperty('transition'); lens.style.removeProperty('transform'); lens.style.removeProperty('scale'); } };
+  useLayoutEffect(() => { if (lensRelease.current) releaseLens(); }, [selected]);
+  const followDrag = (fraction:number|null, turned=false) => {
     const lens = dateNav.current?.querySelector<HTMLElement>('.day-lens'); if (!lens) return;
-    if (fraction===null) { lens.style.removeProperty('transition'); lens.style.removeProperty('transform'); lens.style.removeProperty('scale'); return; }
+    if (fraction===null) { if (turned) { clearTimeout(lensRelease.current); lensRelease.current = window.setTimeout(releaseLens, 500); } else releaseLens(); return; }
     const f = Math.max(-1, Math.min(1, fraction)), day = weekday(selected);
     lens.style.transition = 'none';
     lens.style.transform = `translateX(calc(${(day - f).toFixed(3)} * (100% + 2px)))`;
@@ -352,7 +358,7 @@ export default function Home() {
   },[]);
   // The new section slides in from the side it lies on in the tab bar.
   const [paneDir,setPaneDir] = useState('');
-  function switchTab(next:Section){if(next===tab)return;stripFrom.current={monday,side:0};setPaneDir(sectionIndex(next)>sectionIndex(tab)?'right':'left');setTab(next);}
+  function switchTab(next:Section){if(next===tab)return;if(tab==='map'){setTab(next);return;}stripFrom.current={monday,side:0};setPaneDir(sectionIndex(next)>sectionIndex(tab)?'right':'left');setTab(next);}
   const closePdf = React.useCallback(() => setPdfOpen(false), []);
   // The class before this one tells where the walk starts.
   function openRoom(room:string, date=today, start='') {
@@ -361,6 +367,7 @@ export default function Home() {
     const day=(lessonsOn(data,date) as Lesson[]).filter(l=>!start || l.start<start);
     const prev=[...day].reverse().map(l=>findRoom(roomFor(l,subgroups.selected)||'')).find(Boolean);
     setMapTarget({to:to.key, from:start && prev && prev.key!==to.key ? prev.key : null, n:Date.now()});
+    if (tab!=='map') setMapFrom(tab);
     setTab('map');
     scrollTo({top:0});
   }
@@ -374,7 +381,19 @@ export default function Home() {
   // The pager shows "day:<date>" or "week:<monday>".
   const pageId = view==='day' ? `day:${selected}` : `week:${monday}`;
   const pageDate = (id:string) => id.slice(id.indexOf(':')+1);
-  const renderPage = (id:string) => id.startsWith('day:') ? renderDay(pageDate(id)) : Array.from({length:7},(_,i)=>renderDay(addDays(pageDate(id),i),true));
+  // Drawn pages are reused while nothing they show has changed: turning a day used to redraw the current day and
+  // both neighbours (twice, with the deferred neighbours), which froze the day lens for a moment on every turn.
+  const pageDeps = [data.hash, groupName, faculty.term?.[0]?.start, today, clock, nextId, JSON.stringify(subgroups.selected), JSON.stringify(homework.tasks),
+    homework.editing, homework.error, recent.map(c=>c.id).join(), faculty.notices.join('|'), checks.map(w=>w.id+w.text).join()].join('§');
+  const pageCache = useRef(new Map<string,{deps:string; node:React.ReactNode}>());
+  const renderPage = (id:string) => {
+    const hit = pageCache.current.get(id);
+    if (hit && hit.deps===pageDeps) return hit.node;
+    const node = id.startsWith('day:') ? renderDay(pageDate(id)) : Array.from({length:7},(_,i)=>renderDay(addDays(pageDate(id),i),true));
+    pageCache.current.set(id, {deps:pageDeps, node});
+    if (pageCache.current.size > 12) pageCache.current.delete(pageCache.current.keys().next().value!);
+    return node;
+  };
   const neighbourPage = (id:string,d:number) => id.startsWith('day:') ? `day:${addDays(pageDate(id),d)}` : `week:${addDays(pageDate(id),7*d)}`;
   function renderDay(date:string,weekly=false) {
     const list=lessonsOn(data,date) as Lesson[];
@@ -417,9 +436,9 @@ export default function Home() {
       <i style={{'--p':((minutes(clock)-minutes(ongoing.start))/(minutes(ongoing.end)-minutes(ongoing.start))).toFixed(3)} as CSSProperties}/>
     </div>}
 
-    <SectionTabs value={tab} onChange={switchTab}/>
+    <SectionTabs value={tab==='map' ? mapFrom : tab} onChange={switchTab}/>
 
-    {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
+    {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><button className="map-back" onClick={()=>{setTab(mapFrom);scrollTo({top:0});}}><ChevronLeft size={18}/>{mapFrom==='calendar'?'Календарь':mapFrom==='session'?'Сессия':'Расписание'}</button><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
     </CampusMap></Suspense> : tab==='calendar' ? <main className="session-main pane" key="calendar">
       <TermCalendar term={faculty.term} sessions={[faculty.session, ...faculty.archive].filter((s):s is Session=>!!s)} group={groupName} today={today} academicYear={data.year}
@@ -444,7 +463,6 @@ export default function Home() {
           </button>
         </p>
       </div>
-      <div className="view-switch" role="group" aria-label="Вид расписания"><button aria-pressed={view==='day'} onClick={()=>setView('day')}>День</button><button aria-pressed={view==='week'} onClick={()=>setView('week')}>Неделя</button></div>
     </div>
 
     <nav className="date-navigation" aria-label="Выбрать день" ref={dateNav}>
@@ -476,7 +494,7 @@ export default function Home() {
     </main>
 
     <footer className="footer">
-      <div className="footer-links"><button className="footer-count" onClick={()=>setStatsOpen(true)}>{weekCount} {plural(weekCount,['пара','пары','пар'])} в неделю</button>{history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения</button>}{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
+      <div className="footer-links"><button className={view==='week'?'fresh-view':''} aria-pressed={view==='week'} onClick={()=>{setView(view==='week'?'day':'week');scrollTo({top:0});}}>{view==='week'?'По дням':'Вся неделя'}</button><button className="footer-count" onClick={()=>setStatsOpen(true)}>{weekCount} {plural(weekCount,['пара','пары','пар'])} в неделю</button>{history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения</button>}{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
     </footer>
     </>}
 

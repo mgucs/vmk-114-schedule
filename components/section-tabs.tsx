@@ -1,7 +1,8 @@
 import {useEffect,useRef,useState,type CSSProperties,type PointerEvent} from 'react';
-import {CalendarClock,CalendarRange,GraduationCap,Map} from 'lucide-react';
+import {CalendarClock,CalendarRange,GraduationCap} from 'lucide-react';
 
-const items=[['schedule','Расписание',CalendarClock],['calendar','Календарь',CalendarRange],['session','Сессия',GraduationCap],['map','Карта',Map]] as const;
+const items=[['schedule','Расписание',CalendarClock],['calendar','Календарь',CalendarRange],['session','Сессия',GraduationCap]] as const;
+// The campus map is not a section: it opens from a room (page.tsx, openRoom) and goes back where it came from.
 export type Section=typeof items[number][0];
 export const sectionIndex=(s:Section)=>items.findIndex(i=>i[0]===s);
 
@@ -51,7 +52,7 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
     }}
     onPointerUp={e=>end(e)} onPointerCancel={e=>end(e,true)} onLostPointerCapture={e=>{if(e.target===e.currentTarget&&gesture.current?.id===e.pointerId){gesture.current=null;setPosition(null);setStretch(1);setPressing(false);}}}
     onClickCapture={e=>{if(suppressClick.current){e.preventDefault();e.stopPropagation();suppressClick.current=false;}}}
-    onKeyDown={e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();if(document.documentElement.dataset.style==='glass')e.stopPropagation();const n=e.key==='Home'?0:e.key==='End'?3:(index+(e.key==='ArrowRight'?1:3))%4;onChange(items[n][0]);e.currentTarget.querySelectorAll('button')[n].focus();}}>
+    onKeyDown={e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();if(document.documentElement.dataset.style==='glass')e.stopPropagation();const last=items.length-1,n=e.key==='Home'?0:e.key==='End'?last:(index+(e.key==='ArrowRight'?1:last))%items.length;onChange(items[n][0]);e.currentTarget.querySelectorAll('button')[n].focus();}}>
     <span className="tab-lens" aria-hidden="true" data-squish={moves.current.n&&position===null?moves.current.n%2:undefined}/>
     {items.map(([name,label,Icon],i)=><button key={name} aria-pressed={value===name} data-hovered={position!==null&&Math.round(position)===i||undefined} onClick={()=>onChange(name)}><Icon/><span>{label}</span></button>)}
   </nav>;

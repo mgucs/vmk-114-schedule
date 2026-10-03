@@ -11,7 +11,7 @@ const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{page:string; render:(page:string)=>ReactNode;
   neighbour:(page:string, d:number)=>string; onTurn:(d:number)=>void; surface:RefObject<HTMLElement|null>;
-  onDrag?:(fraction:number|null)=>void}) {
+  onDrag?:(fraction:number|null, turned?:boolean)=>void}) {
   const track = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState<{page:string; leaving:{page:string; side:number}|null}>({page, leaving:null});
   const pager = useRef<HTMLDivElement>(null);
@@ -109,11 +109,10 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
         return;
       }
       if (s.axis!=='x') return;
-      follow.current?.(null);
       const fling = Math.abs(s.v)>.35 && Math.sign(s.v)===Math.sign(s.dx) && Math.abs(s.dx)>24;
       const recent = e.timeStamp-s.lastT < 80 ? s.v : 0;
-      if (e.type==='touchend' && (Math.abs(s.dx)>el.offsetWidth*.22 || fling)) { release.current = recent; drag(false); turn.current(s.dx<0 ? 1 : -1); }
-      else { release.current = recent; settle(0, () => drag(false)); }
+      if (e.type==='touchend' && (Math.abs(s.dx)>el.offsetWidth*.22 || fling)) { follow.current?.(null, true); release.current = recent; drag(false); turn.current(s.dx<0 ? 1 : -1); }
+      else { follow.current?.(null); release.current = recent; settle(0, () => drag(false)); }
     };
     area.addEventListener('touchstart', start, {passive:true});
     area.addEventListener('touchmove', move, {passive:false});
