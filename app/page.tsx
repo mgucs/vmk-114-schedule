@@ -13,6 +13,7 @@ import {Onboarding, needsOnboarding} from '@/components/onboarding';
 import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
 import {StatsDialog} from '@/components/term-stats';
+import {UsefulView} from '@/components/useful';
 import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
 import {DayPager} from '@/components/day-pager';
@@ -175,7 +176,7 @@ export default function Home() {
   const [today,setToday] = useState(isoMoscow), [clock,setClock] = useState(clockMoscow);
   // null = follow the current time (today, or the next teaching day once today's classes are over).
   const [pinned,setPinned] = useState<string|null>(null);
-  const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'map'>('schedule'), [mapFrom,setMapFrom] = useState<Section>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
+  const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'info'|'map'>('schedule'), [mapFrom,setMapFrom] = useState<Section>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
   const [changesOpen,setChangesOpen] = useState(false);
@@ -438,12 +439,14 @@ export default function Home() {
 
     <SectionTabs value={tab==='map' ? mapFrom : tab} onChange={switchTab}/>
 
-    {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><button className="map-back" onClick={()=>{setTab(mapFrom);scrollTo({top:0});}}><ChevronLeft size={18}/>{mapFrom==='calendar'?'Календарь':mapFrom==='session'?'Сессия':'Расписание'}</button><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
+    {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><button className="map-back" onClick={()=>{setTab(mapFrom);scrollTo({top:0});}}><ChevronLeft size={18}/>{mapFrom==='calendar'?'Календарь':mapFrom==='session'?'Сессия':mapFrom==='info'?'Полезное':'Расписание'}</button><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
     </CampusMap></Suspense> : tab==='calendar' ? <main className="session-main pane" key="calendar">
       <TermCalendar term={faculty.term} sessions={[faculty.session, ...faculty.archive].filter((s):s is Session=>!!s)} group={groupName} today={today} academicYear={data.year}
         classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
       <button className="changes-button stats-open" onClick={()=>setStatsOpen(true)}><CalendarRange size={17}/><span><b>Сколько пар</b><small>за неделю и семестр, по предметам и в сравнении всех групп</small></span><ChevronRight size={18}/></button>
+    </main> : tab==='info' ? <main className="session-main pane" key="info">
+      <UsefulView stream={streams(table).find(s=>s.groups.includes(groupName))?.title || ''}/>
     </main> : tab==='session' ? <main className="session-main pane" key="session">
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>

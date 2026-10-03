@@ -1051,3 +1051,38 @@ button.changed-note span { margin-left:auto; font-weight:700; text-decoration:un
 .tag.class { color:var(--muted-foreground); }
 /* Карта открывается только из аудитории: вверху кнопка назад. */
 .map-back { display:inline-flex; align-items:center; gap:2px; margin:4px 0 10px -6px; padding:6px 12px 6px 6px; border:0; border-radius:999px; background:var(--muted); color:var(--foreground); font-size:14px; font-weight:650; }
+/* ——— «Полезное» ——— */
+.useful { padding-bottom:20px; }
+.useful-card { display:block; margin:0 0 10px; padding:14px 16px; border-radius:18px; background:var(--card); box-shadow:var(--shadow); font-size:14px; line-height:1.45; }
+.useful-card p { margin:4px 0 0; color:var(--muted-foreground); }
+.useful-card header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 10px; }
+.useful-card header b { font-size:16px; font-weight:750; letter-spacing:-.01em; }
+.useful-card header span { color:var(--muted-foreground); font-size:12.5px; }
+.useful-card.subject.other { opacity:.72; }
+.useful-hero { display:flex; flex-direction:column; gap:12px; margin-top:14px; }
+.useful-hero b { font-size:20px; font-weight:800; letter-spacing:-.02em; }
+.useful-h { display:flex; align-items:center; gap:8px; margin:22px 0 10px; font-size:18px; font-weight:750; letter-spacing:-.02em; }
+.useful-list { display:flex; flex-direction:column; }
+.useful-links, .useful-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.useful-links a, .useful-actions a { display:inline-flex; align-items:center; gap:4px; padding:6px 11px; border-radius:999px; background:var(--muted); color:var(--foreground); font-size:13px; font-weight:600; text-decoration:none; }
+.useful-links a.useful-primary, .useful-actions a.useful-primary { background:var(--foreground); color:var(--background); }
+.useful-terms { display:inline-flex; margin-bottom:10px; }
+.useful-columns { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.useful-columns small { color:var(--muted-foreground); font-size:12px; font-weight:650; text-transform:uppercase; letter-spacing:.04em; }
+.useful-columns p { margin:3px 0 0; color:var(--foreground); font-weight:550; }
+.useful-rule { margin-top:12px!important; }
+.useful-rule b { color:var(--foreground); }
+.useful-note { border-top:1px solid var(--border); padding:9px 0; }
+.useful-note:first-of-type { margin-top:10px; }
+.useful-note summary, .useful-books summary { display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:650; list-style:none; }
+.useful-note summary::-webkit-details-marker, .useful-books summary::-webkit-details-marker { display:none; }
+.useful-note summary::after, .useful-books summary::after { content:'›'; margin-left:auto; color:var(--muted-foreground); font-size:18px; transition:transform .25s; }
+.useful-note[open] summary::after, .useful-books[open] summary::after { transform:rotate(90deg); }
+.useful-books ol { margin:10px 0 0; padding-left:20px; color:var(--muted-foreground); }
+.useful-books li { margin:3px 0; }
+@media (max-width:380px) { .useful-columns { grid-template-columns:1fr; } }
+[data-style=glass] .useful-card { background:var(--c-fill); box-shadow:var(--c-shadow); border-radius:22px; }
+
+[data-style=glass] .useful-links a, [data-style=glass] .useful-actions a { background:var(--g-chip); }
+[data-style=glass] .useful-links a.useful-primary, [data-style=glass] .useful-actions a.useful-primary { background:var(--foreground); color:var(--background); }
+[data-style=glass] .useful-h, [data-style=glass] .useful .term-sub { text-shadow:var(--g-text-shadow); }

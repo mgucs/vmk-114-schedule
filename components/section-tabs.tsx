@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState,type CSSProperties,type PointerEvent} from 'react';
-import {CalendarClock,CalendarRange,GraduationCap} from 'lucide-react';
+import {BookOpen,CalendarClock,CalendarRange,GraduationCap} from 'lucide-react';
 
-const items=[['schedule','Расписание',CalendarClock],['calendar','Календарь',CalendarRange],['session','Сессия',GraduationCap]] as const;
+const items=[['schedule','Расписание',CalendarClock],['calendar','Календарь',CalendarRange],['session','Сессия',GraduationCap],['info','Полезное',BookOpen]] as const;
 // The campus map is not a section: it opens from a room (page.tsx, openRoom) and goes back where it came from.
 export type Section=typeof items[number][0];
 export const sectionIndex=(s:Section)=>items.findIndex(i=>i[0]===s);
