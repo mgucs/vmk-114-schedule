@@ -1086,3 +1086,27 @@ button.changed-note span { margin-left:auto; font-weight:700; text-decoration:un
 [data-style=glass] .useful-links a, [data-style=glass] .useful-actions a { background:var(--g-chip); }
 [data-style=glass] .useful-links a.useful-primary, [data-style=glass] .useful-actions a.useful-primary { background:var(--foreground); color:var(--background); }
 [data-style=glass] .useful-h, [data-style=glass] .useful .term-sub { text-shadow:var(--g-text-shadow); }
+/* «Полезное»: фильтры семестра и потока, дерево папок CSDrive */
+.useful-filters { position:sticky; top:8px; z-index:4; display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 4px; }
+.useful-filters .term-years { background:var(--card); box-shadow:var(--shadow); }
+.useful-sections { display:flex; flex-direction:column; margin-top:10px; border-top:1px solid var(--border); }
+.useful-folder { border-bottom:1px solid var(--border); }
+.useful-folder .useful-folder { border-bottom:0; }
+.useful-folder > summary { display:flex; align-items:center; gap:6px; padding:9px 2px; cursor:pointer; list-style:none; font-weight:650; font-size:14px; }
+.useful-folder > summary::-webkit-details-marker { display:none; }
+.useful-folder > summary .chev { flex-shrink:0; color:var(--muted-foreground); transition:transform .2s; }
+.useful-folder[open] > summary .chev { transform:rotate(90deg); }
+.useful-folder > summary span { flex:1; min-width:0; }
+.useful-folder > summary small { padding:1px 7px; border-radius:999px; background:var(--muted); color:var(--muted-foreground); font-size:11.5px; font-weight:650; font-variant-numeric:tabular-nums; }
+.useful-folder .useful-folder > summary { padding:7px 2px; font-weight:600; font-size:13.5px; }
+.useful-folder-body { display:flex; flex-direction:column; gap:2px; padding:0 0 8px 14px; border-left:1.5px solid var(--border); margin-left:7px; }
+.useful-file { display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto auto; column-gap:8px; align-items:center; padding:6px 8px; border-radius:10px; color:var(--foreground); text-decoration:none; font-size:13.5px; line-height:1.3; }
+.useful-file:hover { background:var(--muted); }
+.useful-file > svg:first-child { grid-row:1/3; color:var(--muted-foreground); }
+.useful-file > svg:last-child { display:none; }
+.useful-file span { overflow-wrap:anywhere; }
+.useful-file small { grid-column:2; color:var(--muted-foreground); font-size:11.5px; }
+.useful-file.folder-only { padding:9px 2px; border-bottom:1px solid var(--border); border-radius:0; font-weight:600; }
+.useful-empty { margin:6px 0; color:var(--muted-foreground); font-size:13px; }
+[data-style=glass] .useful-filters .term-years { background:var(--g-fill); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur); box-shadow:var(--g-lip), var(--g-drop); }
+[data-style=glass] .useful-file:hover { background:var(--g-chip); }

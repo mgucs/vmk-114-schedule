@@ -16,6 +16,13 @@
   </head>
   <body>
     <div id="root"><div class="boot">Расписание ВМК</div></div>
+    <script>
+      // Safety net: if the app's script could not load (an old saved page during an update) or the app has not
+      // started in 8 seconds, reload once; the new version is ready by then.
+      (function(){var key='vmk-boot-retry',retry=function(){try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){return;}location.reload();};
+      addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='SCRIPT')retry();},true);
+      setTimeout(function(){if(document.querySelector('#root > .boot'))retry();else try{sessionStorage.removeItem(key);}catch(e){}},8000);})();
+    </script>
     <script type="module" src="/main.tsx"></script>
   </body>
 </html>

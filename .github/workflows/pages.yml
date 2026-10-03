@@ -29,13 +29,17 @@ jobs:
       - name: Обновить справочник преподавателей
         continue-on-error: true
         run: node scripts/sync-people.mjs
+      # First-course materials from CSDrive (Yandex Disk) for «Полезное»: at most once a week.
+      - name: Обновить материалы CSDrive
+        continue-on-error: true
+        run: node scripts/sync-csdrive.mjs
       - name: Сохранить изменения расписания
         if: steps.sync.outputs.commit == 'true'
         run: |
-          if ! git diff --quiet -- public/source.json public/latest.pdf public/initial.json public/people.json; then
+          if ! git diff --quiet -- public/source.json public/latest.pdf public/initial.json public/people.json public/csdrive.json; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add public/source.json public/latest.pdf public/initial.json public/people.json public/archive
+            git add public/source.json public/latest.pdf public/initial.json public/people.json public/csdrive.json public/archive
             git commit -m 'Update VMK schedule source'
             git push
           fi

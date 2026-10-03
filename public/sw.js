@@ -10,9 +10,18 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
  for(const path of list){const url=local(path);const response=await fetch(url,{cache:'reload'});if(!response.ok)throw Error('Offline asset unavailable: '+path);await cache.put(url,response);}
  await cache.put(local('offline-ready'),new Response('ready'));
+ await cache.put(local('cache-created'),new Response(String(Date.now())));
  await self.skipWaiting();
 })()));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('vmk114-shell-')&&key!==CACHE)await caches.delete(key);await self.clients.claim();})()));
+// The previous version's files stay one more release: a page opened from it while this version installed must
+// still find its scripts (the deploy removed them from the server). Only older versions are deleted.
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ const old=[];
+ for(const key of await caches.keys())if(key.startsWith('vmk114-shell-')&&key!==CACHE){const created=await (await caches.open(key)).match(local('cache-created'));old.push({key,at:created?Number(await created.text()):0});}
+ old.sort((a,b)=>b.at-a.at);
+ for(const {key} of old.slice(1))await caches.delete(key);
+ await self.clients.claim();
+})()));
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
  if(request.method!=='GET'||!inScope(url))return;
