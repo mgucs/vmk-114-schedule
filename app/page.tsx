@@ -179,6 +179,7 @@ export default function Home() {
   const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'info'|'map'>('schedule'), [mapFrom,setMapFrom] = useState<Section>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
+  const [appUpdated,setAppUpdated] = useState(false);
   const [changesOpen,setChangesOpen] = useState(false);
   useEffect(()=>{const open=()=>setChangesOpen(true);window.addEventListener('vmk-open-changes',open);return()=>window.removeEventListener('vmk-open-changes',open);},[]);
   const [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
@@ -324,21 +325,34 @@ export default function Home() {
     const syncTimer=setInterval(()=>{if(document.visibilityState==='visible')void refresh();},5*60*1000);
     const onOnline=()=>{setOnline(true);lastAttempt.current=0;void refresh();};
     const onOffline=()=>setOnline(false);
-    const onVisible=()=>{if(document.visibilityState==='visible'){tick();void refresh();}};
+    // The saved app opens at once from the phone (sw.js), so a new version of the site arrives in the background.
+    // When it takes over before the user touched anything since opening or returning to the app, nothing is lost
+    // and the page reloads quietly; otherwise a banner offers to reload instead of interrupting.
+    let touched=false, registration:ServiceWorkerRegistration|null=null;
+    const onTouch=()=>{touched=true;};
+    window.addEventListener('pointerdown',onTouch,{passive:true});window.addEventListener('keydown',onTouch);
+    const hadController=!!navigator.serviceWorker?.controller;
+    const onNewVersion=()=>{
+      if(!hadController)return;
+      const busy=!!document.querySelector('[data-slot=dialog-content]') || document.activeElement?.matches('input,textarea');
+      if(!touched && !busy) location.reload(); else setAppUpdated(true);
+    };
+    navigator.serviceWorker?.addEventListener('controllerchange',onNewVersion);
+    const onVisible=()=>{if(document.visibilityState==='visible'){touched=false;tick();void refresh();void registration?.update().catch(()=>{});}};
     window.addEventListener('online',onOnline);window.addEventListener('offline',onOffline);document.addEventListener('visibilitychange',onVisible);
     async function prepareOffline() {
       try {
         persist(current.current);
         if (!('serviceWorker' in navigator)) throw Error('Офлайн-доступ не поддерживается браузером.');
-        const registration=await navigator.serviceWorker.register(asset('sw.js'),{scope:import.meta.env.BASE_URL,updateViaCache:'none'});
+        registration=await navigator.serviceWorker.register(asset('sw.js'),{scope:import.meta.env.BASE_URL,updateViaCache:'none'});
         await navigator.serviceWorker.ready;
         if (!disposed) setOfflineReady(!!await caches.match(asset('offline-ready')));
-        void registration.update().catch(()=>{});
+        void registration?.update().catch(()=>{});
         if (await (await caches.open(dataCache)).match(pdfKey(current.current.snapshot.hash))) setPdfUrl(pdfKey(current.current.snapshot.hash));
       } catch { if(!disposed)setSyncError('Не удалось подготовить доступ без сети. Подключись к интернету и открой сайт ещё раз.'); }
     }
     void prepareOffline(); void refresh();
-    return()=>{disposed=true;clearInterval(timer);clearInterval(syncTimer);window.removeEventListener('online',onOnline);window.removeEventListener('offline',onOffline);document.removeEventListener('visibilitychange',onVisible);};
+    return()=>{disposed=true;navigator.serviceWorker?.removeEventListener('controllerchange',onNewVersion);window.removeEventListener('pointerdown',onTouch);window.removeEventListener('keydown',onTouch);clearInterval(timer);clearInterval(syncTimer);window.removeEventListener('online',onOnline);window.removeEventListener('offline',onOffline);document.removeEventListener('visibilitychange',onVisible);};
   // Initialization happens before the first update; refs always hold the last saved version.
   },[]);
 
@@ -492,6 +506,7 @@ export default function Home() {
         <strong>{{now:'до конца пары',before:'до первой пары',break:'до следующей пары'}[glance.kind as 'now']}</strong>
         <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
       </section>}
+      {appUpdated && <div className="message" role="status"><span>Сайт обновился — новая версия готова.<button className="message-more" onClick={()=>location.reload()}>Обновить</button></span><button className="dismiss-message" aria-label="Позже" onClick={()=>setAppUpdated(false)}><X size={15}/></button></div>}
       {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
       <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} surface={scheduleArea} onDrag={view==='day' ? followDrag : undefined}/>
     </main>
