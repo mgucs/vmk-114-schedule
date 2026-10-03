@@ -17,6 +17,7 @@ import {UsefulView} from '@/components/useful';
 import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
 import {DayPager} from '@/components/day-pager';
+import {useDayLens} from '@/components/day-lens';
 import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
@@ -246,33 +247,20 @@ export default function Home() {
     : saved.snapshot.status==='error' ? 'Не удалось проверить ВМК' : checks.length ? 'Сверь с PDF' : checkedAgo ? `Сверено ${checkedAgo}` : status.title;
   const tone = !online ? 'offline' : syncError || checks.length ? 'warn' : status.tone;
 
-  function go(date:string) { setPinned(date===focus?null:date); }
-  // From the latest pinned day, so two quick swipes move two days even before a re-render.
-  function shift(direction:number) { setPinned(p=>{ const next=addDays(p??focus,direction*(view==='week'?7:1)); return next===focus?null:next; }); }
+  // The drop on the day strip starts moving here, in the input handler, before the new day is drawn (day-lens.ts).
+  const lensCtl = useDayLens(weekday(selected), monday);
+  const target = useRef(selected);
+  useLayoutEffect(() => { target.current = selected; }, [selected]);
+  function lensTo(date:string) { if (view==='day' && addDays(date,-weekday(date))===monday) lensCtl.glide(weekday(date)); }
+  function go(date:string) { target.current=date; lensTo(date); setPinned(date===focus?null:date); }
+  // From the latest target day, so two quick swipes move two days even before a re-render.
+  function shift(direction:number) { const next=addDays(target.current,direction*(view==='week'?7:1)); target.current=next; lensTo(next); setPinned(next===focus?null:next); }
   // The week strip slides in from the side the new week lies on.
   const stripFrom = useRef({monday, side:0});
   if (stripFrom.current.monday!==monday) stripFrom.current = {monday, side:monday>stripFrom.current.monday?1:-1};
-  // Each move of the chosen-day lens restarts its squish (two identical animations, alternating).
-  // The day lens follows a swipe of the days (Стекло): set straight on the strip, no re-render per finger move.
   const dateNav = useRef<HTMLElement>(null);
-  // Only the lens itself is moved (transform/scale are composited): changing a variable on the blurred strip
-  // would restyle and repaint the whole strip on every finger move. Letting go hands it back to its CSS spring.
-  // On a turn the lens stays where the finger left it until the new day is on screen, then springs straight there
-  // (it used to spring back to the old day first and then forward, a visible twitch).
-  const lensRelease = useRef(0);
-  const releaseLens = () => { clearTimeout(lensRelease.current); lensRelease.current = 0; const lens = dateNav.current?.querySelector<HTMLElement>('.day-lens');
-    if (lens) { lens.style.removeProperty('transition'); lens.style.removeProperty('transform'); lens.style.removeProperty('scale'); } };
-  useLayoutEffect(() => { if (lensRelease.current) releaseLens(); }, [selected]);
-  const followDrag = (fraction:number|null, turned=false) => {
-    const lens = dateNav.current?.querySelector<HTMLElement>('.day-lens'); if (!lens) return;
-    if (fraction===null) { if (turned) { clearTimeout(lensRelease.current); lensRelease.current = window.setTimeout(releaseLens, 500); } else releaseLens(); return; }
-    const f = Math.max(-1, Math.min(1, fraction)), day = weekday(selected);
-    lens.style.transition = 'none';
-    lens.style.transform = `translateX(calc(${(day - f).toFixed(3)} * (100% + 2px)))`;
-    lens.style.scale = `${(1 + Math.abs(f) * .14).toFixed(3)} ${(1 - Math.abs(f) * .04).toFixed(3)}`;
-  };
-  const lensMoves = useRef({selected, n:0});
-  if (lensMoves.current.selected!==selected) lensMoves.current = {selected, n:lensMoves.current.n+1};
+  // A swipe of the days: the finger holds the drop; on a turn shift() glides it on from there, otherwise it settles back.
+  const followDrag = (fraction:number|null, turned=false) => { if (fraction!==null) lensCtl.follow(fraction); else if (!turned) lensCtl.settle(); };
 
   async function savePdf(hash:string) {
     if (!('caches' in window)) throw Error('Сохранение PDF недоступно в этом браузере.');
@@ -485,7 +473,7 @@ export default function Home() {
     <nav className="date-navigation" aria-label="Выбрать день" ref={dateNav}>
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
       <div className="days" key={monday} data-from={stripFrom.current.side>0?'right':stripFrom.current.side<0?'left':undefined} style={{'--day':weekday(selected)} as CSSProperties}>
-        {view==='day' && <i className={`day-lens ${selected===today?'today':''}`} aria-hidden="true" data-squish={lensMoves.current.n ? lensMoves.current.n%2 : undefined}/>}
+        {view==='day' && <i ref={lensCtl.ref} className={`day-lens ${selected===today?'today':''}`} aria-hidden="true"/>}
         {week.map((date,i)=><button key={date} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}
       </div>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>

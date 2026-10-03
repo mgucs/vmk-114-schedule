@@ -475,7 +475,7 @@ html[data-style=glass] { background:var(--background); }
 
 /* Гель. Линзы едут на мягкой пружине (перелёт ~4%), вытягиваются по ходу движения и встают на место. */
 [data-style=glass] .tab-lens { transition:transform .6s var(--gel), scale .4s var(--gel), background .3s, box-shadow .3s; }
-[data-style=glass] .day-lens { transition:transform .6s var(--gel), scale .4s var(--gel); }
+[data-style=glass] .day-lens { transition:none; }  /* moved by day-lens.ts (Web Animations), not by CSS */
 /* Без отдельной анимации «сжатия»: она перезапускалась, когда палец отпускал день, и линза вздрагивала.
    Гель даёт сама пружина перемещения; при свайпе линзу ведёт палец (page.tsx, followDrag). */
 [data-style=glass] :is(.tab-lens,.day-lens) { animation:none; will-change:transform; }
