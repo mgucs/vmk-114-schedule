@@ -117,8 +117,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .days { position:relative; gap:2px; }
 [data-style=glass] .day-lens { display:block; position:absolute; grid-area:1/1/2/2; inset:0; border-radius:18px; pointer-events:none;
   background:var(--g-lens); box-shadow:var(--g-lens-shadow); transform:translateX(calc(var(--day) * (100% + 2px))); transition:transform .6s var(--spring), background .3s; }
-[data-style=glass] .day-lens[data-squish="0"] { animation:lens-squish-a .6s var(--glide); }
-[data-style=glass] .day-lens[data-squish="1"] { animation:lens-squish-b .6s var(--glide); }
 [data-style=glass] .day-lens.today { background:var(--g-lens); box-shadow:var(--g-lens-shadow); }
 [data-style=glass] .day-button { z-index:1; gap:3px; padding:7px 0 8px; border-radius:18px; }
 [data-style=glass] .day-button span { font-size:11.5px; font-weight:600; transition:color .3s; }
@@ -209,10 +207,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .tab-lens { display:block; position:absolute; z-index:0; top:6px; bottom:6px; left:6px; width:calc((100% - 12px)/4); border-radius:22px;
   background:var(--g-lens); box-shadow:var(--g-lens-shadow);
   transform:translateX(calc(var(--tab-position)*100%)) scaleX(var(--tab-stretch,1)); transition:transform .6s var(--spring), background .3s, box-shadow .3s; }
-[data-style=glass] .tab-lens[data-squish="0"] { animation:lens-squish-a .6s var(--glide); }
-[data-style=glass] .tab-lens[data-squish="1"] { animation:lens-squish-b .6s var(--glide); }
-@keyframes lens-squish-a { 30% { scale:1.08 .94; } 65% { scale:.99 1.02; } }
-@keyframes lens-squish-b { 30% { scale:1.08 .94; } 65% { scale:.99 1.02; } }
 [data-style=glass] .drag-tabs.dragging .tab-lens { transform:translateX(calc(var(--tab-position)*100%)) scale(min(var(--tab-stretch,1),1.12),1.06);
   transition:transform .16s var(--glide), background .3s, box-shadow .3s; background:radial-gradient(120% 90% at 50% 0%,#ffffff2e,#ffffff08 65%);
   box-shadow:inset 0 0 0 1px #ffffff66, inset 0 1.5px 1px #ffffffb3, inset 0 -8px 14px -10px #ffffffa6, 0 12px 26px -10px #00000080; }
@@ -482,14 +476,11 @@ html[data-style=glass] { background:var(--background); }
 /* Гель. Линзы едут на мягкой пружине (перелёт ~4%), вытягиваются по ходу движения и встают на место. */
 [data-style=glass] .tab-lens { transition:transform .6s var(--gel), scale .4s var(--gel), background .3s, box-shadow .3s; }
 [data-style=glass] .day-lens { transition:transform .6s var(--gel), scale .4s var(--gel), background .3s; }
-@keyframes lens-squish-a { 30% { scale:1.07 .95; } 100% { scale:1; } }
-@keyframes lens-squish-b { 30% { scale:1.07 .95; } 100% { scale:1; } }
-[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="0"] { animation:lens-squish-a .5s ease-out; }
-[data-style=glass] :is(.tab-lens,.day-lens)[data-squish="1"] { animation:lens-squish-b .5s ease-out; }
+/* Без отдельной анимации «сжатия»: она перезапускалась, когда палец отпускал день, и линза вздрагивала.
+   Гель даёт сама пружина перемещения; при свайпе линзу ведёт палец (page.tsx, followDrag). */
+[data-style=glass] :is(.tab-lens,.day-lens) { animation:none; will-change:transform; }
 [data-style=glass] .drag-tabs.pressing:not(.dragging) .tab-lens { scale:1.06 1.1; }
 [data-style=glass] .drag-tabs.dragging .tab-lens { scale:1.04 1.12; }
-[data-style=glass] .date-navigation[data-follow] .day-lens { transition:none; animation:none;
-  transform:translateX(calc((var(--day) - var(--drag,0)) * (100% + 2px))); scale:calc(1 + var(--drag-abs,0) * .16) calc(1 - var(--drag-abs,0) * .05); }
 
 /* Плотные карточки пар */
 [data-style=glass] .list { gap:7px; }

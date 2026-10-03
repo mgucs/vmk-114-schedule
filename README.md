@@ -42,7 +42,8 @@ PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium no
 | `scripts/sync-people.mjs` | карточки преподавателей из справочника cs.msu.ru (раз в неделю) |
 | `scripts/archive-session.mjs` | добавить в архив прошлую сессию по сохранённой странице (например, из Wayback Machine) |
 | `lib/term.mjs` | праздники, недели занятий, чётность (у ФИИТ верхняя запись клетки — нечётная неделя) |
-| `components/session.tsx`, `components/term-calendar.tsx` | вкладки «Сессия» и «Календарь» |
+| `components/session.tsx`, `components/term-calendar.tsx` | вкладки «Сессия» и «Календарь» (учебный год целиком, переключатель на прошлый год по архиву сессий) |
+| `lib/academic-year.mjs` | периоды учебного года: семестры, сессии, зимние и летние каникулы — по датам ВМК, иначе по обычному календарю МГУ («примерно») |
 | `lib/term-stats.mjs`, `components/term-stats.tsx` | «Сколько пар»: неделя или семестр, по предметам у группы и сравнение всех групп (только отличающиеся) |
 | `components/teacher.tsx`, `components/onboarding.tsx` | карточка преподавателя, первый вход |
 | `lib/search.mjs`, `components/search.tsx` | поиск по всем группам: преподаватель, предмет, аудитория, группа |

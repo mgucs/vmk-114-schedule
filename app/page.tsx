@@ -253,11 +253,15 @@ export default function Home() {
   // Each move of the chosen-day lens restarts its squish (two identical animations, alternating).
   // The day lens follows a swipe of the days (Стекло): set straight on the strip, no re-render per finger move.
   const dateNav = useRef<HTMLElement>(null);
+  // Only the lens itself is moved (transform/scale are composited): changing a variable on the blurred strip
+  // would restyle and repaint the whole strip on every finger move. Letting go hands it back to its CSS spring.
   const followDrag = (fraction:number|null) => {
-    const el = dateNav.current; if (!el) return;
-    if (fraction===null) { el.removeAttribute('data-follow'); el.style.removeProperty('--drag'); el.style.removeProperty('--drag-abs'); return; }
-    const f = Math.max(-1, Math.min(1, fraction));
-    el.setAttribute('data-follow', ''); el.style.setProperty('--drag', f.toFixed(3)); el.style.setProperty('--drag-abs', Math.abs(f).toFixed(3));
+    const lens = dateNav.current?.querySelector<HTMLElement>('.day-lens'); if (!lens) return;
+    if (fraction===null) { lens.style.removeProperty('transition'); lens.style.removeProperty('transform'); lens.style.removeProperty('scale'); return; }
+    const f = Math.max(-1, Math.min(1, fraction)), day = weekday(selected);
+    lens.style.transition = 'none';
+    lens.style.transform = `translateX(calc(${(day - f).toFixed(3)} * (100% + 2px)))`;
+    lens.style.scale = `${(1 + Math.abs(f) * .14).toFixed(3)} ${(1 - Math.abs(f) * .04).toFixed(3)}`;
   };
   const lensMoves = useRef({selected, n:0});
   if (lensMoves.current.selected!==selected) lensMoves.current = {selected, n:lensMoves.current.n+1};
@@ -418,8 +422,7 @@ export default function Home() {
     {tab==='map' ? <Suspense fallback={<p className="personal-hint">Загружаем карту…</p>}><CampusMap target={mapTarget?.to ?? null} fromHint={mapTarget?.from ?? null} key={mapTarget?.n ?? 0}>
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
     </CampusMap></Suspense> : tab==='calendar' ? <main className="session-main pane" key="calendar">
-      <TermCalendar term={faculty.term} session={isCurrent(faculty.session,data.year) ? faculty.session : null} group={groupName} today={today} academicYear={data.year}
-        lastWinter={[faculty.session, ...faculty.archive].find(s=>s && s.season==='winter' && s.year===data.year-1) || null}
+      <TermCalendar term={faculty.term} sessions={[faculty.session, ...faculty.archive].filter((s):s is Session=>!!s)} group={groupName} today={today} academicYear={data.year}
         classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
       <button className="changes-button stats-open" onClick={()=>setStatsOpen(true)}><CalendarRange size={17}/><span><b>Сколько пар</b><small>за неделю и семестр, по предметам и в сравнении всех групп</small></span><ChevronRight size={18}/></button>
     </main> : tab==='session' ? <main className="session-main pane" key="session">
