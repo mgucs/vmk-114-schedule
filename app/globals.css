@@ -1110,3 +1110,25 @@ button.changed-note span { margin-left:auto; font-weight:700; text-decoration:un
 .useful-empty { margin:6px 0; color:var(--muted-foreground); font-size:13px; }
 [data-style=glass] .useful-filters .term-years { background:var(--g-fill); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur); box-shadow:var(--g-lip), var(--g-drop); }
 [data-style=glass] .useful-file:hover { background:var(--g-chip); }
+/* «Полезное»: лектор, карточки преподавателей, закрытая часть */
+.useful-lecturer { display:flex; align-items:center; gap:6px; margin:6px 0 0!important; color:var(--foreground)!important; font-size:13px; font-weight:600; }
+.useful-lecturer svg { color:var(--muted-foreground); }
+.useful-folder > summary .lock { flex-shrink:0; color:var(--muted-foreground); }
+.useful-card.teacher { padding:0; }
+.useful-card.teacher > summary { display:flex; align-items:center; gap:8px; padding:13px 14px; cursor:pointer; list-style:none; }
+.useful-card.teacher > summary::-webkit-details-marker { display:none; }
+.useful-card.teacher > summary .chev { flex-shrink:0; color:var(--muted-foreground); transition:transform .2s; }
+.useful-card.teacher[open] > summary .chev { transform:rotate(90deg); }
+.useful-card.teacher > summary span { display:flex; flex:1; min-width:0; flex-direction:column; gap:2px; }
+.useful-card.teacher > summary b { font-size:15px; font-weight:700; }
+.useful-card.teacher > summary small { color:var(--muted-foreground); font-size:12.5px; line-height:1.3; }
+.useful-card.teacher > summary em { flex-shrink:0; padding:2px 8px; border-radius:999px; background:var(--lecture); color:var(--lecture-ink); font-size:12px; font-style:normal; font-weight:700; }
+.teacher-body { padding:0 14px 12px; }
+.teacher-body > p { margin:0 0 4px; }
+.teacher-body a { color:var(--foreground); }
+.useful-filters { row-gap:6px; }
+/* Закреплённые фильтры «Полезного» — одна панель, а не пилюли поверх содержимого. */
+.useful-filters { padding:6px; border-radius:22px; background:color-mix(in srgb,var(--background) 88%,transparent); box-shadow:0 8px 24px -14px #0008; }
+.useful-filters .term-years { box-shadow:none; background:color-mix(in srgb,var(--foreground) 7%,transparent); }
+[data-style=glass] .useful-filters { background:var(--g-thick); -webkit-backdrop-filter:var(--g-blur-thick); backdrop-filter:var(--g-blur-thick); box-shadow:var(--g-lip), var(--g-drop); }
+[data-style=glass] .useful-filters .term-years { background:var(--g-chip); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:none; }

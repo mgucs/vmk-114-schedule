@@ -448,7 +448,7 @@ export default function Home() {
         classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
       <button className="changes-button stats-open" onClick={()=>setStatsOpen(true)}><CalendarRange size={17}/><span><b>Сколько пар</b><small>за неделю и семестр, по предметам и в сравнении всех групп</small></span><ChevronRight size={18}/></button>
     </main> : tab==='info' ? <main className="session-main pane" key="info">
-      <UsefulView stream={streams(table).find(s=>s.groups.includes(groupName))?.title || ''}/>
+      <UsefulView table={table} group={groupName} streams={streams(table).map(s=>({title:s.title, groups:s.groups}))}/>
     </main> : tab==='session' ? <main className="session-main pane" key="session">
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>

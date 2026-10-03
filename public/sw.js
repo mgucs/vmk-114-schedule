@@ -32,5 +32,6 @@ self.addEventListener('fetch',event=>{
  if(request.mode==='navigate'){
   event.respondWith((async()=>{const cached=await (await caches.open(CACHE)).match(local('index.html'));if(cached)return cached;try{return await fetch(request);}catch{return new Response('Для первого открытия нужен интернет.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;
  }
- event.respondWith((async()=>{const cached=await caches.match(request);if(cached)return cached;const response=await fetch(request);if(response.ok){const cache=await caches.open(CACHE);await cache.put(request,response.clone());}return response;})());
+ // A page in place of a file (a server's fallback to index.html) is never kept as that file.
+ event.respondWith((async()=>{const cached=await caches.match(request);if(cached&&!(cached.headers.get('content-type')||'').includes('text/html'))return cached;const response=await fetch(request);if(response.ok&&!(response.headers.get('content-type')||'').includes('text/html')){const cache=await caches.open(CACHE);await cache.put(request,response.clone());}return response;})());
 });
