@@ -4,7 +4,8 @@ import Home from './app/page';
 import './app/fonts.css';
 import './app/globals.css';
 import './app/glass.css';
-import {TILT_KEY, startTilt, tiltNeedsPermission, tiltWanted} from './lib/tilt.mjs';
+import {TILT_KEY, startTilt, stopTilt, tiltNeedsPermission, tiltWanted} from './lib/tilt.mjs';
+import {watchFrames} from './lib/glass-quality.mjs';
 
 createRoot(document.getElementById('root')!).render(<React.StrictMode><Home/></React.StrictMode>);
 
@@ -23,5 +24,9 @@ function light(event:PointerEvent) {
 addEventListener('pointerdown', light, {passive: true});
 addEventListener('pointermove', light, {passive: true});
 
-// Highlights follow the phone's tilt; on iOS only after the switch in «Оформление» was turned on once.
-try { if (tiltWanted() && (!tiltNeedsPermission() || localStorage.getItem(TILT_KEY) === 'on')) startTilt(); } catch {}
+// Highlights follow the phone's tilt (not on the lite effects level); on iOS only after the switch in «Оформление» was turned on once.
+const tiltAllowed = () => { try { return document.documentElement.dataset.glass !== 'lite' && tiltWanted() && (!tiltNeedsPermission() || localStorage.getItem(TILT_KEY) === 'on'); } catch { return false; } };
+if (tiltAllowed()) startTilt();
+addEventListener('vmk-glass-quality', () => { if (tiltAllowed()) startTilt(); else stopTilt(); });
+// Auto effects level: steps down if this device cannot keep up while scrolling or swiping.
+watchFrames();

@@ -20,3 +20,27 @@ test('text keeps a backing at full transparency', () => {
   assert.ok(parseInt(max['--c-fill-d']) >= 40 && parseInt(max['--c-fill-l']) >= 60);
   assert.equal(liquidVars(50)['--lg2'], '0');
 });
+
+import {deviceTier, initialTier} from '../lib/glass-quality.mjs';
+test('effects level: device guess, measured step-down, manual choice', () => {
+  assert.equal(deviceTier({cores:8, memory:8, coarse:false}), 'full');
+  assert.equal(deviceTier({cores:8, memory:8, coarse:true}), 'balanced');
+  assert.equal(deviceTier({cores:4, memory:8, coarse:true}), 'lite');
+  assert.equal(deviceTier({cores:8, memory:8, coarse:true, reduced:true}), 'lite');
+  assert.equal(initialTier(null, 'lite', {coarse:true}), 'lite', 'measuring found the phone too slow');
+  assert.equal(initialTier(null, 'full', {coarse:true}), 'balanced', 'a measured level never raises the guess');
+  assert.equal(initialTier('full', 'lite', {coarse:true}), 'full', 'a manual choice wins');
+});
+test('the startup script picks the same effects level as lib/glass-quality.mjs', async () => {
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const script = html.match(/var g='balanced';[\s\S]*?dataset\.glass=g;/)[0];
+  const cases = [[null, null, {cores:8, memory:8, coarse:true}], ['full', null, {cores:2, memory:2, coarse:true}], [null, 'lite', {cores:8, memory:8, coarse:true}], [null, null, {cores:8, memory:8, coarse:false}], [null, null, {cores:4, memory:8, coarse:false}]];
+  for (const [choice, measured, env] of cases) {
+    const store = {'vmk114-glass-quality':choice, 'vmk114-glass-auto':measured};
+    const document = {documentElement:{dataset:{}}};
+    new Function('localStorage', 'navigator', 'matchMedia', 'document', script)(
+      {getItem:k => store[k] ?? null}, {hardwareConcurrency:env.cores, deviceMemory:env.memory},
+      q => ({matches:q.includes('coarse') ? env.coarse : false}), document);
+    assert.equal(document.documentElement.dataset.glass, initialTier(choice, measured, env), JSON.stringify([choice, measured, env]));
+  }
+});

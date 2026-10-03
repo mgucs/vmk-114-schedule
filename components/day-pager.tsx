@@ -49,7 +49,7 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
     if (calm() || distance<.5) { finish(); return; }
     // An ease-out whose start is 3× its average speed: the duration makes that start equal the finger's speed.
     const toward = v && Math.sign(v)===Math.sign(to-from);
-    const ms = Math.round(Math.min(440, Math.max(toward ? 180 : 300, toward ? 3*distance/Math.abs(v) : 220+distance*.45)));
+    const ms = Math.round(Math.min(460, Math.max(toward ? 240 : 320, toward ? 3*distance/Math.abs(v) : 240+distance*.45)));
     el.style.transition = `transform ${ms}ms cubic-bezier(.25,.75,.35,1)`;
     el.style.transform = `translate3d(${to}px,0,0)`;
     clearTimeout(guard.current); guard.current = window.setTimeout(finish, ms+250);

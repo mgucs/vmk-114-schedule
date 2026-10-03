@@ -454,10 +454,13 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .glass-atmosphere { opacity:calc(1 - var(--lg2,0) * .6); }
 [data-style=glass] .glass-horizon { opacity:calc(1 - var(--lg2,0) * .8); }
 
-/* Слой навигации: объёмное стекло. Кромка (::before) повторяет наклон телефона, блик сверху тоже. */
+/* Слой навигации: объёмное стекло. Кромка — градиентная рамка (без маски и лишнего слоя), повторяет наклон телефона. */
 [data-style=glass] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs,.footer-links button) {
-  background:var(--g-sheen), var(--g-fill); box-shadow:var(--g-lip), var(--g-pool), var(--g-drop); }
-[data-style=glass] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs,.footer-links button)::before { opacity:1; }
+  border:1px solid transparent;
+  background-image:var(--g-sheen), linear-gradient(var(--g-fill),var(--g-fill)), var(--g-rim);
+  background-origin:border-box; background-clip:padding-box, padding-box, padding-box, border-box;
+  box-shadow:var(--g-lip), var(--g-pool), var(--g-drop); }
+[data-style=glass] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs,.footer-links button)::before { display:none; }
 /* Под пальцем стекло светится изнутри, свет расходится от точки касания. */
 [data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after { content:''; position:absolute; inset:0; z-index:0; border-radius:inherit; pointer-events:none;
   background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgb(255 255 255 / .28),rgb(255 255 255 / 0) 60%); opacity:0; transition:opacity .6s; }
@@ -521,3 +524,39 @@ html[data-style=glass] { background:var(--background); }
 @media (prefers-reduced-transparency:reduce) {
   :root[data-style=glass] { --c-fill:var(--card); --c-past:var(--card); --g-fill:var(--card); --g-thick:var(--card); }
 }
+
+/* ═══ Качество эффектов (lib/glass-quality.mjs): data-glass = lite | balanced | full ═══
+   Размытие фона (backdrop-filter) пересчитывается на каждом кадре прокрутки для каждого элемента над
+   фотографией — это и есть нагрузка. Поэтому:
+   • full     — всё: размытые подложки карточек, линзирование навигации (Chromium), блики от наклона.
+   • balanced — размытие только у четырёх маленьких элементов навигации; карточки — плотная подложка без размытия.
+   • lite     — без размытия вообще: стекло из бликов, кромки и тона. Для слабых телефонов.
+   Телефон сам переходит на ступень ниже, если не успевает рисовать кадры. */
+:root[data-style=glass]:not([data-glass=full]) {
+  /* Без размытия подложка карточек плотнее: смесь с непрозрачным цветом карточки. */
+  --c-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--c-fill-l),transparent),var(--card) 28%);
+  --c-past:color-mix(in srgb,color-mix(in srgb,var(--card) var(--c-past-l),transparent),var(--card) 22%);
+}
+:root[data-scheme=dark][data-style=glass]:not([data-glass=full]) {
+  --c-fill:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-fill-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 24%);
+  --c-past:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-past-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 18%);
+}
+:root[data-style=glass]:not([data-glass=full]) :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
+  -webkit-backdrop-filter:none; backdrop-filter:none; }
+/* balanced: навигация размыта слабее (стоимость растёт с радиусом), без яркости и линз. */
+:root[data-style=glass][data-glass=balanced] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs) {
+  -webkit-backdrop-filter:blur(min(var(--g-blur-px),9px)) saturate(1.5); backdrop-filter:blur(min(var(--g-blur-px),9px)) saturate(1.5); }
+:root[data-style=glass][data-glass=balanced] [data-slot=dialog-content] { -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+/* lite: ни одного размытия. Навигация и окна — плотный тон того же цвета с бликами и кромкой. */
+:root[data-style=glass][data-glass=lite] * { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
+:root[data-style=glass][data-glass=lite] {
+  --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
+  --g-thick:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-thick-p),transparent),var(--card) 70%);
+}
+:root[data-scheme=dark][data-style=glass][data-glass=lite] {
+  --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
+  --g-thick:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-thick-p),transparent),var(--card) 70%);
+}
+:root[data-style=glass][data-glass=lite] .shell>.drag-tabs { --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-tabs-p),transparent),var(--card) 60%); }
+:root[data-style=glass][data-glass=lite] .glass-campus { filter:none; }
+:root[data-style=glass][data-glass=lite] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after { display:none; }

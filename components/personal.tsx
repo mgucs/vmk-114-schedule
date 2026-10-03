@@ -5,6 +5,22 @@ import {StylePreview} from './style-preview';
 import {calendarFile} from '../lib/calendar.mjs';
 import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
 import {TILT_KEY,disableTilt,enableTilt,tiltNeedsPermission,tiltWanted} from '../lib/tilt.mjs';
+import {loadChoice,setChoice} from '../lib/glass-quality.mjs';
+const QUALITY=[['auto','Авто'],['lite','Экономно'],['balanced','Красиво'],['full','Максимум']] as const;
+const tierNames:Record<string,string>={lite:'экономно',balanced:'красиво',full:'максимум'};
+// Effects level of Стекло: auto measures this device; the others are fixed.
+function GlassQuality(){
+  const [choice,setChoiceState]=useState(loadChoice);
+  const [tier,setTier]=useState(()=>document.documentElement.dataset.glass||'balanced');
+  useEffect(()=>{const sync=()=>setTier(document.documentElement.dataset.glass||'balanced');addEventListener('vmk-glass-quality',sync);return()=>removeEventListener('vmk-glass-quality',sync);},[]);
+  return <div className="glass-quality">
+    <div className="liquid-head"><strong>Эффекты</strong><span>{choice==='auto'?`сейчас: ${tierNames[tier]}`:''}</span></div>
+    <div className="quality-switch" role="radiogroup" aria-label="Качество эффектов стекла">
+      {QUALITY.map(([name,label])=><button key={name} role="radio" aria-checked={choice===name} onClick={()=>{setChoice(name);setChoiceState(name);}}>{label}</button>)}
+    </div>
+    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Без размытия: быстро на любом телефоне.':choice==='balanced'?'Размыты только панели навигации, карточки — плотные.':'Всё, включая искажение по краям (Android и компьютер). Может тормозить на слабых телефонах.'}</p>
+  </div>;
+}
 
 // name, label, scheme, swatch colours (background, lecture, now)
 export const THEMES = [
@@ -33,6 +49,7 @@ export function LiquidSlider(){
   const [tilt,setTilt]=useState(()=>tiltWanted()&&(!tiltNeedsPermission()||(()=>{try{return localStorage.getItem(TILT_KEY)==='on';}catch{return false;}})()));
   const change=(v:number)=>{setValue(v);applyLiquid(v);};
   return <div className="liquid-slider">
+    <GlassQuality/>
     <div className="liquid-head"><strong>Прозрачность</strong><span>{value<25?'плотное стекло':value<45?'приглушённое':value<=55?'обычное':value<80?'прозрачное':'видно МГУ'}</span></div>
     <input type="range" min={0} max={100} step={1} value={value} aria-label="Прозрачность стекла: от плотного к прозрачному"
       style={{'--v':`${value}%`} as React.CSSProperties}

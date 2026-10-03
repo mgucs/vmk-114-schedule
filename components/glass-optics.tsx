@@ -68,7 +68,8 @@ export function GlassOptics() {
     const sizes = new Map<HTMLElement, string>();
     let nextId = 0, frame = 0;
     let watching = false;
-    const active = () => supported && root.dataset.style === 'glass' && !reduced.matches && !motion.matches;
+    // Lensing only on the «full» effects level (lib/glass-quality.mjs): it is the most expensive effect.
+    const active = () => supported && root.dataset.style === 'glass' && root.dataset.glass === 'full' && !reduced.matches && !motion.matches;
     function remove(el:HTMLElement) {
       observer.unobserve(el);
       filters.get(el)?.remove(); filters.delete(el); sizes.delete(el);
@@ -131,7 +132,7 @@ export function GlassOptics() {
     // The slider redraws every surface with the new strength.
     function relevel() { sizes.clear(); for (const el of filters.keys()) render(el); schedule(); }
     const styleObserver = new MutationObserver(schedule);
-    styleObserver.observe(root, {attributes:true, attributeFilter:['data-style']});
+    styleObserver.observe(root, {attributes:true, attributeFilter:['data-style','data-glass']});
     const contentObserver = new MutationObserver(schedule);
     reduced.addEventListener('change', schedule); motion.addEventListener('change', schedule);
     window.addEventListener('vmk-liquid-change', relevel);
