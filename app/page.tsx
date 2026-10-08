@@ -17,6 +17,7 @@ import {UsefulView} from '@/components/useful';
 import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
 import {SnapPager, type PagerHandle} from '@/components/snap-pager';
+import {LiveDay, setLiveDay} from '@/components/live-day';
 import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
@@ -57,6 +58,11 @@ const formatDate = (iso:string,options:Intl.DateTimeFormatOptions={day:'numeric'
 const stamp = (iso:string|null) => iso && Number.isFinite(Date.parse(iso)) ? fmt({timeZone:'Europe/Moscow',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(iso)) : 'нет данных';
 const plural = (n:number,forms:[string,string,string]) => forms[n%10===1&&n%100!==11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2];
 const lessonCount = (n:number) => n ? `${n} ${plural(n,['пара','пары','пар'])}` : 'Без пар';
+// The six pairs of a VMK day. A class takes every pair its time overlaps (most take one; some, like 15:10–18:50,
+// take several) — the strip shows a day as these six places, the card says which pair it is.
+const PAIRS = [['08:45','10:20'],['10:30','12:05'],['12:50','14:25'],['14:35','16:10'],['16:20','17:55'],['18:00','19:35']];
+const pairsOf = (l:{start:string;end:string}) => PAIRS.flatMap(([s,e],i)=>l.start<e && l.end>s ? [i] : []);
+const pairLabel = (l:{start:string;end:string}) => { const p=pairsOf(l); return !p.length ? '' : p.length===1 ? `${p[0]+1} пара` : `${p[0]+1}–${p.at(-1)!+1} пары`; };
 function ago(iso:string|null) {
   if (!iso || !Number.isFinite(Date.parse(iso))) return '';
   const m = Math.max(0,Math.round((Date.now()-Date.parse(iso))/60000));
@@ -156,6 +162,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
   const label = now ? 'идёт' : next ? `через ${duration(left)}` : '';
   return <LessonAt.Provider value={{date,start:lesson.start}}><article className={`lesson ${lesson.type} ${now?'current':''} ${past?'past':''}`} onClick={event=>{if(!hw.editing && !(event.target as HTMLElement).closest('button,a,textarea,input,label'))hw.open();}}>
     <div className="lesson-time">
+      {pairLabel(lesson) && <span className="pair-no">{pairLabel(lesson)}</span>}
       <span className="range">{lesson.start}<span><i> – </i>{lesson.end}</span></span>
       {typeNames[lesson.type] && <span className={`tag ${lesson.type}`}>{typeNames[lesson.type]}</span>}
       {label && <span className="live">{label}</span>}
@@ -277,10 +284,16 @@ export default function Home() {
   const settleOn = go;
   // While a swipe of the days goes on, the strip follows at once, without waiting for React: the day more than half in
   // view is marked, and the strip slides to its week. React's drawing after the swipe then finds it all in place.
-  const strip = useRef<PagerHandle|null>(null), dateNav = useRef<HTMLElement>(null);
-  function peekDay(date:string) {
-    dateNav.current?.querySelectorAll<HTMLElement>('.day-button').forEach(b => b.setAttribute('aria-pressed', String(view==='day' && b.dataset.date===date)));
-    strip.current?.show(Math.floor(span(rangeStart,date)/7));
+  const strip = useRef<PagerHandle|null>(null);
+  function peekDay(date:string) { setLiveDay(date); strip.current?.show(Math.floor(span(rangeStart,date)/7)); }
+  // Once React has drawn a day, the live one is that day again.
+  useLayoutEffect(() => { setLiveDay(null); }, [selected, view]);
+  // What the month, the line and «К ближайшим» say about a day (the live one while a swipe goes on).
+  const nearOf = (d:string) => d===today ? 'Сегодня' : d===addDays(today,1) ? 'Завтра' : d===addDays(today,-1) ? 'Вчера' : '';
+  function aboutDay(d:string) {
+    const list = lessonsOn(data,d) as Lesson[], first = list.reduce((s,l)=>!s||l.start<s?l.start:s,''), last = list.reduce((e,l)=>l.end>e?l.end:e,'');
+    const odd = fiit ? weekOf(faculty.term,d)?.odd : undefined;
+    return <><b>{nearOf(d) || dayNames[weekday(d)]}</b>{`, ${formatDate(d)}`}<span>{' · '}{lessonCount(list.length)}{first && ` · ${first}–${last}`}{odd!=null && ` · ${odd?'нечётная':'чётная'} неделя`}</span></>;
   }
 
   async function savePdf(hash:string) {
@@ -428,7 +441,7 @@ export default function Home() {
       const gap=until ? minutes(l.start)-minutes(until) : 0;
       if (gap>=30) {
         const now=date===today && !!clock && clock>=until && clock<l.start;
-        items.push(<div key={'gap'+l.id} className={`gap ${now?'now':''}`}><span>Окно</span><b>{now?`ещё ${duration(minutes(l.start)-minutes(clock))}`:duration(gap)}</b><small>{until}–{l.start}</small></div>);
+        items.push(<div key={'gap'+l.id} className={`gap ${now?'now':''}`}><span className="gap-label"><span>Окно</span><b>{now?`ещё ${duration(minutes(l.start)-minutes(clock))}`:duration(gap)}</b><small>{until}–{l.start}</small></span></div>);
       }
       items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={!isStacked(l,data.lessons) ? '' : fiit && weekOf(faculty.term,date) ? (/-\d$/.test(l.id)?'even':'odd') : list.filter(o=>o.id.replace(/-\d$/,'')===l.id.replace(/-\d$/,'')).length>1 ? 'both' : ''} notice={noticeFor(faculty.notices,l,date)} check={checks.filter(w=>w.id===l.id).map(w=>w.text)}/>);
       if (l.end>until) until=l.end;
@@ -477,10 +490,10 @@ export default function Home() {
     </main> : <>
     {/* Стекло: the month on top (and «Сегодня» when another day is open), then the week strip, then one line about
         the chosen day. Each line has a fixed height whatever the day, so nothing below moves when the day changes. */}
-    <div className="dayhead glass-only">
-      <h1>{months}<span>{(view==='day'?selected:monday).slice(0,4)}</span></h1>
-      <button className="dayhead-back" data-on={pinned!==null || undefined} tabIndex={pinned!==null ? 0 : -1} aria-hidden={pinned===null || undefined} onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>
-    </div>
+    <LiveDay selected={selected}>{d=>{const away = view==='week' ? pinned!==null : d!==focus; return <div className="dayhead glass-only">
+      <h1>{view==='day' ? monthOf(d) : months}<span>{(view==='day'?d:monday).slice(0,4)}</span></h1>
+      <button className="dayhead-back" data-on={away || undefined} tabIndex={away ? 0 : -1} aria-hidden={!away || undefined} onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>
+    </div>;}}</LiveDay>
     <div className={`heading ${view}`}>
       <div className="heading-text">
         <p className="glass-only glass-date">{view==='day' ? `${dayNames[weekday(selected)]}, ${formatDate(selected,{day:'numeric',month:'long'})}` : 'Расписание на неделю'}</p>
@@ -500,19 +513,22 @@ export default function Home() {
 
     {/* The strip is a row of weeks in its own snap scroller: a new week slides in whole, the numbers never change in place.
         A swipe of the strip opens the same weekday of that week. Dots under a number: how many classes that day. */}
-    <nav className="date-navigation" aria-label="Выбрать день" ref={dateNav}>
+    <nav className="date-navigation" aria-label="Выбрать день">
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
       <SnapPager key={'strip'+rangeStart} className="week-strip" count={weekTotal} index={weekIndex} label="Недели" handle={strip}
         onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))}
-        render={i=>{const start=addDays(rangeStart,7*i); return <div className="days">{Array.from({length:7},(_,k)=>{
-          const date=addDays(start,k), n=lessonsOn(data,date).length;
-          return <button key={k} data-date={date} className={`day-button ${date===today?'today':''} ${n?'':'off'}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(n).toLowerCase()}`}>
+        render={i=>{const start=addDays(rangeStart,7*i); return <LiveDay selected={selected}>{d=><div className="days">{Array.from({length:7},(_,k)=>{
+          const date=addDays(start,k), list=lessonsOn(data,date) as Lesson[], taken:string[]=Array(6).fill('');
+          for (const l of list) for (const p of pairsOf(l)) taken[p] ||= l.type;
+          return <button key={k} className={`day-button ${date===today?'today':''} ${date<today?'past':''} ${list.length?'':'off'}`} aria-pressed={view==='day' && date===d} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(list.length).toLowerCase()}`}>
             <span>{shortDays[k]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[k]}</em>
-            <i className="dots" aria-hidden="true">{Array.from({length:Math.min(n,4)},(_,j)=><b key={j}/>)}</i>
-          </button>;})}</div>;}}/>
+            <i className="pairs" aria-hidden="true">{taken.map((t,j)=><b key={j} className={t}/>)}</i>
+          </button>;})}</div>}</LiveDay>;}}/>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>
-    <p className="dayline glass-only"><b>{view==='day' ? near || dayNames[weekday(selected)] : 'Неделя'}</b>{view==='day' ? `, ${formatDate(selected)}` : `, ${weekRange}`}<span>{' · '}{view==='day' ? <>{lessonCount(selectedLessons.length)}{dayStart && ` · ${dayStart}–${dayEnd}`}</> : lessonCount(shownWeekCount)}{parity!=null && ` · ${parity?'нечётная':'чётная'} неделя`}</span></p>
+    {view==='day'
+      ? <LiveDay selected={selected}>{d=><p className="dayline glass-only">{aboutDay(d)}</p>}</LiveDay>
+      : <p className="dayline glass-only"><b>Неделя</b>{`, ${weekRange}`}<span>{' · '}{lessonCount(shownWeekCount)}{parity!=null && ` · ${parity?'нечётная':'чётная'} неделя`}</span></p>}
 
     <main ref={scheduleArea}>
       {recent.length>0 && <section className="changes-banner" aria-label="Изменения расписания">

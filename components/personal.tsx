@@ -5,8 +5,8 @@ import {StylePreview} from './style-preview';
 import {calendarFile} from '../lib/calendar.mjs';
 import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
 import {loadChoice,setChoice} from '../lib/glass-quality.mjs';
-const QUALITY=[['auto','Авто'],['lite','Экономно'],['balanced','Красиво'],['full','Максимум']] as const;
-const tierNames:Record<string,string>={lite:'экономно',balanced:'красиво',full:'максимум'};
+const QUALITY=[['auto','Авто'],['lite','Экономно'],['balanced','Плавно'],['full','Красиво']] as const;
+const tierNames:Record<string,string>={lite:'экономно',balanced:'плавно',full:'красиво'};
 // Effects level of Стекло: auto measures this device; the others are fixed.
 function GlassQuality(){
   const [choice,setChoiceState]=useState(loadChoice);
@@ -17,7 +17,7 @@ function GlassQuality(){
     <div className="quality-switch" role="radiogroup" aria-label="Качество эффектов стекла">
       {QUALITY.map(([name,label])=><button key={name} role="radio" aria-checked={choice===name} onClick={()=>{setChoice(name);setChoiceState(name);}}>{label}</button>)}
     </div>
-    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Без размытия и без фото МГУ на фоне: для самых слабых телефонов.':choice==='balanced'?'Без живого размытия: стекло из тона, бликов и кромки. Плавно на телефоне.':'Всё, включая искажение по краям (Android и компьютер). Может тормозить на слабых телефонах.'}</p>
+    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Плоско и легко: без бликов, теней и затемнений. Для слабых телефонов.':choice==='balanced'?'Стекло из тона, бликов и кромки, без живого размытия — листается плавно на любом телефоне.':'Живое размытие под карточками и панелями, на компьютере ещё и преломление по краям. Красивее всего, но на телефоне может подтормаживать при листании.'}</p>
   </div>;
 }
 

@@ -544,29 +544,56 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .dayhead-back[data-on] { visibility:visible; }
 :root[data-scheme=dark][data-style=glass] :is(.dayhead,.dayline) { text-shadow:0 1px 12px rgb(0 0 0 / .55); }
 
-/* Полоса недель. Выбранный день — сплошная капсула; сегодня — акцентным цветом; точки — сколько пар.
-   Размеры всех частей заданы, ничего не анимируется, кроме смены цвета у двух кнопок. */
-[data-style=glass] .date-navigation { margin:8px 0 0; padding:4px; grid-template-columns:minmax(0,1fr); border-radius:22px; overflow:hidden; }
+/* Полоса недели — без подложки, прямо на фоне, как неделя в календаре iPhone. Под каждым числом шесть кружков —
+   шесть пар дня (08:45 … 18:00): золотой — лекция, светлый — семинар, голубой — консультация или физкультура,
+   едва видный — пары нет. Выбранный день — круг вокруг числа, сегодня — акцентным цветом, прошедшие приглушены.
+   Размеры всех частей заданы; при смене дня меняется только цвет. */
+[data-style=glass] .date-navigation { margin:6px -6px 0; padding:0; grid-template-columns:minmax(0,1fr); border:0; border-radius:0; overflow:hidden;
+  background:none!important; box-shadow:none!important; -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
+[data-style=glass] .date-navigation::before, [data-style=glass] .date-navigation::after { display:none; }
 [data-style=glass] .date-navigation>.icon-button { display:none; }
 @media (hover:hover) and (pointer:fine) {
-  [data-style=glass] .date-navigation { grid-template-columns:28px minmax(0,1fr) 28px; padding:6px 2px; }
-  [data-style=glass] .date-navigation>.icon-button { display:inline-flex; height:52px; }
+  [data-style=glass] .date-navigation { grid-template-columns:28px minmax(0,1fr) 28px; }
+  [data-style=glass] .date-navigation>.icon-button { display:inline-flex; height:66px; }
 }
-[data-style=glass] .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
-[data-style=glass] .day-button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; height:52px; padding:0; border-radius:18px;
-  background:transparent; box-shadow:none; transition:background-color .2s, box-shadow .2s; }
-[data-style=glass] .day-button span { height:13px; color:var(--muted-foreground); font-size:10px; font-weight:600; line-height:13px; letter-spacing:.03em; text-transform:uppercase; transition:color .2s; }
-[data-style=glass] .day-button strong { display:block; width:auto; height:22px; margin:0; background:none!important; color:var(--foreground); font-size:18px; font-weight:650; line-height:22px;
-  font-variant-numeric:tabular-nums; letter-spacing:-.02em; transform:none!important; transition:color .2s; }
-[data-style=glass] .day-button .dots { display:flex; justify-content:center; gap:3px; height:4px; margin-top:3px; }
-[data-style=glass] .day-button .dots b { width:3.5px; height:3.5px; border-radius:50%; background:currentColor; color:var(--muted-foreground); opacity:.8; }
-[data-style=glass] .day-button.off strong { color:var(--muted-foreground); opacity:.55; }
-[data-style=glass] .day-button.today span, [data-style=glass] .day-button.today strong, [data-style=glass] .day-button.today .dots b { color:var(--g-accent); opacity:1; }
+[data-style=glass] .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:0; }
+[data-style=glass] .day-button { display:flex; flex-direction:column; align-items:center; gap:0; height:68px; padding:0; border-radius:0; background:none; box-shadow:none; }
+[data-style=glass] .day-button span { height:13px; color:var(--muted-foreground); font-size:10px; font-weight:650; line-height:13px; letter-spacing:.08em; text-transform:uppercase; }
+[data-style=glass] .day-button strong { display:grid; place-items:center; width:36px; height:36px; margin:3px 0 0; border-radius:50%; background:none!important; color:var(--foreground);
+  font-size:19px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-.02em; transform:none!important; transition:background-color .2s, color .2s; }
+[data-style=glass] .day-button .pairs { display:flex; gap:2px; height:4px; margin-top:7px; }
+[data-style=glass] .day-button .pairs b { width:4px; height:4px; border-radius:50%; background:color-mix(in srgb,var(--foreground) 16%,transparent); }
+[data-style=glass] .day-button .pairs b.class { background:var(--foreground); }
+[data-style=glass] .day-button .pairs b.lecture { background:var(--lecture); }
+[data-style=glass] .day-button .pairs b:is(.consultation,.sport) { background:var(--now); }
+[data-style=glass] .day-button.off strong { color:var(--muted-foreground); }
+[data-style=glass] .day-button.past:not([aria-pressed=true]) :is(span,strong,.pairs) { opacity:.45; }
+[data-style=glass] .day-button.today span, [data-style=glass] .day-button.today strong { color:var(--g-accent); }
 [data-style=glass] .day-button.today::after { display:none; }
-[data-style=glass] .day-button[aria-pressed=true] { background:var(--foreground); box-shadow:0 6px 16px -8px rgb(0 0 0 / .6); }
-[data-style=glass] .day-button[aria-pressed=true] :is(span,strong,.dots b) { color:var(--background); opacity:1; }
-[data-style=glass] .day-button.today[aria-pressed=true] { background:var(--g-accent); }
-@media (hover:hover) { [data-style=glass] .day-button:not([aria-pressed=true]):hover { background:var(--g-chip); } }
+[data-style=glass] .day-button[aria-pressed=true] strong { background:var(--foreground)!important; color:var(--background); box-shadow:0 6px 16px -6px rgb(0 0 0 / .6); text-shadow:none; }
+[data-style=glass] .day-button.today[aria-pressed=true] strong { background:var(--g-accent)!important; color:var(--background); }
+[data-style=glass] .day-button[aria-pressed=true] span { color:var(--foreground); }
+:root[data-scheme=dark][data-style=glass] .day-button :is(span,strong) { text-shadow:0 1px 10px rgb(0 0 0 / .7); }
+@media (hover:hover) { [data-style=glass] .day-button:not([aria-pressed=true]):hover strong { background:var(--g-chip)!important; } }
+/* Небо над шапкой чуть темнее, чтобы дни без подложки читались на фото. */
+@media (max-width:899px) {
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-campus::after { content:''; position:absolute; inset:0 0 auto; height:34%;
+    background:linear-gradient(180deg, color-mix(in srgb,var(--background) 55%,transparent), transparent); }
+}
+
+/* Номер пары в карточке — та же шкала, что в полосе. */
+[data-style=glass] .lesson .pair-no { display:inline; color:var(--muted-foreground); font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+[data-style=glass] .lesson.lecture .pair-no { color:var(--g-accent); }
+[data-style=glass] .lesson .pair-no::after { content:'·'; margin-left:6px; color:var(--muted-foreground); }
+[data-style=glass] .lesson-time > :nth-child(2) { margin-left:0; }
+[data-style=glass] .lesson-time .range { margin-right:auto; }
+/* Окно между парами — тонкий разделитель с подписью, а не ещё одна плашка. */
+[data-style=glass] .gap { align-self:stretch; display:flex; align-items:center; gap:7px; margin:2px 6px; padding:0; border-radius:0; background:none!important; box-shadow:none!important;
+  color:var(--muted-foreground); font-size:11.5px; }
+[data-style=glass] .gap-label { display:inline-flex; align-items:center; gap:5px; padding:2px 10px; border-radius:999px; background:var(--c-fill); box-shadow:var(--c-shadow); white-space:nowrap; }
+[data-style=glass] .gap::before, [data-style=glass] .gap::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--foreground) 28%,transparent)); }
+[data-style=glass] .gap::after { background:linear-gradient(270deg,transparent,color-mix(in srgb,var(--foreground) 28%,transparent)); }
+[data-style=glass] .gap.now { color:var(--now); }
 
 /* Строка о выбранном дне — под полосой */
 [data-style=glass] .dayline { display:block; height:22px; margin:10px 2px 8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:15px; line-height:22px; color:var(--foreground); font-variant-numeric:tabular-nums; }
@@ -590,3 +617,14 @@ html[data-style=glass] { background:var(--background); }
    а не на строке: при резком рывке страницы вверх (отскок у края) оно не уезжает вместе с ней. */
 [data-style=glass] .shell::after { content:''; position:fixed; z-index:15; left:0; right:0; bottom:0; height:calc(150px + env(safe-area-inset-bottom)); pointer-events:none;
   background:linear-gradient(to bottom, transparent, color-mix(in srgb,var(--background) 55%,transparent) 45%, color-mix(in srgb,var(--background) 72%,transparent)); }
+
+/* Панель вкладок, пока её тянут: линза идёт за пальцем с короткой (90 мс) доводкой между событиями касания и
+   вытягивается от скорости (--stretch из section-tabs.tsx); отпустили — мягко доезжает до вкладки. */
+[data-style=glass] .drag-tabs.dragging .tab-lens { transition:transform 90ms cubic-bezier(.2,.7,.3,1), scale .3s var(--gel), background .3s, box-shadow .3s;
+  scale:calc(1.04 * var(--stretch,1)) calc(1.12 / var(--stretch,1)); }
+
+/* Экономно: плоское стекло — без бликов, теней, затемнения снизу и цветокоррекции фото. */
+:root[data-style=glass][data-glass=lite] { --g-sheen:linear-gradient(#0000,#0000); --g-drop:0 0 #0000; --g-lip:inset 0 0 #0000; --g-pool:inset 0 0 #0000;
+  --c-shadow:inset 0 0 0 .5px rgb(255 255 255 / .08); --g-lens-shadow:inset 0 0 0 1px rgb(255 255 255 / .2); }
+:root[data-style=glass][data-glass=lite] .shell::after { display:none; }
+:root[data-style=glass][data-glass=lite] :is(.dayhead,.dayline,.topbar,.heading) { text-shadow:none; }

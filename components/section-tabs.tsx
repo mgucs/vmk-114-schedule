@@ -13,7 +13,7 @@ export const sectionIndex=(s:Section)=>items.findIndex(i=>i[0]===s);
 export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Section)=>void}) {
   const index=sectionIndex(value);
   const nav=useRef<HTMLElement>(null),lens=useRef<HTMLSpanElement>(null);
-  const gesture=useRef<{id:number;x:number;y:number;dragged:boolean;base:number;cell:number;at:number;live:number}|null>(null);
+  const gesture=useRef<{id:number;x:number;y:number;dragged:boolean;base:number;cell:number;at:number;live:number;lastX:number;lastT:number}|null>(null);
   const suppressClick=useRef(false);
   const glass=()=>document.documentElement.dataset.style==='glass';
   const cell=()=>lens.current?.offsetWidth||0;
@@ -29,7 +29,7 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
     const g=gesture.current;if(!g||g.id!==e.pointerId)return;
     gesture.current=null;
     nav.current?.classList.remove('dragging','pressing');hover(null);
-    if(lens.current)lens.current.style.transition='';
+    lens.current?.style.removeProperty('--stretch');
     if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
     if(!g.dragged)return;
     suppressClick.current=!cancel;
@@ -39,17 +39,20 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
   }
   return <nav ref={nav} className="tabs drag-tabs" aria-label="Разделы"
     onPointerDown={e=>{if(!e.isPrimary||e.button!==0)return;suppressClick.current=false;nav.current?.classList.add('pressing');
-      const w=cell();gesture.current={id:e.pointerId,x:e.clientX,y:e.clientY,dragged:false,base:index*w,cell:w,at:index*w,live:index};}}
+      const w=cell();gesture.current={id:e.pointerId,x:e.clientX,y:e.clientY,dragged:false,base:index*w,cell:w,at:index*w,live:index,lastX:e.clientX,lastT:e.timeStamp};}}
     onPointerMove={e=>{const g=gesture.current;if(!g||g.id!==e.pointerId)return;
       if(!g.dragged){
         if(Math.abs(e.clientX-g.x)<=6||Math.abs(e.clientX-g.x)<=Math.abs(e.clientY-g.y))return;
         g.dragged=true;e.currentTarget.setPointerCapture(e.pointerId);
-        nav.current?.classList.add('dragging');if(lens.current)lens.current.style.transition='none';
+        nav.current?.classList.add('dragging');
         g.x=e.clientX;   // from here the lens moves with the finger, starting where it is
       }
       e.preventDefault();
       g.at=Math.max(0,Math.min((items.length-1)*g.cell,g.base+e.clientX-g.x));
-      place(g.at);
+      place(g.at);   // a 90 ms transition (glass.css) smooths the steps between finger events
+      // Stretched along the way by the finger's speed, like a drop of gel.
+      const speed=Math.abs(e.clientX-g.lastX)/Math.max(8,e.timeStamp-g.lastT);g.lastX=e.clientX;g.lastT=e.timeStamp;
+      lens.current?.style.setProperty('--stretch',String(1+Math.min(.3,speed*.3)));
       const n=Math.round(g.at/(g.cell||1));
       if(n!==g.live){g.live=n;hover(n);navigator.vibrate?.(4);if(!glass())onChange(items[n][0]);}
     }}

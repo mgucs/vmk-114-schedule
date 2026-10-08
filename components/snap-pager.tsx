@@ -1,4 +1,4 @@
-import {useLayoutEffect,useRef,type ReactNode,type RefObject} from 'react';
+import {memo,useLayoutEffect,useRef,useState,type ReactNode,type RefObject} from 'react';
 
 // A row of pages in the browser's own horizontal scroller with snap points: the days of the year, or its weeks.
 // Every page has a fixed place for good — page i always starts at i × width — so the scroller is never rebuilt or
@@ -7,7 +7,13 @@ import {useLayoutEffect,useRef,type ReactNode,type RefObject} from 'react';
 // rest are empty boxes of the same width. A swipe is a native scroll: the phone moves the pages on its compositor and
 // no script runs until the scroller settles on a page, which is then reported once. While it moves, `onPeek` hears
 // which page is more than half in view (once per change), so the day strip can follow the finger right away.
+// Pages near the one passing under the finger get their content too, so a quick run of swipes does not reach empty
+// pages; an empty page shows the outline of cards (globals.css) until it is drawn.
 export type PagerHandle = {show:(i:number)=>void};
+// A page that did not change is not redrawn: its content comes from a cache (page.tsx), the same object every time.
+const Slide = memo(function Slide({active, children}:{active:boolean; children:ReactNode}) {
+  return <div className={`slide${active ? ' current' : ''}`} aria-hidden={!active || undefined} inert={!active || undefined}>{children}</div>;
+});
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function SnapPager({count, index, render, onSettle, onPeek, handle, className, near = 1, label}:{count:number; index:number;
@@ -18,6 +24,7 @@ export function SnapPager({count, index, render, onSettle, onPeek, handle, class
   const settle = useRef(onSettle); settle.current = onSettle;
   const peek = useRef(onPeek); peek.current = onPeek;
   const peeked = useRef(index);
+  const [passing, setPassing] = useState(index);   // the page under the finger, for drawing its neighbours early
   const width = () => scroller.current?.clientWidth || 1;
 
   // First drawing, and the parent moving to another page (a tap, an arrow, «Сегодня»): a neighbour glides in,
@@ -45,8 +52,10 @@ export function SnapPager({count, index, render, onSettle, onPeek, handle, class
     function done() {
       clearTimeout(timer);
       const w = width(), i = Math.round(el!.scrollLeft / w);
-      if (Math.abs(el!.scrollLeft - i * w) > 1.5) return;     // still between pages (a fling running)
-      if (peeked.current !== i) { peeked.current = i; peek.current?.(i); }
+      const off = el!.scrollLeft - i * w;
+      if (Math.abs(off) > 3) return;                           // still between pages (a fling running)
+      if (Math.abs(off) > .5) el!.scrollLeft = i * w;          // an interrupted glide stopped a pixel or two short
+      if (peeked.current !== i) { peeked.current = i; peek.current?.(i); setPassing(i); }
       if (i !== shown.current) { shown.current = i; settle.current(i); }
       else peek.current?.(i);                                  // back where it was: undo what a peek showed
     }
@@ -55,7 +64,7 @@ export function SnapPager({count, index, render, onSettle, onPeek, handle, class
     const scroll = () => {
       clearTimeout(timer);
       const w = width(), x = el.scrollLeft, i = Math.round(x / w);
-      if (i !== peeked.current) { peeked.current = i; peek.current?.(i); }
+      if (i !== peeked.current) { peeked.current = i; peek.current?.(i); setPassing(i); }
       if (Math.abs(x - i * w) < .5 && i !== shown.current) { done(); return; }
       timer = window.setTimeout(done, 120);
     };
@@ -68,8 +77,8 @@ export function SnapPager({count, index, render, onSettle, onPeek, handle, class
   }, []);
 
   return <div className={className} ref={scroller} aria-label={label}>
-    {Array.from({length:count}, (_, i) => <div key={i} className={`slide${i === index ? ' current' : ''}`} aria-hidden={i !== index || undefined} inert={i !== index || undefined}>
-      {Math.abs(i - index) <= near ? render(i) : null}
-    </div>)}
+    {Array.from({length:count}, (_, i) => <Slide key={i} active={i === index}>
+      {Math.abs(i - index) <= near || Math.abs(i - passing) <= near ? render(i) : null}
+    </Slide>)}
   </div>;
 }
