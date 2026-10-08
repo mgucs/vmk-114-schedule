@@ -642,7 +642,6 @@ html[data-style=glass] { background:var(--background); }
 :root[data-peek] .liquid-slider input[type=range] { visibility:visible; }
 
 /* Тёплая осень: фото МГУ тоже как под Night Shift — янтарный тон поверх (слой обоев статичный, рисуется один раз). */
-[data-style=glass][data-theme=amber] .wallpaper::after { content:''; position:absolute; inset:0; background:#ff9d2e; mix-blend-mode:multiply; opacity:.62; pointer-events:none; }
 :root[data-style=glass][data-theme=amber] { --g-accent:#ffc35c; }
 
 /* Кнопки шапки — как полоса дней: без общей капсулы, три тихие круглые иконки прямо на фоне;
@@ -674,3 +673,28 @@ html[data-style=glass] { background:var(--background); }
 @media (hover:hover) { [data-style=glass] .groups-sheet .group-tiles button:not([aria-pressed=true]):hover { background:color-mix(in srgb,var(--foreground) 11%,transparent); } }
 [data-style=glass] .groups-sheet .share-group { justify-content:flex-start; margin-top:22px; padding:10px 0 2px; border:0; border-top:1px solid color-mix(in srgb,var(--foreground) 8%,transparent); border-radius:0;
   background:none; color:var(--muted-foreground); font-size:14px; }
+
+/* ═══ Оттенок фото у каждой темы ═══
+   Темы различались почти только цветом кружков: фото МГУ под всеми было одно и то же. Теперь у темы свой оттенок
+   снимка — слой поверх фото с режимом наложения (color: тон без изменения яркости; multiply: окрашивание целиком).
+   Слой обоев статичный: рисуется один раз и при листании ничего не стоит. МГУ ночь и МГУ день — исходный снимок. */
+[data-style=glass] .wallpaper::after { content:''; position:absolute; inset:0; pointer-events:none;
+  background:var(--tint,#0000); mix-blend-mode:var(--tint-mode,color); opacity:var(--tint-a,0); }
+:root[data-theme=midnight] { --tint:#7a5cff; --tint-a:.32; }
+:root[data-theme=winter]   { --tint:#5fd2ff; --tint-a:.4; }
+:root[data-theme=ocean]    { --tint:#14b8b2; --tint-a:.45; }
+:root[data-theme=forest]   { --tint:#3fa35c; --tint-a:.45; }
+:root[data-theme=steel]    { --tint:#8b929c; --tint-a:.92; }
+:root[data-theme=onyx]     { --tint:#808080; --tint-a:1; }
+:root[data-theme=graphite] { --tint:#8a8f86; --tint-a:.9; }
+:root[data-theme=night]    { --tint:#ffbe2e; --tint-a:.38; }
+:root[data-theme=autumn]   { --tint:#d2581f; --tint-a:.45; }
+:root[data-theme=amber]    { --tint:#ff9d2e; --tint-mode:multiply; --tint-a:.62; }
+:root[data-theme=snow]     { --tint:#d3d9e0; --tint-a:.8; }
+:root[data-theme=fog]      { --tint:#8ea3b8; --tint-a:.6; }
+:root[data-theme=mint]     { --tint:#2fbf9a; --tint-a:.35; }
+:root[data-theme=lavender] { --tint:#9a80f0; --tint-a:.38; }
+:root[data-theme=pearl]    { --tint:#d6bf98; --tint-a:.5; }
+:root[data-theme=paper]    { --tint:#f2dfae; --tint-mode:multiply; --tint-a:.55; }
+:root[data-theme=spring]   { --tint:#9ad45a; --tint-a:.38; }
+:root[data-theme=summer]   { --tint:#ffa233; --tint-a:.52; }

@@ -585,7 +585,7 @@ export default function Home() {
         <div><dt>Без интернета</dt><dd>{offlineReady?'работает':'ещё не готово'}</dd></div>
       </dl>
       {pdfError && <p className="personal-hint">{pdfError}</p>}
-      {checks.length>0 && <div className="status-error check-list"><b>Стоит сверить с PDF</b>{checks.map(w=><p key={w.id+w.text}>{dayNames[w.day]}, {w.start} · {w.title}: {w.text}</p>)}</div>}
+      {checks.length>0 && <div className="status-error check-list"><b>Стоит сверить с PDF</b>{checks.map(w=><p key={w.id+w.text}>{w.day>=0 ? `${dayNames[w.day]}, ${w.start} · ${w.title}: ` : ''}{w.text}</p>)}</div>}
       <button className="save-task" onClick={()=>refresh(true)} disabled={busy || !online}><RefreshCw size={15} className={busy?'spin':''}/> {busy?'Обновляем…':'Обновить'}</button>
       {history.length>0 && <button className="changes-button" onClick={()=>{setStatusOpen(false);setChangesOpen(true);}}><History size={17}/><span><b>Изменения расписания</b><small>последнее — от {history[0].date}, по всем группам</small></span><ChevronRight size={18}/></button>}
       <div className="source-links"><a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>

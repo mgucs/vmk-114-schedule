@@ -34,6 +34,7 @@ test('effects level: device guess, measured step-down, manual choice', () => {
 test('the startup script picks the same effects level as lib/glass-quality.mjs', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const script = html.match(/var g='balanced';[\s\S]*?dataset\.glass=g;/)[0];
+  // A stored manual choice is ignored now (the level is always automatic).
   const cases = [[null, null, {cores:8, memory:8, coarse:true}], ['full', null, {cores:2, memory:2, coarse:true}], [null, 'lite', {cores:8, memory:8, coarse:true}], [null, null, {cores:8, memory:8, coarse:false}], [null, null, {cores:4, memory:8, coarse:false}]];
   for (const [choice, measured, env] of cases) {
     const store = {'vmk114-glass-quality':choice, 'vmk114-glass-auto':measured};
@@ -41,6 +42,6 @@ test('the startup script picks the same effects level as lib/glass-quality.mjs',
     new Function('localStorage', 'navigator', 'matchMedia', 'document', script)(
       {getItem:k => store[k] ?? null}, {hardwareConcurrency:env.cores, deviceMemory:env.memory},
       q => ({matches:q.includes('coarse') ? env.coarse : false}), document);
-    assert.equal(document.documentElement.dataset.glass, initialTier(choice, measured, env), JSON.stringify([choice, measured, env]));
+    assert.equal(document.documentElement.dataset.glass, initialTier(null, measured, env), JSON.stringify([choice, measured, env]));
   }
 });

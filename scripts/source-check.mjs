@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {checkTable} from '../lib/parse-check.mjs';
+import {guardGroups} from '../lib/guard.mjs';
 import {DEFAULT_GROUP, HISTORY_LIMIT, PARSER_VERSION, diffTables, validHistory, validTable} from '../lib/schedule-model.mjs';
 
 export const PAGE = 'https://cs.msu.ru/studies/schedule';
@@ -64,7 +65,9 @@ export async function checkSource({previous, parse, fetcher = fetch, now = () =>
     const parsed = await parse(pdf);
     const attemptedAt = now();
     const savedAt = before?.hash === hash ? before.savedAt : attemptedAt;
-    const schedule = {year:parsed.year, groups:parsed.groups, sourceDate:metadata.date, sourceUrl:metadata.url, hash, savedAt, parserVersion:PARSER_VERSION};
+    // A group that looks misread keeps its previous timetable (lib/guard.mjs) instead of breaking the site.
+    const guarded = guardGroups(parsed.groups, before);
+    const schedule = {year:parsed.year, groups:guarded.groups, sourceDate:metadata.date, sourceUrl:metadata.url, hash, savedAt, parserVersion:PARSER_VERSION};
     if (!validTable(schedule)) throw Error('Не удалось проверить полноту расписания.');
     let nextHistory = history;
     const pdfChanged = !!before && before.hash !== hash;
@@ -76,7 +79,7 @@ export async function checkSource({previous, parse, fetcher = fetch, now = () =>
       nextHistory = [{date:metadata.date, previousDate:before.sourceDate || null, detectedAt:attemptedAt, pdfChanged, changes}, ...history].slice(0, HISTORY_LIMIT);
     }
     // Places that look misread: shown in the app next to the class and in the GitHub log.
-    const parseWarnings = checkTable(schedule.groups).slice(0, 60);
+    const parseWarnings = [...guarded.notes, ...checkTable(schedule.groups)].slice(0, 60);
     return {pdf, snapshot:{schema:3, status:'ok', attemptedAt, checkedAt:attemptedAt, error:null, date:metadata.date, url:metadata.url, hash, schedule, history:nextHistory, parseWarnings}};
   } catch (error) {
     if (!before) throw error;

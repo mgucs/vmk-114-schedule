@@ -3,21 +3,6 @@ import {Palette,NotebookPen,Check,CalendarPlus} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {calendarFile} from '../lib/calendar.mjs';
 import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
-import {loadChoice,setChoice} from '../lib/glass-quality.mjs';
-const QUALITY=[['auto','Авто'],['lite','Экономно'],['balanced','Плавно'],['full','Красиво']] as const;
-const tierNames:Record<string,string>={lite:'экономно',balanced:'плавно',full:'красиво'};
-// Effects level of Стекло: auto measures this device; the others are fixed.
-function GlassQuality(){
-  const [choice,setChoiceState]=useState(loadChoice);
-  const [tier,setTier]=useState(()=>document.documentElement.dataset.glass||'balanced');
-  useEffect(()=>{const sync=()=>setTier(document.documentElement.dataset.glass||'balanced');addEventListener('vmk-glass-quality',sync);return()=>removeEventListener('vmk-glass-quality',sync);},[]);
-  return <div className="glass-quality">
-    <div className="liquid-head"><strong>Эффекты</strong><span>{choice==='auto'?`сейчас: ${tierNames[tier]}`:''}</span></div>
-    <div className="quality-switch" role="radiogroup" aria-label="Качество эффектов стекла">
-      {QUALITY.map(([name,label])=><button key={name} role="radio" aria-checked={choice===name} onClick={()=>{setChoice(name);setChoiceState(name);}}>{label}</button>)}
-    </div>
-  </div>;
-}
 
 // name, label, scheme, swatch colours (background, lecture, now)
 export const THEMES = [
@@ -25,16 +10,16 @@ export const THEMES = [
   ['msu-light','МГУ день','light',['#eaf1f8','#c07a45','#2f6fd1']], ['mint','Мята','light',['#edf5f1','#2e9a74','#e0604e']], ['lavender','Лаванда','light',['#f3f1f9','#7b66d6','#df5a86']],
   ['pearl','Жемчуг','light',['#f6f3ed','#9a7738','#16151a']], ['paper','Бумага','light',['#f3efe6','#f5c518','#ff5a36']],
   ['spring','Весна','light',['#f1f5ec','#6dbb5a','#ea4f8a']], ['summer','Лето','light',['#fff6e3','#ffae1f','#ff4e2e']],
-  ['msu','МГУ ночь','dark',['#0b1030','#d8b45c','#2a3aa8']], ['msu-classic','МГУ классика','dark',['#090d24','#e3bd55','#9aa3cf']], ['midnight','Полночь','dark',['#111120','#9f8cff','#ff7eb0']],
+  ['msu','МГУ ночь','dark',['#0b1030','#d8b45c','#2a3aa8']], ['midnight','Полночь','dark',['#150f26','#9f8cff','#ff7eb0']],
   ['ocean','Океан','dark',['#0b161b','#4cc2c4','#ff8a73']], ['forest','Лес','dark',['#0e1512','#74c98f','#ffae6b']],
   ['steel','Сталь','dark',['#17181b','#7aa7ff','#ff7a7a']], ['onyx','Оникс','dark',['#0d0d0f','#c9a96e','#ece7de']],
-  ['night','Ночь','dark',['#15130f','#e8b923','#ff6a48']], ['graphite','Графит','dark',['#111214','#b8f34a','#ff4f8b']],
-  ['winter','Зима','dark',['#0b1220','#6ea8ff','#ff6b9a']], ['autumn','Осень','dark',['#17100b','#ea7a36','#ff5e3a']], ['amber','Тёплая осень','dark',['#160f06','#ffb547','#ffd27a']],
+  ['night','Ночь','dark',['#15130f','#e8b923','#ff6a48']], ['graphite','Графит','dark',['#1b1c1f','#b8f34a','#ff4f8b']],
+  ['winter','Зима','dark',['#0a1820','#7fd3ff','#ff8fb5']], ['autumn','Осень','dark',['#17100b','#ea7a36','#ff5e3a']], ['amber','Тёплая осень','dark',['#160f06','#ffb547','#ffd27a']],
 ] as const;
 // Layout and type, independent of the colour theme.
 export const STYLES = [
-  ['atelier','Журнал','Антиква и тонкие линейки'],
   ['glass','Стекло','Жидкое стекло, как в iOS 26'],
+  ['atelier','Журнал','Антиква и тонкие линейки'],
   ['minimal','Минимал','Время, предмет, аудитория'],
   ['timeline','Лента','Шкала времени и карточки'],
   ['cards','Карточки','Как в приложениях iOS'],
@@ -49,7 +34,6 @@ export function LiquidSlider(){
   const peek=(on:boolean)=>{if(on)document.documentElement.setAttribute('data-peek','');else document.documentElement.removeAttribute('data-peek');};
   const save=(v:number)=>{peek(false);applyLiquid(v,true);};
   return <div className="liquid-slider">
-    <GlassQuality/>
     <div className="liquid-head"><strong>Фон</strong><span>{value<20?'светлый':value<45?'обычный':value<75?'приглушённый':'тёмный'}</span></div>
     <input type="range" min={0} max={100} step={1} value={value} aria-label="Фон: от светлого к тёмному"
       style={{'--v':`${value}%`} as React.CSSProperties}
@@ -60,7 +44,8 @@ export function LiquidSlider(){
 }
 const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'glass';}catch{return 'glass';}};
 // Older versions stored plain "light"/"dark".
-const legacy=(value:string|null)=>value==='light'?'paper':value==='dark'?'night':value;
+// «МГУ классика» was the same as «МГУ ночь» and is gone.
+const legacy=(value:string|null)=>value==='light'?'paper':value==='dark'?'night':value==='msu-classic'?'msu':value;
 export function applyTheme(choice:string,style=loadStyle()){
   const name=choice==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'midnight':'snow'):choice;
   const theme=THEMES.find(t=>t[0]===name)||THEMES.find(t=>t[0]==='paper')!;

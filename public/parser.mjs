@@ -129,9 +129,14 @@ export async function parseAll(pdfjs,data) {
       year||=Number(items.map(i=>i.str).join(' ').match(/(20\d{2})\s*\/\s*20\d{2}/)?.[1]);
       if(!year)throw Error('Не удалось определить учебный год PDF.');
       const {horizontal,vertical}=borders(await page.getOperatorList(),pdfjs.OPS,height);
+      // The group columns are the same for every day of a page. They are taken from all six header rows together,
+      // so a number VMK left out of one row (103 on a Monday) does not lose that group's whole day.
+      const seen=new Map();
+      for(const head of headers)for(const i of items)if(/^1\d\d$/.test(i.str.trim())&&Math.abs(i.y-head.y)<6){const g=i.str.trim();if(!seen.has(g))seen.set(g,[]);seen.get(g).push(i.x+i.width/2);}
+      const pageCols=[...seen].map(([group,xs])=>({group,x:xs.sort((a,b)=>a-b)[xs.length>>1]})).sort((a,b)=>a.x-b.x);
       for(let day=0;day<6;day++) {
         const head=headers[day],bottom=headers[day+1]?.y??height;
-        const cols=items.filter(i=>/^1\d\d$/.test(i.str.trim())&&Math.abs(i.y-head.y)<6).sort((a,b)=>a.x-b.x).map(i=>({group:i.str.trim(),x:i.x+i.width/2}));
+        const cols=pageCols;
         if(!cols.length)throw Error(`Страница ${pageNo}: не найдены номера групп.`);
         const contentLeft=Math.max(...vertical.filter(v=>v.x0<cols[0].x-10&&v.y0<head.y&&v.y1>head.y).map(v=>v.x0));
         if(!Number.isFinite(contentLeft))throw Error('Не найдена граница таблицы.');
