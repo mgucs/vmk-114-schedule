@@ -458,18 +458,19 @@ textarea { font:inherit; }
 .glance-line span { min-width:0; overflow:hidden; color:var(--muted-foreground); white-space:nowrap; text-overflow:ellipsis; }
 
 /* Lessons: cards. Time line, subject, teacher with the room on the right. Tap a card to write homework. */
-/* Days lie side by side in the browser's own horizontal scroller (day-pager.tsx): a swipe is a native scroll that
+/* Days lie side by side in the browser's own horizontal scroller (snap-pager.tsx): a swipe is a native scroll that
    snaps to a page. Each page is the scroller's full width; its side padding is the gap between pages and leaves room
-   for the cards' shadows, which the scroller would otherwise cut. */
+   for the cards' shadows, which the scroller would otherwise cut. The week strip is the same kind of scroller. */
 .pager { flex:1; display:flex; margin:-12px -12px -32px; padding:12px 0 32px; overflow-x:auto; overflow-y:hidden;
   scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:none; }
-.pager::-webkit-scrollbar { display:none; }
-.slide { flex:0 0 100%; min-width:0; padding:0 12px; display:flex; flex-direction:column; scroll-snap-align:start; scroll-snap-stop:always; }
+.pager::-webkit-scrollbar, .week-strip::-webkit-scrollbar { display:none; }
+.pager > .slide { flex:0 0 100%; min-width:0; padding:0 12px; display:flex; flex-direction:column; scroll-snap-align:start; scroll-snap-stop:always; }
 /* Only the day in view sets the height: the pages beside it are cut to it while they slide in. Otherwise a long
    neighbour stretched the page, and the buttons under it stood lower or higher depending on the next day. */
-.slide[aria-hidden=true] { height:0; }
-/* The drop on the day strip is Стекло's own (glass.css). */
-.day-lens { display:none; }
+.pager > .slide[aria-hidden=true] { height:0; }
+.week-strip { display:flex; min-width:0; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:none; }
+.week-strip > .slide { flex:0 0 100%; min-width:0; scroll-snap-align:start; scroll-snap-stop:always; }
+.day-button .dots { display:none; }
 .slide>section.day { flex:1; display:flex; flex-direction:column; }
 .list { display:flex; flex-direction:column; gap:8px; }
 .lesson { position:relative; overflow:hidden; padding:12px 16px 14px; border-radius:16px; background:var(--card); box-shadow:var(--shadow); cursor:pointer; }

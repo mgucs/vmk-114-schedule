@@ -1,4 +1,4 @@
-import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties} from 'react';
+import React, {Suspense, createContext, lazy, startTransition, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties} from 'react';
 import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
@@ -16,8 +16,7 @@ import {StatsDialog} from '@/components/term-stats';
 import {UsefulView} from '@/components/useful';
 import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
-import {DayPager} from '@/components/day-pager';
-import {useDayLens} from '@/components/day-lens';
+import {SnapPager} from '@/components/snap-pager';
 import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
@@ -257,25 +256,27 @@ export default function Home() {
   const months = view==='day' ? monthOf(selected) : [...new Set([monthOf(monday),monthOf(week[6])])].join(' — ');
   const weekRange = week[0].slice(5,7)===week[6].slice(5,7) ? `${Number(week[0].slice(-2))}–${formatDate(week[6])}` : `${formatDate(week[0])} – ${formatDate(week[6])}`;
   const shownWeekCount = week.reduce((n,date)=>n+lessonsOn(data,date).length,0);
+  // The academic year's days and weeks have fixed places in the pagers (snap-pager.tsx); page i is the i-th day
+  // (or week) from rangeStart. The range always holds today and the chosen day.
+  const rangeStart = (()=>{ const a=[`${data.year}-08-01`,addDays(today,-60),selected].sort()[0]; return addDays(a,-weekday(a)); })();
+  const rangeEnd = [`${data.year+1}-07-31`,addDays(today,120),selected].sort().at(-1)!;
+  const span = (a:string,b:string) => Math.round((Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/86400000);
+  const dayTotal = span(rangeStart,rangeEnd)+1, weekTotal = Math.ceil(dayTotal/7);
+  const dayIndex = span(rangeStart,selected), weekIndex = Math.floor(dayIndex/7);
   const dayStart = selectedLessons.reduce((s,l)=>!s||l.start<s?l.start:s,''), dayEnd = selectedLessons.reduce((e,l)=>l.end>e?l.end:e,'');
   const checkedAgo = ago(saved.snapshot.checkedAt || null);
   const statusText = !online ? 'Без интернета' : busy ? 'Обновляем…' : syncError ? 'Не удалось получить обновления'
     : saved.snapshot.status==='error' ? 'Не удалось проверить ВМК' : checks.length ? 'Сверь с PDF' : checkedAgo ? `Сверено ${checkedAgo}` : status.title;
   const tone = !online ? 'offline' : syncError || checks.length ? 'warn' : status.tone;
 
-  // The drop on the day strip starts moving here, in the input handler, before the new day is drawn (day-lens.ts).
-  const lensCtl = useDayLens(weekday(selected), monday);
   const target = useRef(selected);
   useLayoutEffect(() => { target.current = selected; }, [selected]);
-  // Into another week too: the strip stays, only its numbers change, and the drop travels to the new weekday.
-  function lensTo(date:string) { if (view==='day') lensCtl.glide(weekday(date)); }
-  function go(date:string) { target.current=date; lensTo(date); setPinned(date===focus?null:date); }
-  // From the latest target day, so two quick swipes move two days even before a re-render.
-  function shift(direction:number) { const next=addDays(target.current,direction*(view==='week'?7:1)); target.current=next; lensTo(next); setPinned(next===focus?null:next); }
-  // The week strip slides in from the side the new week lies on.
-  const dateNav = useRef<HTMLElement>(null);
-  // A swipe of the days: the finger holds the drop; on a turn shift() glides it on from there, otherwise it settles back.
-  const followDrag = (fraction:number|null, turned=false) => { if (fraction!==null) lensCtl.follow(fraction); else if (!turned) lensCtl.settle(); };
+  function go(date:string) { target.current=date; setPinned(date===focus?null:date); }
+  // From the latest target day, so two quick key presses move two days even before a re-render.
+  function shift(direction:number) { go(addDays(target.current,direction*(view==='week'?7:1))); }
+  // A swipe that settled: the page is already in view, so React draws the rest as interruptible work — a new touch
+  // is not kept waiting for it.
+  const settleOn = (date:string) => { target.current=date; startTransition(()=>setPinned(date===focus?null:date)); };
 
   async function savePdf(hash:string) {
     if (!('caches' in window)) throw Error('Сохранение PDF недоступно в этом браузере.');
@@ -363,7 +364,8 @@ export default function Home() {
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
       if (event.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
-      if (event.key==='ArrowLeft') shift(-1); else if (event.key==='ArrowRight') shift(1);
+      // preventDefault: with a day button focused, the arrow would also scroll the week strip by itself.
+      if (event.key==='ArrowLeft') { event.preventDefault(); shift(-1); } else if (event.key==='ArrowRight') { event.preventDefault(); shift(1); }
     };
     window.addEventListener('keydown',onKey); return()=>window.removeEventListener('keydown',onKey);
   });
@@ -397,8 +399,7 @@ export default function Home() {
     return {task,editing,open:()=>homework.setEditing(editing?'':id),
       editor:editing?<HomeworkEditor task={draft} error={homework.error} onSave={homework.save} onToggle={()=>homework.toggle(id)} onClose={()=>homework.setEditing('')}/>:null};
   }
-  // The pager shows "day:<date>" or "week:<monday>".
-  const pageId = view==='day' ? `day:${selected}` : `week:${monday}`;
+  // Pages are "day:<date>" or "week:<monday>".
   const pageDate = (id:string) => id.slice(id.indexOf(':')+1);
   // Drawn pages are reused while nothing they show has changed: turning a day used to redraw the current day and
   // both neighbours (twice, with the deferred neighbours), which froze the day lens for a moment on every turn.
@@ -410,10 +411,9 @@ export default function Home() {
     if (hit && hit.deps===pageDeps) return hit.node;
     const node = id.startsWith('day:') ? renderDay(pageDate(id)) : Array.from({length:7},(_,i)=>renderDay(addDays(pageDate(id),i),true));
     pageCache.current.set(id, {deps:pageDeps, node});
-    if (pageCache.current.size > 12) pageCache.current.delete(pageCache.current.keys().next().value!);
+    if (pageCache.current.size > 16) pageCache.current.delete(pageCache.current.keys().next().value!);
     return node;
   };
-  const neighbourPage = (id:string,d:number) => id.startsWith('day:') ? `day:${addDays(pageDate(id),d)}` : `week:${addDays(pageDate(id),7*d)}`;
   function renderDay(date:string,weekly=false) {
     const list=lessonsOn(data,date) as Lesson[];
     const kind=dayKind(faculty.term,date);
@@ -470,14 +470,11 @@ export default function Home() {
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
     </main> : <>
-    {/* Стекло: one fixed-height block — what day, its date, how many classes and when. Every line keeps its height
-        whatever the day, so nothing below moves when the day changes; «Сегодня» keeps its place even while hidden. */}
+    {/* Стекло: the month on top (and «Сегодня» when another day is open), then the week strip, then one line about
+        the chosen day. Each line has a fixed height whatever the day, so nothing below moves when the day changes. */}
     <div className="dayhead glass-only">
-      <h1>{view==='day' ? near || dayNames[weekday(selected)] : 'Неделя'}<span>{view==='day' ? formatDate(selected) : weekRange}</span></h1>
-      <div className="dayhead-row">
-        <p className="dayhead-sub">{view==='day' ? <>{lessonCount(selectedLessons.length)}{dayStart && ` · ${dayStart}–${dayEnd}`}</> : lessonCount(shownWeekCount)}{parity!=null && ` · ${parity?'нечётная':'чётная'} неделя`}</p>
-        <button className="dayhead-back" data-on={pinned!==null || undefined} tabIndex={pinned!==null ? 0 : -1} aria-hidden={pinned===null || undefined} onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>
-      </div>
+      <h1>{months}<span>{(view==='day'?selected:monday).slice(0,4)}</span></h1>
+      <button className="dayhead-back" data-on={pinned!==null || undefined} tabIndex={pinned!==null ? 0 : -1} aria-hidden={pinned===null || undefined} onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>
     </div>
     <div className={`heading ${view}`}>
       <div className="heading-text">
@@ -496,14 +493,21 @@ export default function Home() {
       </div>
     </div>
 
-    <nav className="date-navigation" aria-label="Выбрать день" ref={dateNav}>
+    {/* The strip is a row of weeks in its own snap scroller: a new week slides in whole, the numbers never change in place.
+        A swipe of the strip opens the same weekday of that week. Dots under a number: how many classes that day. */}
+    <nav className="date-navigation" aria-label="Выбрать день">
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
-      <div className="days" style={{'--day':weekday(selected)} as CSSProperties}>
-        {view==='day' && <i ref={lensCtl.ref} className={`day-lens ${selected===today?'today':''}`} aria-hidden="true"/>}
-        {week.map((date,i)=><button key={i} className={`day-button ${date===today?'today':''} ${lessonsOn(data,date).length?'':'off'}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}
-      </div>
+      <SnapPager key={'strip'+rangeStart} className="week-strip" count={weekTotal} index={weekIndex} label="Недели"
+        onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))}
+        render={i=>{const start=addDays(rangeStart,7*i); return <div className="days">{Array.from({length:7},(_,k)=>{
+          const date=addDays(start,k), n=lessonsOn(data,date).length;
+          return <button key={k} className={`day-button ${date===today?'today':''} ${n?'':'off'}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(n).toLowerCase()}`}>
+            <span>{shortDays[k]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[k]}</em>
+            <i className="dots" aria-hidden="true">{Array.from({length:Math.min(n,4)},(_,j)=><b key={j}/>)}</i>
+          </button>;})}</div>;}}/>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>
+    <p className="dayline glass-only"><b>{view==='day' ? near || dayNames[weekday(selected)] : 'Неделя'}</b>{view==='day' ? `, ${formatDate(selected)}` : `, ${weekRange}`}<span>{' · '}{view==='day' ? <>{lessonCount(selectedLessons.length)}{dayStart && ` · ${dayStart}–${dayEnd}`}</> : lessonCount(shownWeekCount)}{parity!=null && ` · ${parity?'нечётная':'чётная'} неделя`}</span></p>
 
     <main ref={scheduleArea}>
       {recent.length>0 && <section className="changes-banner" aria-label="Изменения расписания">
@@ -516,7 +520,11 @@ export default function Home() {
         {freshNotices.map(n=><p key={n}>{n}</p>)}
       </section>}
       {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
-      <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} onDrag={view==='day' ? followDrag : undefined}/>
+      {view==='day'
+        ? <SnapPager key={'days'+rangeStart} className="pager" count={dayTotal} index={dayIndex} near={2} label="Дни"
+            render={i=>renderPage('day:'+addDays(rangeStart,i))} onSettle={i=>settleOn(addDays(rangeStart,i))}/>
+        : <SnapPager key={'weeks'+rangeStart} className="pager" count={weekTotal} index={weekIndex} label="Недели"
+            render={i=>renderPage('week:'+addDays(rangeStart,7*i))} onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))}/>}
     </main>
 
     <footer className="footer">

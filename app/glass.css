@@ -109,9 +109,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .date-navigation>.icon-button { width:30px; height:48px; border-radius:14px; background:none; color:var(--muted-foreground); }
 [data-style=glass] .date-navigation>.icon-button svg { width:18px; height:18px; }
 [data-style=glass] .days { position:relative; gap:2px; }
-[data-style=glass] .day-lens { display:block; position:absolute; grid-area:1/1/2/2; inset:0; border-radius:18px; pointer-events:none;
-  background:var(--g-lens); box-shadow:var(--g-lens-shadow); translate:calc(var(--day) * (100% + 2px)) 0; }
-[data-style=glass] .day-lens.today { background:var(--g-lens); box-shadow:var(--g-lens-shadow); }
 [data-style=glass] .day-button { z-index:1; gap:3px; padding:7px 0 8px; border-radius:18px; }
 [data-style=glass] .day-button span { font-size:11.5px; font-weight:600; transition:color .3s; }
 [data-style=glass] .day-button strong { width:auto; height:auto; border-radius:0; background:none!important; font-size:18px; font-weight:650; transition:color .3s, transform .45s var(--spring); }
@@ -458,11 +455,7 @@ html[data-style=glass] { background:var(--background); }
 
 /* Гель. Линзы едут на мягкой пружине (перелёт ~4%), вытягиваются по ходу движения и встают на место. */
 [data-style=glass] .tab-lens { transition:transform .6s var(--gel), scale .4s var(--gel), background .3s, box-shadow .3s; }
-[data-style=glass] .day-lens { transition:none; }  /* moved by day-lens.ts (Web Animations on translate and scale), not by CSS */
-/* Без отдельной анимации «сжатия»: она перезапускалась, когда палец отпускал день, и линза вздрагивала.
-   Гель даёт сама пружина перемещения; при свайпе линзу ведёт палец (page.tsx, followDrag). */
 [data-style=glass] .tab-lens { animation:none; will-change:transform; }
-[data-style=glass] .day-lens { animation:none; will-change:translate, scale; }
 [data-style=glass] .drag-tabs.pressing:not(.dragging) .tab-lens { scale:1.06 1.1; }
 [data-style=glass] .drag-tabs.dragging .tab-lens { scale:1.04 1.12; }
 
@@ -490,7 +483,7 @@ html[data-style=glass] { background:var(--background); }
   transform:scale(.95); transition-duration:.12s; }
 @media (prefers-reduced-motion:reduce) {
   [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active { transform:none; }
-  [data-style=glass] :is(.tab-lens,.day-lens) { transition-duration:.01s; animation:none!important; scale:1!important; }
+  [data-style=glass] .tab-lens { transition-duration:.01s; animation:none!important; scale:1!important; }
 }
 /* Без прозрачности (настройка системы): подложки и стекло сплошные. */
 @media (prefers-reduced-transparency:reduce) {
@@ -542,30 +535,42 @@ html[data-style=glass] { background:var(--background); }
    при смене дня меняется только текст и едет капля. Стрелки — только там, где есть мышь; на телефоне дни листают
    пальцем или нажимают. */
 [data-style=glass] .heading { display:none; }
-[data-style=glass] .dayhead { display:block; padding:6px 2px 0; }
-[data-style=glass] .dayhead h1 { height:36px; margin:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:29px; font-weight:700; line-height:36px; letter-spacing:-.04em; }
-[data-style=glass] .dayhead h1 span { margin-left:9px; color:var(--muted-foreground); font-size:17px; font-weight:550; letter-spacing:-.01em; }
-[data-style=glass] .dayhead-row { display:flex; align-items:center; gap:10px; height:26px; margin-top:2px; }
-[data-style=glass] .dayhead-sub { flex:1; min-width:0; margin:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted-foreground); font-size:13px; line-height:26px; font-variant-numeric:tabular-nums; }
-[data-style=glass] .dayhead-back { flex-shrink:0; height:26px; padding:0 12px; border:0; border-radius:999px; background:var(--g-lens); box-shadow:var(--g-lens-shadow); color:var(--foreground); font-size:12px; font-weight:650; visibility:hidden; }
+/* Месяц и «Сегодня» */
+[data-style=glass] .dayhead { display:flex; align-items:center; gap:10px; height:40px; padding:4px 2px 0; }
+[data-style=glass] .dayhead h1 { flex:1; min-width:0; margin:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:30px; font-weight:700; line-height:40px; letter-spacing:-.04em; }
+[data-style=glass] .dayhead h1 span { margin-left:8px; color:var(--muted-foreground); font-size:18px; font-weight:500; letter-spacing:-.01em; }
+[data-style=glass] .dayhead-back { flex-shrink:0; height:30px; padding:0 14px; border:0; border-radius:999px; background:var(--g-lens); box-shadow:var(--g-lens-shadow); color:var(--foreground); font-size:13px; font-weight:650; visibility:hidden; }
 [data-style=glass] .dayhead-back[data-on] { visibility:visible; }
-:root[data-scheme=dark][data-style=glass] .dayhead { text-shadow:0 1px 12px rgb(0 0 0 / .5); }
-@media (max-width:360px) { [data-style=glass] .dayhead h1 { font-size:26px; } [data-style=glass] .dayhead h1 span { font-size:15px; } }
+:root[data-scheme=dark][data-style=glass] :is(.dayhead,.dayline) { text-shadow:0 1px 12px rgb(0 0 0 / .55); }
 
-[data-style=glass] .date-navigation { margin:12px 0; padding:5px; grid-template-columns:1fr; border-radius:24px; }
+/* Полоса недель. Выбранный день — сплошная капсула; сегодня — акцентным цветом; точки — сколько пар.
+   Размеры всех частей заданы, ничего не анимируется, кроме смены цвета у двух кнопок. */
+[data-style=glass] .date-navigation { margin:10px 0 0; padding:6px; grid-template-columns:minmax(0,1fr); border-radius:26px; overflow:hidden; }
 [data-style=glass] .date-navigation>.icon-button { display:none; }
 @media (hover:hover) and (pointer:fine) {
-  [data-style=glass] .date-navigation { grid-template-columns:28px 1fr 28px; padding:5px 2px; }
-  [data-style=glass] .date-navigation>.icon-button { display:inline-flex; height:54px; }
+  [data-style=glass] .date-navigation { grid-template-columns:28px minmax(0,1fr) 28px; padding:6px 2px; }
+  [data-style=glass] .date-navigation>.icon-button { display:inline-flex; height:64px; }
 }
-[data-style=glass] .days { gap:0; }
-[data-style=glass] .day-lens { border-radius:18px; translate:calc(var(--day) * 100%) 0; }
-[data-style=glass] .day-button { height:54px; gap:2px; padding:0; justify-content:center; border-radius:18px; }
-[data-style=glass] .day-button span { font-size:11px; font-weight:600; line-height:14px; letter-spacing:.02em; transition:none; }
-[data-style=glass] .day-button strong { height:24px; font-size:19px; font-weight:650; line-height:24px; font-variant-numeric:tabular-nums; transition:none; transform:none!important; }
-[data-style=glass] .day-button.off strong { opacity:.45; }
-[data-style=glass] .day-button.today strong, [data-style=glass] .day-button.today span { color:var(--g-accent); }
-[data-style=glass] .day-button.today::after { bottom:4px; width:4px; height:4px; }
+[data-style=glass] .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+[data-style=glass] .day-button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; height:64px; padding:0; border-radius:20px;
+  background:transparent; box-shadow:none; transition:background-color .2s, box-shadow .2s; }
+[data-style=glass] .day-button span { height:15px; color:var(--muted-foreground); font-size:11px; font-weight:600; line-height:15px; letter-spacing:.03em; text-transform:uppercase; transition:color .2s; }
+[data-style=glass] .day-button strong { display:block; width:auto; height:26px; margin:1px 0 0; background:none!important; color:var(--foreground); font-size:20px; font-weight:650; line-height:26px;
+  font-variant-numeric:tabular-nums; letter-spacing:-.02em; transform:none!important; transition:color .2s; }
+[data-style=glass] .day-button .dots { display:flex; justify-content:center; gap:3px; height:5px; margin-top:4px; }
+[data-style=glass] .day-button .dots b { width:4px; height:4px; border-radius:50%; background:currentColor; color:var(--muted-foreground); opacity:.8; }
+[data-style=glass] .day-button.off strong { color:var(--muted-foreground); opacity:.55; }
+[data-style=glass] .day-button.today span, [data-style=glass] .day-button.today strong, [data-style=glass] .day-button.today .dots b { color:var(--g-accent); opacity:1; }
+[data-style=glass] .day-button.today::after { display:none; }
+[data-style=glass] .day-button[aria-pressed=true] { background:var(--foreground); box-shadow:0 6px 16px -8px rgb(0 0 0 / .6); }
+[data-style=glass] .day-button[aria-pressed=true] :is(span,strong,.dots b) { color:var(--background); opacity:1; }
+[data-style=glass] .day-button.today[aria-pressed=true] { background:var(--g-accent); }
+@media (hover:hover) { [data-style=glass] .day-button:not([aria-pressed=true]):hover { background:var(--g-chip); } }
+
+/* Строка о выбранном дне — под полосой */
+[data-style=glass] .dayline { display:block; height:22px; margin:12px 2px 10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:15px; line-height:22px; color:var(--foreground); font-variant-numeric:tabular-nums; }
+[data-style=glass] .dayline b { font-weight:700; }
+[data-style=glass] .dayline span { color:var(--muted-foreground); }
 
 /* Статус и версия — одна тонкая строка под кнопками. */
 [data-style=glass] .footer-meta { flex-wrap:nowrap; gap:0; margin-top:6px; overflow:hidden; white-space:nowrap; color:var(--muted-foreground); font-size:11px; line-height:16px; }
