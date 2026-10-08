@@ -29,7 +29,7 @@
   --wp-photo:.48; --wp-wash:color-mix(in srgb,var(--background) 45%,transparent);
   --g-text-shadow:0 1px 8px #00000035;
 }
-:root[data-style=glass][data-scheme=light] :is(.glass-campus,.glass-soft) { background-image:var(--photo-day); }
+:root[data-style=glass][data-scheme=light] .glass-campus { background-image:var(--photo-day); }
 :root[data-style=glass][data-theme=msu-light] {
   --background:#e9eff6; --card:#f8fbff; --foreground:#13233a; --muted:#dde6f0; --muted-foreground:#56687f;
   --lecture:#bf7a47; --accent-ink:#9c5427; --lecture-soft:#f3e6da; --now:#2c74c9; --now-soft:#dbe9f7;
@@ -45,7 +45,7 @@
 html[data-style=glass] { background:var(--background); }
 [data-style=glass] body { background:transparent; }
 [data-style=glass] .wallpaper { display:block; position:fixed; inset:0; height:100vh; height:100lvh; z-index:-1; pointer-events:none; overflow:hidden; background:var(--background); }
-[data-style=glass] :is(.glass-campus,.glass-soft) { position:absolute; inset:0; background-image:var(--photo-night); background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(calc(.3 + var(--lg2,0) * .7)); }
+[data-style=glass] .glass-campus { position:absolute; inset:0; background-image:var(--photo-night); background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(calc(.3 + var(--lg2,0) * .7)); }
 [data-style=glass] .glass-atmosphere { position:absolute; inset:0; background:linear-gradient(180deg,var(--background) 0%,var(--wp-wash) 32%,transparent 65%,var(--background) 100%); }
 [data-style=glass] .glass-horizon { position:absolute; inset:0; background:radial-gradient(ellipse at 0% 40%,color-mix(in srgb,var(--lecture) 10%,transparent),transparent 60%),linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--background) 45%,transparent)); }
 [data-style=glass] :is(.msu-hero,.msu-emblem) { display:none; }
@@ -55,15 +55,15 @@ html[data-style=glass] { background:var(--background); }
 
 /* Материал. Кромка — отдельный слой по маске: градиент рисуется только на ободке и не просвечивает сквозь стекло. */
 [data-style=glass] .lesson, [data-style=glass] .now-bar, [data-style=glass] .glance-line, [data-style=glass] .notices, [data-style=glass] .message,
-[data-style=glass] .empty, [data-style=glass] .term-facts div, [data-style=glass] .term-day, [data-style=glass] .term-month, [data-style=glass] .session-item,
-[data-style=glass] .session-next, [data-style=glass] .onboarding-card, [data-style=glass] .date-navigation, [data-style=glass] .heading .view-switch,
+[data-style=glass] .empty, [data-style=glass] .term-facts div, [data-style=glass] .term-day, [data-style=glass] .term-cal, [data-style=glass] .session-item,
+[data-style=glass] .session-next, [data-style=glass] .date-navigation, [data-style=glass] .heading .view-switch,
 [data-style=glass] .session-empty, [data-style=glass] .session-what, [data-style=glass] .term-dates,
 [data-style=glass] .header-actions, [data-style=glass] .footer-links button, [data-style=glass] [data-slot=dialog-content] {
   border:0; background:var(--g-sheen), var(--g-tint, linear-gradient(#0000,#0000)), var(--g-fill);
   -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
   box-shadow:var(--g-lip), var(--g-pool), var(--g-drop); }
 [data-style=glass] .lesson::before, [data-style=glass] .now-bar::before, [data-style=glass] .glance-line::before, [data-style=glass] .notices::before, [data-style=glass] .message::before,
-[data-style=glass] .empty::before, [data-style=glass] .term-facts div::before, [data-style=glass] .term-day::before, [data-style=glass] .term-month::before, [data-style=glass] .session-item::before,
+[data-style=glass] .empty::before, [data-style=glass] .term-facts div::before, [data-style=glass] .term-day::before, [data-style=glass] .term-cal::before, [data-style=glass] .session-item::before,
 [data-style=glass] .session-next::before, [data-style=glass] .date-navigation::before, [data-style=glass] .heading .view-switch::before,
 [data-style=glass] .session-empty::before, [data-style=glass] .session-what::before, [data-style=glass] .term-dates::before,
 [data-style=glass] .header-actions::before, [data-style=glass] .footer-links button::before {
@@ -71,13 +71,13 @@ html[data-style=glass] { background:var(--background); }
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
   mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite:exclude; }
 [data-style=glass] .glance-line, [data-style=glass] .notices, [data-style=glass] .message, [data-style=glass] .empty, [data-style=glass] .term-facts div,
-[data-style=glass] .term-month, [data-style=glass] .session-item, [data-style=glass] .session-next, [data-style=glass] .onboarding-card,
+[data-style=glass] .term-cal, [data-style=glass] .session-item, [data-style=glass] .session-next,
 [data-style=glass] .date-navigation, [data-style=glass] .heading .view-switch, [data-style=glass] .header-actions, [data-style=glass] .footer-links button,
 [data-style=glass] .session-empty, [data-style=glass] .session-what, [data-style=glass] .term-dates { position:relative; }
 /* Окна прокручиваются, и слой кромки уехал бы вместе с содержимым: у них кромка — внутренняя тень. */
-[data-style=glass] [data-slot=dialog-content], [data-style=glass] .onboarding-card { box-shadow:var(--g-edge), var(--g-lip), var(--g-drop); }
+[data-style=glass] [data-slot=dialog-content] { box-shadow:var(--g-edge), var(--g-lip), var(--g-drop); }
 /* Толстое стекло там, где под ним всегда текст: панель вкладок, окна, закреплённый день календаря. */
-[data-style=glass] [data-slot=dialog-content], [data-style=glass] .onboarding-card, [data-style=glass] .term-day {
+[data-style=glass] [data-slot=dialog-content] {
   --g-fill:var(--g-thick); -webkit-backdrop-filter:var(--g-blur-thick); backdrop-filter:var(--g-blur-thick); }
 
 /* Шапка: название группы и круглые стеклянные кнопки в одной капсуле. */
@@ -166,7 +166,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .gap small { margin-left:0; font-size:12.5px; }
 [data-style=glass] .gap small::before { content:'·'; margin-right:5px; }
 /* Подписи прямо на заставке */
-[data-style=glass] .day-title, [data-style=glass] .term-sub, [data-style=glass] .term-legend, [data-style=glass] .calendar-history, [data-style=glass] .map-credit { text-shadow:var(--g-text-shadow); }
+[data-style=glass] .day-title, [data-style=glass] .term-sub, [data-style=glass] .term-legend, [data-style=glass] .map-credit { text-shadow:var(--g-text-shadow); }
 [data-style=glass] .empty { padding:44px 24px 40px; border-radius:30px; }
 [data-style=glass] .empty svg { width:48px; height:48px; padding:12px; border-radius:50%; background:var(--g-chip); color:var(--foreground); opacity:1; box-shadow:inset 0 1px 0 #ffffff2e; }
 [data-style=glass] .empty p { margin-top:14px; color:var(--foreground); font-size:19px; font-weight:700; letter-spacing:-.02em; }
@@ -196,7 +196,6 @@ html[data-style=glass] { background:var(--background); }
 /* Окна и первый вход */
 [data-style=glass] [data-slot=dialog-overlay] { background:#00000047; }
 [data-style=glass] [data-slot=dialog-content] { border-radius:32px; }
-[data-style=glass] .onboarding-card { border-radius:32px; }
 [data-style=glass] .group-grid button, [data-style=glass] .segmented, [data-style=glass] .search-days button { background:var(--g-chip); }
 [data-style=glass] .group-grid button { border-radius:14px; }
 [data-style=glass] .group-grid button[aria-pressed=true] { background:var(--lecture); }
@@ -207,12 +206,13 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .session-title { font-size:34px; font-weight:800; letter-spacing:-.04em; }
 [data-style=glass] .term-facts { gap:10px; }
 [data-style=glass] .term-facts div { padding:14px 16px; border-radius:22px; }
-[data-style=glass] .term-day { top:8px; border-radius:22px; }
-[data-style=glass] .term-month { margin-top:14px; padding:14px 10px 12px; border-radius:26px; }
-[data-style=glass] .term-month h2 { margin:0 6px 8px; }
-[data-style=glass] .term-cell { border-radius:12px; }
-[data-style=glass] .term-cell.selected { background:var(--g-lens); color:var(--foreground); box-shadow:var(--g-lens-shadow); }
-[data-style=glass] .term-cell.selected::after { background:var(--hair-strong); }
+/* Календарь: месяц — карточка того же слоя, что пары; выбранный день и «сегодня» — как в полосе недели. */
+[data-style=glass] .term-cal { border-radius:26px; }
+[data-style=glass] .term-day { border-radius:22px; }
+[data-style=glass] .term-cell.today .n { color:var(--g-accent); }
+[data-style=glass] .term-cell.selected .n { background:var(--foreground); color:var(--background); box-shadow:0 6px 16px -6px rgb(0 0 0 / .6); }
+[data-style=glass] .term-cell.today.selected .n { background:var(--g-accent); color:var(--background); }
+[data-style=glass] :is(.term-nav .term-today, .term-open) { box-shadow:0 6px 14px -8px rgb(0 0 0 / .6); }
 [data-style=glass] .session-next { border-radius:22px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 20%,transparent),#0000 70%); }
 [data-style=glass] .session-item { margin-bottom:10px; padding:14px 18px; border-radius:24px; }
 [data-style=glass] .session-item.exam { --g-tint:linear-gradient(140deg,color-mix(in srgb,var(--lecture) 24%,transparent),#0000 70%); }
@@ -265,7 +265,7 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] .shell { padding-top:16px; }
   [data-style=glass] .heading { padding-top:28px; }
   [data-style=glass] .heading h1 { font-size:44px; }
-  [data-style=glass] :is(.glass-campus,.glass-soft) { background-position:50% 56%; }
+  [data-style=glass] .glass-campus { background-position:50% 56%; }
   [data-style=glass] .list .lesson { padding:22px 26px; }
   [data-style=glass] .list .lesson.current { padding-bottom:32px; }
   [data-style=glass] .lesson h3 { font-size:24px; }
@@ -286,7 +286,7 @@ html[data-style=glass] { background:var(--background); }
 /* МГУ на большом экране: главное здание целиком, днём или ночью, без дымки. Мягкая тень только
    под колонкой расписания, чтобы подписи читались; на телефоне фото остаётся приглушённым, как было. */
 @media (min-width:900px) {
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.glass-campus,.glass-soft) { opacity:1; filter:none; background-position:50% 62%; }
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-campus { opacity:1; filter:none; background-position:50% 62%; }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-atmosphere {
     background:linear-gradient(90deg, transparent calc(50% - 520px), color-mix(in srgb,var(--background) 42%,transparent) calc(50% - 330px), color-mix(in srgb,var(--background) 42%,transparent) calc(50% + 330px), transparent calc(50% + 520px)); }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-horizon { display:none; }
@@ -390,11 +390,11 @@ html[data-style=glass] { background:var(--background); }
 }
 
 /* Слой контента: карточки без стеклянной кромки, на подложке, которая держит текст. */
-[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates) {
+[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates) {
   background:var(--g-tint, linear-gradient(#0000,#0000)), var(--c-fill);
   -webkit-backdrop-filter:blur(var(--c-blur-px)) saturate(1.3); backdrop-filter:blur(var(--c-blur-px)) saturate(1.3);
   box-shadow:var(--c-shadow); }
-[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates)::before { display:none; }
+[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates)::before { display:none; }
 [data-style=glass] .lesson.past { background:var(--c-past); }
 [data-style=glass] .lesson.current, [data-style=glass] .lesson.lecture.current { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--now) 45%,transparent), var(--c-shadow); }
 [data-style=glass] .gap { background:var(--c-fill); -webkit-backdrop-filter:blur(var(--c-blur-px)); backdrop-filter:blur(var(--c-blur-px)); box-shadow:var(--c-shadow); }
@@ -463,7 +463,7 @@ html[data-style=glass] { background:var(--background); }
   --c-fill:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-fill-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 24%);
   --c-past:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-past-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 18%);
 }
-:root[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
+:root[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
   -webkit-backdrop-filter:none; backdrop-filter:none; }
 /* balanced и lite: ни одного размытия. */
 :root[data-style=glass]:not([data-glass=full]) * { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
@@ -476,7 +476,7 @@ html[data-style=glass] { background:var(--background); }
   --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
   --g-thick:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-thick-p),transparent),var(--card) 70%);
 }
-:root[data-style=glass][data-glass=lite] :is(.glass-campus,.glass-soft) { filter:none; }
+:root[data-style=glass][data-glass=lite] .glass-campus { filter:none; }
 /* Лекция или семинар — видно сразу: у лекции цветная метка и полоса слева, у семинара спокойная метка. */
 [data-style=glass] .tag.lecture { background:var(--lecture); color:var(--lecture-ink); box-shadow:none; font-weight:700; }
 [data-style=glass] .tag.class { background:none; color:var(--muted-foreground); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--foreground) 22%,transparent); }
@@ -575,20 +575,18 @@ html[data-style=glass] { background:var(--background); }
 :root[data-style=glass][data-glass=lite] .dock-lens { box-shadow:none; }
 
 /* ═══ Одна иерархия ═══
-   Главное на странице — пары выбранного дня. МГУ — атмосфера: чёткий за шапкой и неделей, а под парами — его мягкая
-   копия (заранее размытая и приглушённая картинка, ничего не размывается на лету), поэтому прозрачные карточки
-   читаются и ничего не рябит. Всё второстепенное — в «Ещё» (⋯ в шапке). */
-[data-style=glass] .glass-soft { -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent 17%, #000 31%); mask-image:linear-gradient(to bottom, transparent 0, transparent 17%, #000 31%); }
-@media (min-width:900px) { :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-soft { display:none; } }
+   Главное на странице — пары выбранного дня. МГУ — атмосфера: снимок чёткий везде, дымка только сверху (облака
+   над шпилем); под парами размытой копии больше нет — она туманила здание. Карточки держат текст своей плотной
+   подложкой. Всё второстепенное — в «Ещё» (⋯ в шапке). */
 [data-style=glass] .footer { display:none; }
 [data-style=glass] .vmk-link { display:none; }
 
-/* Шапка: статус проверки — точка у «МГУ · ВМК»; «⋯» — всё остальное, с точкой, если ВМК недавно что-то поменял. */
+/* Шапка: статус проверки — точка у «МГУ · ВМК»; «⋯» — всё остальное, без своей точки (она горела почти всегда:
+   ВМК меняет расписание каждую неделю). Свежие изменения отмечены внутри «Ещё». */
 [data-style=glass] .brand-status { display:inline-block; width:5px; height:5px; margin:0 0 1px 6px; border-radius:50%; background:var(--ok); vertical-align:middle; }
 [data-style=glass] .brand-status.warn { background:var(--warn-fg); }
 [data-style=glass] .brand-status.offline { background:var(--muted-foreground); }
 [data-style=glass] .more-button { position:relative; display:inline-flex; }
-[data-style=glass] .more-button[data-fresh]::after { content:''; position:absolute; top:8px; right:7px; width:6px; height:6px; border-radius:50%; background:var(--now); box-shadow:0 0 0 2px var(--background); }
 
 /* День — главный заголовок; строка под ним тихая. Справа «К ближайшим» (только когда открыт другой день) и «Неделя». */
 [data-style=glass] .dayhead { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:2px 8px; height:62px; margin:10px 0 6px; padding:0 2px; }
@@ -619,6 +617,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .more-list > :is(button,a):last-child { border-bottom:0; }
 [data-style=glass] .more-list > button::after { content:'›'; margin-left:auto; color:var(--muted-foreground); font-size:20px; font-weight:400; }
 [data-style=glass] .more-list > a svg { margin-left:auto; color:var(--muted-foreground); }
+[data-style=glass] .more-list > .more-with-thumb::after { margin-left:0; }
 [data-style=glass] .more-list > .fresh-changes::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--now); }
 [data-style=glass] .more-status { display:flex; align-items:center; gap:8px; margin:4px 2px 2px; padding:0; border:0; background:none; color:var(--muted-foreground); font-size:13px; text-align:left; }
 [data-style=glass] .more-sheet .app-version { margin:4px 2px 0; font-size:12px; opacity:.75; }
@@ -639,7 +638,11 @@ html[data-style=glass] { background:var(--background); }
    (personal.tsx ставит data-peek на <html>). visibility:visible у ползунка действует внутри скрытого окна. */
 :root[data-peek] [data-slot=dialog-overlay] { opacity:0; transition:opacity .2s; }
 :root[data-peek] [data-slot=dialog-content] { visibility:hidden; }
-:root[data-peek] .liquid-slider input[type=range] { visibility:visible; }
+:root[data-peek=slider] .liquid-slider input[type=range] { visibility:visible; }
+/* То же у колёс «Оформления»: пока колесо крутят пальцем, окно прячется — остаются само колесо и название темы,
+   а вся страница за ними — превью (personal.tsx, Dial: data-peek=dial, data-held у колеса). */
+:root[data-peek=dial] :is(.dial[data-held], .theme-dial[data-held] + .dial-name) { visibility:visible; }
+:root[data-peek=dial] :is(.dial-name, .style-dial > button) { text-shadow:0 0 14px var(--background), 0 0 4px var(--background); }
 
 /* Тёплая осень: фото МГУ тоже как под Night Shift — янтарный тон поверх (слой обоев статичный, рисуется один раз). */
 [data-style=glass][data-theme=amber] .wallpaper::after { content:''; position:absolute; inset:0; background:#ff9d2e; mix-blend-mode:multiply; opacity:.62; pointer-events:none; }
@@ -654,7 +657,6 @@ html[data-style=glass] { background:var(--background); }
 :root[data-scheme=dark][data-style=glass] .header-actions .icon-button svg { filter:drop-shadow(0 1px 6px rgb(0 0 0 / .45)); }
 [data-style=glass] .header-actions .icon-button:active { transform:scale(.88); background:color-mix(in srgb,var(--foreground) 12%,transparent); transition-duration:.1s; }
 @media (hover:hover) { [data-style=glass] .header-actions .icon-button:hover { background:color-mix(in srgb,var(--foreground) 9%,transparent); } }
-[data-style=glass] .more-button[data-fresh]::after { top:7px; right:6px; }
 
 /* Окно группы: текущая группа крупно, потоки — ряды кругов, как дни в полосе недели. */
 [data-style=glass] .groups-current { display:flex; align-items:center; gap:14px; margin:14px 0 6px; }

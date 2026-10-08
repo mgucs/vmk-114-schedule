@@ -2,14 +2,14 @@ import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEf
 import {ArrowUpRight, CalendarClock, Ellipsis, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
-import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,type Task} from '@/components/personal';
+import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,useIconPicker,type Task} from '@/components/personal';
 import {useSearch} from '@/components/search';
 import {useSubgroups} from '@/components/subgroups';
 import {dayGlance, duration, focusDate, lessonsOn, minutes, roomFor} from '@/lib/day-glance.mjs';
 import {dayKind, isStacked, termEnd, validTerm, weekOf} from '@/lib/term.mjs';
 import {SessionView, isCurrent, type Session} from '@/components/session';
 import {OpenTeacher, TeacherName, useTeacherCard} from '@/components/teacher';
-import {Onboarding, needsOnboarding} from '@/components/onboarding';
+import {markOnboarded, needsOnboarding} from '@/components/onboarding';
 import {SectionTabs, sectionIndex, type Section} from '@/components/section-tabs';
 import {TermCalendar} from '@/components/term-calendar';
 import {StatsDialog} from '@/components/term-stats';
@@ -206,7 +206,9 @@ export default function Home() {
   useEffect(()=>{const open=()=>setChangesOpen(true);window.addEventListener('vmk-open-changes',open);return()=>window.removeEventListener('vmk-open-changes',open);},[]);
   const [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
   const checking = useRef(false), lastAttempt = useRef(0), scheduleArea = useRef<HTMLElement>(null);
-  const [group,setGroupState] = useState(loadGroup), [groupsOpen,setGroupsOpen] = useState(false);
+  // The first visit opens the group window by itself (onboarding.tsx); until a group is picked it cannot be closed.
+  const [onboarding,setOnboarding] = useState(needsOnboarding);
+  const [group,setGroupState] = useState(loadGroup), [groupsOpen,setGroupsOpen] = useState(onboarding);
   const table = saved.snapshot.schedule;
   const faculty = readFaculty(saved.snapshot);
   const data = {...groupSchedule(table,group), term:faculty.term} as Schedule & {term:Faculty['term']|null};
@@ -223,10 +225,11 @@ export default function Home() {
   const subgroups=useSubgroups(data.lessons,groupName);
   const homework=useHomework(groupName,(date)=>{setView('day');go(date);});
   const calendar=useCalendarExport(data,subgroups.selected);
+  const appIcon=useIconPicker();
   // Search looks at the current teaching week; on Sunday that is the coming one.
   const searchWeek=Array.from({length:6},(_,i)=>addDays(today,i-weekday(today)+(weekday(today)===6?7:0)));
   const search=useSearch({table,term:faculty.term,dates:searchWeek,today,clock,group:groupName,room:(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>});
-  function setGroup(name:string){setGroupState(name);setGroupsOpen(false);setMessage('');try{localStorage.setItem(groupKey,name);}catch{}}
+  function setGroup(name:string){setGroupState(name);setGroupsOpen(false);setMessage('');try{localStorage.setItem(groupKey,name);}catch{}if(onboarding){markOnboarded();setOnboarding(false);}}
   const focus = focusDate(data,today,clock) as string;
   const selected = pinned ?? focus;
   const monday = addDays(selected,-weekday(selected));
@@ -242,7 +245,7 @@ export default function Home() {
   const [readNotices,setReadNotices] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem(noticeKey)||'[]');}catch{return [];}});
   const freshNotices = faculty.notices.filter(n=>!readNotices.includes(n));
   const [statsOpen,setStatsOpen] = useState(false), [moreOpen,setMoreOpen] = useState(false);
-  const [contactsOpen,setContactsOpen] = useState(false), [onboarding,setOnboarding] = useState(needsOnboarding), [shared,setShared] = useState('');
+  const [contactsOpen,setContactsOpen] = useState(false), [shared,setShared] = useState('');
   // Lecturer of each subject this term, by the first letters of its name.
   const lecturers = Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];}));
   const teacherCard = useTeacherCard({table, session:isCurrent(faculty.session,data.year) ? faculty.session : null, dates:searchWeek, term:faculty.term, room:(name,day,start)=><LessonAt.Provider value={{date:searchWeek[day],start}}><Room room={name}/></LessonAt.Provider>});
@@ -400,7 +403,7 @@ export default function Home() {
   useEffect(()=>{
     const params=new URLSearchParams(location.search), wanted=params.get('g');
     if(!wanted)return;
-    if(table.groups[wanted]){setGroup(wanted);setOnboarding(false);}
+    if(table.groups[wanted])setGroup(wanted);
     params.delete("g");window.history.replaceState(null,'',location.pathname+(params.size?'?'+params:'')+location.hash);
   },[]);
   // The new section slides in from the side it lies on in the tab bar.
@@ -474,7 +477,7 @@ export default function Home() {
         <a className="vmk-link" href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer" aria-label="Расписание на сайте ВМК">ВМК<ArrowUpRight size={13}/></a>
         {search.button}
         <ThemeButton/>
-        <button className="icon-button glass-only more-button" aria-label="Ещё: изменения, подгруппы, PDF, статус" data-fresh={history.length>0 && Date.now()-Date.parse(history[0].detectedAt)<RECENT || undefined} onClick={()=>setMoreOpen(true)}><Ellipsis size={20}/></button>
+        <button className="icon-button glass-only more-button" aria-label="Ещё: изменения, подгруппы, PDF, статус" onClick={()=>setMoreOpen(true)}><Ellipsis size={20}/></button>
       </div>
     </header>
 
@@ -489,8 +492,8 @@ export default function Home() {
       {nextLesson && <button onClick={()=>openRoom(roomFor(nextLesson,subgroups.selected),today,nextLesson.start)}>К паре {nextLesson.start}: {roomFor(nextLesson,subgroups.selected)}</button>}
     </CampusMap></Suspense> : tab==='calendar' ? <main className="session-main pane" key="calendar">
       <TermCalendar term={faculty.term} sessions={[faculty.session, ...faculty.archive].filter((s):s is Session=>!!s)} group={groupName} today={today} academicYear={data.year}
-        classesOn={date=>lessonsOn(data,date).length} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
-      <button className="changes-button stats-open" onClick={()=>setStatsOpen(true)}><CalendarRange size={17}/><span><b>Сколько пар</b><small>за неделю и семестр, по предметам и в сравнении всех групп</small></span><ChevronRight size={18}/></button>
+        classesOn={date=>lessonsOn(data,date).length} dataKey={saved.snapshot.attemptedAt+groupName} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
+      <button className="changes-button stats-open" onClick={()=>setStatsOpen(true)}><CalendarRange size={17}/><span><b>Сколько пар</b><small>по предметам и в сравнении с другими группами</small></span><ChevronRight size={18}/></button>
     </main> : tab==='info' ? <main className="session-main pane" key="info">
       <UsefulView table={table} group={groupName} streams={streams(table).map(s=>({title:s.title, groups:s.groups}))}/>
     </main> : tab==='session' ? <main className="session-main pane" key="session">
@@ -596,6 +599,7 @@ export default function Home() {
     {homework.dialogs}
     {subgroups.dialog}
     {calendar.dialog}
+    {appIcon.dialog}
     {search.dialog}
     {teacherCard.dialog}
     {faculty.contacts && <Dialog open={contactsOpen} onOpenChange={setContactsOpen}><DialogContent className="changes-dialog contacts-card">
@@ -609,7 +613,6 @@ export default function Home() {
       </dl>
       <div className="source-links"><a href="https://cs.msu.ru/studies/contacts" target="_blank" rel="noreferrer">Страница на сайте ВМК<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>}
-    {onboarding && <Onboarding streams={streams(table)} onGroup={name=>{setGroupState(name);try{localStorage.setItem(groupKey,name);}catch{}}} onDone={()=>setOnboarding(false)}/>}
     {/* «Ещё»: everything that is not the day's classes, out of the way. A row closes the sheet and opens its own window. */}
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="changes-dialog more-sheet">
       <DialogTitle>Ещё</DialogTitle>
@@ -621,6 +624,7 @@ export default function Home() {
         {calendar.button}
         {pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF расписания</button>}
         {faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}
+        {appIcon.button}
         <a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Расписание на сайте ВМК<ArrowUpRight size={15}/></a>
       </div>
       <button className={`more-status ${tone}`} onClick={()=>{setMoreOpen(false);setStatusOpen(true);}}>
@@ -637,10 +641,12 @@ export default function Home() {
         : seen && Date.now()-Date.parse(history[0].detectedAt)<RECENT && <button className="changes-button" onClick={showChanges}><History size={17}/><span><b>Снова отметить изменённые пары</b><small>в расписании за последнюю неделю</small></span></button>)}
     </DialogContent></Dialog>
     {/* Groups as circles, a stream per row — the same language as the week strip; the chosen group is filled. */}
-    <Dialog open={groupsOpen} onOpenChange={setGroupsOpen}><DialogContent className="changes-dialog groups-sheet"><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК. Расписание всех групп сохранено и без интернета.</DialogDescription>
-      {(()=>{const mine=streams(table).find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}<br/>группы {mine.range}</span></div>;})()}
-      <GroupPicker list={streams(table)} current={groupName} onPick={setGroup}/>
-      <button className="share-group" onClick={shareGroup}><Share2 size={16}/> Поделиться ссылкой на группу {groupName}</button>
+    <Dialog open={groupsOpen} onOpenChange={open=>{if(open || !onboarding)setGroupsOpen(open);}}><DialogContent className="changes-dialog groups-sheet" showCloseButton={!onboarding} onOpenAutoFocus={e=>{if(onboarding)e.preventDefault();}}>
+      {onboarding ? <><DialogTitle>Какая у тебя группа?</DialogTitle><DialogDescription>Расписание первого курса ВМК. Сменить группу можно в любой момент — нажми на её номер вверху.</DialogDescription></>
+        : <><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК. Расписание всех групп сохранено и без интернета.</DialogDescription></>}
+      {(()=>{const mine=!onboarding && streams(table).find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}<br/>группы {mine.range}</span></div>;})()}
+      <GroupPicker list={streams(table)} current={onboarding ? '' : groupName} onPick={setGroup}/>
+      {!onboarding && <button className="share-group" onClick={shareGroup}><Share2 size={16}/> Поделиться ссылкой на группу {groupName}</button>}
       {shared && <p className="personal-hint share-result">{shared}</p>}
     </DialogContent></Dialog>
   </div></OpenTeacher.Provider></OpenRoom.Provider>;

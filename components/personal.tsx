@@ -31,7 +31,7 @@ export function LiquidSlider(){
   // The thumb moves with React's state; the photo follows through one variable on the wallpaper (lib/liquid.mjs).
   const change=(v:number)=>{setValue(v);applyLiquid(v);};
   // While the thumb is held, the settings window steps aside (glass.css, data-peek) so the change is seen.
-  const peek=(on:boolean)=>{if(on)document.documentElement.setAttribute('data-peek','');else document.documentElement.removeAttribute('data-peek');};
+  const peek=(on:boolean)=>{if(on)document.documentElement.setAttribute('data-peek','slider');else document.documentElement.removeAttribute('data-peek');};
   const save=(v:number)=>{peek(false);applyLiquid(v,true);};
   return <div className="liquid-slider">
     <div className="liquid-head"><strong>Фон</strong><span>{value<20?'светлый':value<45?'обычный':value<75?'приглушённый':'тёмный'}</span></div>
@@ -96,34 +96,40 @@ export function ThemeButton() {
         ? <p className="dial-name">Как в системе</p>
         : <><Dial key={scheme} className="theme-dial" label="Тема" items={themeItems} value={choice} onPick={pick}/>
           <p className="dial-name">{THEMES.find(t=>t[0]===choice)?.[1]||''}</p></>}
-      <IconPicker/>
       {style==='glass' && <LiquidSlider/>}
     </DialogContent></Dialog>
   </>;
 }
 
 // The app icon: the phone takes it when the site is added to the home screen, from the links index.html points at
-// the chosen icon (manifest-<icon>.webmanifest for Android, apple-touch-icon-<icon>.png for iPhone).
-const ICONS=[['night','МГУ ночью'],['day','МГУ днём'],['sunset','МГУ на закате'],['emblem','Эмблема МГУ'],['vmk','Знак ВМК']] as const;
-function IconPicker(){
-  const [icon,setIcon]=useState(()=>{try{return localStorage.getItem('vmk114-icon')||'night';}catch{return 'night';}});
-  const [changed,setChanged]=useState(false);
+// the chosen icon (manifest-<icon>.webmanifest for Android, apple-touch-icon-<icon>.png for iPhone). It is chosen
+// rarely, so it lives in «Ещё» (a row with the current icon) and not in «Оформление».
+const ICONS=[['night','Ночь','МГУ ночью'],['day','День','МГУ днём'],['sunset','Закат','МГУ на закате'],['emblem','Эмблема','Эмблема МГУ'],['vmk','ВМК','Знак ВМК']] as const;
+const iconSrc=(key:string)=>`${import.meta.env.BASE_URL}icons/icon-${key}-192.png`;
+export function useIconPicker(){
+  const [open,setOpen]=useState(false),[changed,setChanged]=useState(false);
+  const [icon,setIcon]=useState(()=>{try{const k=localStorage.getItem('vmk114-icon');return ICONS.some(i=>i[0]===k)?k!:'night';}catch{return 'night';}});
   function choose(key:string){
     setIcon(key);setChanged(true);try{localStorage.setItem('vmk114-icon',key);}catch{}
     const base=import.meta.env.BASE_URL;
     document.querySelector('link[rel=manifest]')?.setAttribute('href',`${base}manifest-${key}.webmanifest`);
     document.querySelector('link[rel=apple-touch-icon]')?.setAttribute('href',`${base}icons/apple-touch-icon-${key}.png`);
   }
-  return <div className="icon-picker">
-    <div className="icon-row" role="radiogroup" aria-label="Иконка приложения">{ICONS.map(([key,label])=><button key={key} role="radio" aria-checked={icon===key} aria-label={label} onClick={()=>choose(key)}>
-      <img src={`${import.meta.env.BASE_URL}icons/icon-${key}-192.png`} alt="" width={48} height={48} loading="lazy" decoding="async"/></button>)}</div>
-    <p className="icon-note">{changed?'Чтобы иконка сменилась, добавь сайт на экран «Домой» заново.':'Иконка для экрана «Домой»'}</p>
-  </div>;
+  return {button:<button className="more-with-thumb" onClick={()=>{setChanged(false);setOpen(true);}}>Иконка приложения<img className="more-thumb" src={iconSrc(icon)} alt="" width={28} height={28} decoding="async"/></button>,
+    dialog:<Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog icon-sheet">
+      <DialogTitle>Иконка приложения</DialogTitle>
+      <DialogDescription>{changed?'Готово. Чтобы иконка сменилась, добавь сайт на экран «Домой» заново.':'Для сайта на экране «Домой».'}</DialogDescription>
+      <div className="icon-row" role="radiogroup" aria-label="Иконка приложения">{ICONS.map(([key,short,label])=><button key={key} role="radio" aria-checked={icon===key} aria-label={label} onClick={()=>choose(key)}>
+        <img src={iconSrc(key)} alt="" width={60} height={60} loading="lazy" decoding="async"/><span>{short}</span></button>)}</div>
+    </DialogContent></Dialog>};
 }
 
 // A horizontal dial like the iPhone camera's zoom or modes: a native snap scroller; whatever reaches the middle is the
 // choice and is applied at once, so the page behind shows it. Items grow toward the middle (--near, 0…1), so the next
 // one is seen coming. Item centres are measured once (and on resize), not on every scroll step.
+// While a finger (or a wheel) turns it, the settings window steps aside and only this dial stays (data-peek=dial on
+// <html>, data-held on the dial; glass.css): the whole page is the preview. A tap on an item does not hide the window,
+// and neither does the dial's own placing when the window opens.
 function Dial({items,value,onPick,className,label}:{items:{key:string;title:string;node:ReactNode}[];value:string;onPick:(key:string)=>void;className:string;label:string}) {
   const ref=useRef<HTMLDivElement>(null),centers=useRef<number[]>([]),at=useRef(value),frame=useRef(0);
   const pick=useRef(onPick);pick.current=onPick;
@@ -141,10 +147,21 @@ function Dial({items,value,onPick,className,label}:{items:{key:string;title:stri
     measure();
     const i=Math.max(0,items.findIndex(x=>x.key===value));
     el.scrollLeft=centers.current[i]-el.clientWidth/2;at.current=items[i]?.key;paint();
-    const scroll=()=>{if(!frame.current)frame.current=requestAnimationFrame(paint);};
+    const root=document.documentElement;let touching=false,wheelAt=0,idle=0;
+    const show=()=>{root.removeAttribute('data-peek');el.removeAttribute('data-held');};
+    const settle=()=>{clearTimeout(idle);idle=window.setTimeout(()=>{if(!touching)show();},450);};
+    const scroll=()=>{
+      if(touching || performance.now()-wheelAt<300){el.setAttribute('data-held','');root.setAttribute('data-peek','dial');}
+      if(el.hasAttribute('data-held'))settle();
+      if(!frame.current)frame.current=requestAnimationFrame(paint);
+    };
+    const down=()=>{touching=true;clearTimeout(idle);},up=()=>{touching=false;if(el.hasAttribute('data-held'))settle();},wheel=()=>{wheelAt=performance.now();};
     el.addEventListener('scroll',scroll,{passive:true});
+    el.addEventListener('touchstart',down,{passive:true});el.addEventListener('touchend',up);el.addEventListener('touchcancel',up);
+    el.addEventListener('wheel',wheel,{passive:true});
     const resize=new ResizeObserver(()=>{measure();paint();});resize.observe(el);
-    return()=>{el.removeEventListener('scroll',scroll);resize.disconnect();cancelAnimationFrame(frame.current);};
+    return()=>{el.removeEventListener('scroll',scroll);el.removeEventListener('touchstart',down);el.removeEventListener('touchend',up);el.removeEventListener('touchcancel',up);
+      el.removeEventListener('wheel',wheel);resize.disconnect();cancelAnimationFrame(frame.current);clearTimeout(idle);if(el.hasAttribute('data-held'))show();};
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[keys]);
   const center=(i:number)=>{const el=ref.current;if(el)el.scrollTo({left:centers.current[i]-el.clientWidth/2,behavior:'smooth'});};
