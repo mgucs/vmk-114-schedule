@@ -336,14 +336,6 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] .lesson h3 { font-size:22px; }
 }
 
-/* МГУ на телефоне: здание видно за шапкой и первыми парами, ниже фото уходит в фон. */
-@media (max-width:899px) {
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.glass-campus,.glass-soft) { opacity:.9; filter:none; background-position:50% 20%; }
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-atmosphere {
-    background:linear-gradient(180deg, color-mix(in srgb,var(--background) 22%,transparent) 0%, transparent 30%, color-mix(in srgb,var(--background) 12%,transparent) 62%, color-mix(in srgb,var(--background) 45%,transparent) 100%); }
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-horizon { display:none; }
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.heading,.topbar) { text-shadow:0 1px 10px color-mix(in srgb,var(--background) 85%,transparent); }
-}
 
 /* ═══ Liquid Glass по правилам Apple (WWDC25 «Meet Liquid Glass») ═══
    • Стекло — только слой навигации, который плавает над контентом: шапка, полоса дней, «День/Неделя»,
@@ -519,7 +511,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .day-button .pairs b { width:4px; height:4px; border-radius:50%; background:color-mix(in srgb,var(--foreground) 16%,transparent); }
 [data-style=glass] .day-button .pairs b.class { background:var(--foreground); }
 [data-style=glass] .day-button .pairs b.lecture { background:var(--lecture); }
-[data-style=glass] .day-button .pairs b:is(.consultation,.sport) { background:var(--now); }
+[data-style=glass] .day-button .pairs b:is(.consultation,.sport) { background:color-mix(in srgb,var(--foreground) 55%,transparent); }
 [data-style=glass] .day-button.off strong { color:var(--muted-foreground); }
 [data-style=glass] .day-button.past:not([aria-pressed=true]) :is(span,strong,.pairs) { opacity:.68; }
 [data-style=glass] .day-button.today span, [data-style=glass] .day-button.today strong { color:var(--g-accent); }
@@ -529,11 +521,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .day-button[aria-pressed=true] span { color:var(--foreground); }
 :root[data-scheme=dark][data-style=glass] .day-button :is(span,strong) { text-shadow:0 1px 10px rgb(0 0 0 / .7); }
 @media (hover:hover) { [data-style=glass] .day-button:not([aria-pressed=true]):hover strong { background:var(--g-chip)!important; } }
-/* Небо над шапкой чуть темнее, чтобы дни без подложки читались на фото. */
-@media (max-width:899px) {
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-campus::after { content:''; position:absolute; inset:0 0 auto; height:34%;
-    background:linear-gradient(180deg, color-mix(in srgb,var(--background) 55%,transparent), transparent); }
-}
 
 [data-style=glass] .lesson-time .range { margin-right:auto; }
 /* Окно между парами — тонкий разделитель с подписью, а не ещё одна плашка. */
@@ -638,11 +625,6 @@ html[data-style=glass] { background:var(--background); }
 /* Окна без живого размытия — плотные, фон под ними темнее: в окне фокус на окне. */
 :root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-content] { background:color-mix(in srgb,color-mix(in srgb,var(--card) 82%,#000) 97%,transparent); }
 :root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-overlay] { background:rgb(0 0 0 / .55); }
-/* МГУ на телефоне чуть ниже: над неделей — чистое небо (дни читаются), шпиль — за заголовком дня. Сверху фото
-   переходит в цвет неба. */
-@media (max-width:899px) {
-  :root[data-scheme=dark][data-style=glass]:is([data-theme=msu],[data-theme=msu-classic]) :is(.glass-campus,.glass-soft) { background-size:auto 88%; background-position:50% 100%; background-repeat:no-repeat; }
-}
 /* «через 8 ч» на карточке следующей пары повторяет строку «до первой пары» над ней — оставлено только «идёт». */
 [data-style=glass] .lesson .live.next { display:none; }
 :root[data-scheme=light][data-style=glass] .dayhead { text-shadow:0 0 10px rgb(255 255 255 / .7); }
@@ -652,3 +634,13 @@ html[data-style=glass] { background:var(--background); }
 /* «Фон»: поверх фото — затемнение цветом фона, от нуля слева до 70 % справа (--shade из lib/liquid.mjs;
    задаётся на .wallpaper, поэтому при движении ползунка пересчитывается только фото). */
 [data-style=glass] .glass-dim { position:absolute; inset:0; background:var(--background); opacity:calc(var(--shade,.3) * .7); pointer-events:none; }
+
+/* Пока тянут ползунок «Фон», окно настроек исчезает — остаётся только сам ползунок, и видно, как меняется фон
+   (personal.tsx ставит data-peek на <html>). visibility:visible у ползунка действует внутри скрытого окна. */
+:root[data-peek] [data-slot=dialog-overlay] { opacity:0; transition:opacity .2s; }
+:root[data-peek] [data-slot=dialog-content] { visibility:hidden; }
+:root[data-peek] .liquid-slider input[type=range] { visibility:visible; }
+
+/* Тёплая осень: фото МГУ тоже как под Night Shift — янтарный тон поверх (слой обоев статичный, рисуется один раз). */
+[data-style=glass][data-theme=amber] .wallpaper::after { content:''; position:absolute; inset:0; background:#ff9d2e; mix-blend-mode:multiply; opacity:.62; pointer-events:none; }
+:root[data-style=glass][data-theme=amber] { --g-accent:#ffc35c; }

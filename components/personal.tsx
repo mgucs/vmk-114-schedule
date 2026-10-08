@@ -31,7 +31,7 @@ export const THEMES = [
   ['ocean','Океан','dark',['#0b161b','#4cc2c4','#ff8a73']], ['forest','Лес','dark',['#0e1512','#74c98f','#ffae6b']],
   ['steel','Сталь','dark',['#17181b','#7aa7ff','#ff7a7a']], ['onyx','Оникс','dark',['#0d0d0f','#c9a96e','#ece7de']],
   ['night','Ночь','dark',['#15130f','#e8b923','#ff6a48']], ['graphite','Графит','dark',['#111214','#b8f34a','#ff4f8b']],
-  ['winter','Зима','dark',['#0b1220','#6ea8ff','#ff6b9a']], ['autumn','Осень','dark',['#17100b','#ea7a36','#ff5e3a']],
+  ['winter','Зима','dark',['#0b1220','#6ea8ff','#ff6b9a']], ['autumn','Осень','dark',['#17100b','#ea7a36','#ff5e3a']], ['amber','Тёплая осень','dark',['#160f06','#ffb547','#ffd27a']],
 ] as const;
 // Layout and type, independent of the colour theme.
 export const STYLES = [
@@ -47,12 +47,15 @@ export function LiquidSlider(){
   const [value,setValue]=useState(loadLiquid);
   // The thumb moves with React's state; the photo follows through one variable on the wallpaper (lib/liquid.mjs).
   const change=(v:number)=>{setValue(v);applyLiquid(v);};
-  const save=(v:number)=>applyLiquid(v,true);
+  // While the thumb is held, the settings window steps aside (glass.css, data-peek) so the change is seen.
+  const peek=(on:boolean)=>{if(on)document.documentElement.setAttribute('data-peek','');else document.documentElement.removeAttribute('data-peek');};
+  const save=(v:number)=>{peek(false);applyLiquid(v,true);};
   return <div className="liquid-slider">
     <GlassQuality/>
     <div className="liquid-head"><strong>Фон</strong><span>{value<20?'светлый':value<45?'обычный':value<75?'приглушённый':'тёмный'}</span></div>
     <input type="range" min={0} max={100} step={1} value={value} aria-label="Фон: от светлого к тёмному"
       style={{'--v':`${value}%`} as React.CSSProperties}
+      onPointerDown={()=>peek(true)} onPointerCancel={()=>peek(false)} onLostPointerCapture={()=>peek(false)}
       onChange={e=>change(Number(e.target.value))} onPointerUp={e=>save(Number(e.currentTarget.value))} onKeyUp={e=>save(Number(e.currentTarget.value))} onBlur={e=>save(Number(e.currentTarget.value))}/>
     <div className="liquid-ends"><span>Светлее</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);save(LIQUID_DEFAULT);}}>Сбросить</button><span>Темнее</span></div>
     <p className="liquid-hint">Насколько приглушить фото МГУ. Карточки с парами всегда остаются плотными, чтобы текст читался.</p>
