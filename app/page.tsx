@@ -112,11 +112,8 @@ function streams(table:Table) {
   for (const [name, g] of Object.entries(table.groups)) pages.set(g.page, [...(pages.get(g.page) || []), name]);
   return [...pages].sort((a, b) => a[0]-b[0]).map(([page, groups], i, all) => {
     groups.sort();
-    const counts = new Map<string,number>();
-    for (const l of table.groups[groups[0]].lessons) if (l.type==='lecture' && l.room) counts.set(l.room, (counts.get(l.room) || 0)+1);
-    const hall = [...counts].sort((a, b) => b[1]-a[1])[0]?.[0];
     const fiit = groups.every(g => g >= '140');
-    return {page, groups, hall, title:fiit ? 'ФИИТ' : `${i+1} поток`, range:`${groups[0]}–${groups.at(-1)}`, total:all.length};
+    return {page, groups, title:fiit ? 'ФИИТ' : `${i+1} поток`, range:`${groups[0]}–${groups.at(-1)}`, total:all.length};
   });
 }
 function loadGroup() { try { return localStorage.getItem(groupKey) || DEFAULT_GROUP; } catch { return DEFAULT_GROUP; } }
@@ -629,9 +626,9 @@ export default function Home() {
     </DialogContent></Dialog>
     {/* Groups as circles, a stream per row — the same language as the week strip; the chosen group is filled. */}
     <Dialog open={groupsOpen} onOpenChange={setGroupsOpen}><DialogContent className="changes-dialog groups-sheet"><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК. Расписание всех групп сохранено и без интернета.</DialogDescription>
-      {(()=>{const mine=streams(table).find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}{mine.hall && <><br/>лекции в {mine.hall}</>}</span></div>;})()}
+      {(()=>{const mine=streams(table).find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}<br/>группы {mine.range}</span></div>;})()}
       {streams(table).map(stream=><section className="stream" key={stream.page}>
-        <div className="stream-head"><strong>{stream.title}</strong><span>{stream.hall ? `лекции в ${stream.hall}` : stream.range}</span></div>
+        <div className="stream-head"><strong>{stream.title}</strong><span>{stream.range}</span></div>
         <div className="group-grid">{stream.groups.map(name=><button key={name} aria-pressed={name===groupName} onClick={()=>setGroup(name)}>{name}</button>)}</div>
       </section>)}
       <button className="share-group" onClick={shareGroup}><Share2 size={16}/> Поделиться ссылкой на группу {groupName}</button>
