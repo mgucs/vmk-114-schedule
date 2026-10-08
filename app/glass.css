@@ -674,9 +674,28 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .groups-sheet .share-group { justify-content:flex-start; margin-top:22px; padding:10px 0 2px; border:0; border-top:1px solid color-mix(in srgb,var(--foreground) 8%,transparent); border-radius:0;
   background:none; color:var(--muted-foreground); font-size:14px; }
 
-/* Тёплая осень: фото МГУ как под Night Shift — янтарный тон поверх (слой обоев статичный, рисуется один раз).
-   Остальные темы — без оттенка: исходный снимок. */
-[data-style=glass][data-theme=amber] .wallpaper::after { content:''; position:absolute; inset:0; background:#ff9d2e; mix-blend-mode:multiply; opacity:.62; pointer-events:none; }
+/* Лёгкий оттенок фото у каждой темы (слой обоев статичный, рисуется один раз); Оникс — чёрно-белый снимок,
+   Тёплая осень — Night Shift. МГУ ночь и МГУ день — исходный снимок. */
+[data-style=glass] .wallpaper::after { content:''; position:absolute; inset:0; pointer-events:none;
+  background:var(--tint,#0000); mix-blend-mode:var(--tint-mode,color); opacity:var(--tint-a,0); }
+:root[data-theme=midnight] { --tint:#7a5cff; --tint-a:.14; }
+:root[data-theme=winter]   { --tint:#5fd2ff; --tint-a:.14; }
+:root[data-theme=ocean]    { --tint:#14b8b2; --tint-a:.16; }
+:root[data-theme=forest]   { --tint:#3fa35c; --tint-a:.16; }
+:root[data-theme=steel]    { --tint:#8b929c; --tint-a:.4; }
+:root[data-theme=onyx]     { --tint:#808080; --tint-a:1; }
+:root[data-theme=graphite] { --tint:#8a8f86; --tint-a:.7; }
+:root[data-theme=night]    { --tint:#ffbe2e; --tint-a:.12; }
+:root[data-theme=autumn]   { --tint:#d2581f; --tint-a:.16; }
+:root[data-theme=amber]    { --tint:#ff9d2e; --tint-mode:multiply; --tint-a:.5; }
+:root[data-theme=snow]     { --tint:#d3d9e0; --tint-a:.5; }
+:root[data-theme=fog]      { --tint:#8ea3b8; --tint-a:.3; }
+:root[data-theme=mint]     { --tint:#2fbf9a; --tint-a:.14; }
+:root[data-theme=lavender] { --tint:#9a80f0; --tint-a:.14; }
+:root[data-theme=pearl]    { --tint:#d6bf98; --tint-a:.25; }
+:root[data-theme=paper]    { --tint:#f2dfae; --tint-mode:multiply; --tint-a:.3; }
+:root[data-theme=spring]   { --tint:#9ad45a; --tint-a:.14; }
+:root[data-theme=summer]   { --tint:#ffa233; --tint-a:.18; }
 
 /* Подача фото как была у МГУ ночь — теперь у всех тем: лёгкая дымка (сверху чуть, к низу плотнее), подсвеченное небо
    видно, без цветного свечения у горизонта. Затемнение — ползунком «Фон» (.glass-dim). */

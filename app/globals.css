@@ -21,8 +21,8 @@
   --ok:#d6c25a; --warn-bg:#3a2a12; --warn-fg:#ffcf7a; --danger:#ff8a5a; --shadow:0 1px 0 #ffffff08, 0 10px 24px -14px #000000cc;
 }
 [data-theme=winter] {
-  --background:#0b1220; --foreground:#e9f1fb; --card:#121d31; --muted:#1a2740; --muted-foreground:#8fa3bd; --border:#21314b;
-  --lecture:#6ea8ff; --lecture-ink:#08111f; --lecture-soft:#16294a; --now:#ff6b9a; --now-soft:#3a1a2b; --sport:#12302d; --consult:#221e40;
+  --background:#0a1820; --foreground:#eaf6fb; --card:#132a35; --muted:#1b3542; --muted-foreground:#8fb4c4; --border:#22404e;
+  --lecture:#7fd3ff; --lecture-ink:#06161e; --lecture-soft:#163646; --now:#ff8fb5; --now-soft:#3a1a2b; --sport:#12302d; --consult:#221e40;
   --ok:#5cc28c; --warn-bg:#2d2a1a; --warn-fg:#ecd27e; --danger:#ff7b8f; --shadow:0 1px 0 #ffffff08, 0 10px 24px -14px #000000cc;
 }
 [data-theme=spring] {
@@ -47,7 +47,7 @@
   --ok:#5cc28c; --warn-bg:#352a15; --warn-fg:#ecc77e; --danger:#ff7b64; --shadow:0 1px 0 #ffffff08, 0 8px 20px -12px #000000aa;
 }
 [data-theme=graphite] {
-  --background:#111214; --foreground:#ececec; --card:#1b1c1f; --muted:#26282c; --muted-foreground:#9a9da3; --border:#2e3035;
+  --background:#1b1c1f; --foreground:#ececec; --card:#28292d; --muted:#323439; --muted-foreground:#a2a5ab; --border:#3a3c42;
   --lecture:#b8f34a; --lecture-ink:#111214; --lecture-soft:#222b17; --now:#ff4f8b; --now-soft:#3a1624; --sport:#16302a; --consult:#272238;
   --ok:#5cc28c; --warn-bg:#33291a; --warn-fg:#ecc77e; --danger:#ff7b64; --shadow:0 1px 0 #ffffff08, 0 8px 20px -12px #000000aa;
 }
@@ -362,7 +362,7 @@ textarea { font:inherit; }
   --shadow:0 1px 0 #0000000a, 0 6px 18px -12px #2c1f5a33;
 }
 [data-theme=midnight] {
-  --background:#111120; --foreground:#e9e8f5; --card:#19192c; --muted:#22223a; --muted-foreground:#9492b5; --border:#2a2a45;
+  --background:#150f26; --foreground:#ece8f7; --card:#211936; --muted:#2b2244; --muted-foreground:#a39bc4; --border:#352b52;
   --lecture:#9f8cff; --lecture-ink:#14112b; --lecture-soft:#23214a; --now:#ff7eb0; --now-soft:#3d1f33; --sport:#16302c; --consult:#2b2140;
   --ok:#6fd6a3; --warn-bg:#2f2a1c; --warn-fg:#e9cf8a; --danger:#ff8a9e; --shadow:0 1px 0 #ffffff06, 0 12px 28px -16px #000000cc;
 }
