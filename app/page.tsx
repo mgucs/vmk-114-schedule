@@ -59,10 +59,10 @@ const stamp = (iso:string|null) => iso && Number.isFinite(Date.parse(iso)) ? fmt
 const plural = (n:number,forms:[string,string,string]) => forms[n%10===1&&n%100!==11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2];
 const lessonCount = (n:number) => n ? `${n} ${plural(n,['пара','пары','пар'])}` : 'Без пар';
 // The six pairs of a VMK day. A class takes every pair its time overlaps (most take one; some, like 15:10–18:50,
-// take several) — the strip shows a day as these six places, the card says which pair it is.
+// take several) — the strip shows a day as these six places.
 const PAIRS = [['08:45','10:20'],['10:30','12:05'],['12:50','14:25'],['14:35','16:10'],['16:20','17:55'],['18:00','19:35']];
 const pairsOf = (l:{start:string;end:string}) => PAIRS.flatMap(([s,e],i)=>l.start<e && l.end>s ? [i] : []);
-const pairLabel = (l:{start:string;end:string}) => { const p=pairsOf(l); return !p.length ? '' : p.length===1 ? `${p[0]+1} пара` : `${p[0]+1}–${p.at(-1)!+1} пары`; };
+
 function ago(iso:string|null) {
   if (!iso || !Number.isFinite(Date.parse(iso))) return '';
   const m = Math.max(0,Math.round((Date.now()-Date.parse(iso))/60000));
@@ -162,7 +162,6 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
   const label = now ? 'идёт' : next ? `через ${duration(left)}` : '';
   return <LessonAt.Provider value={{date,start:lesson.start}}><article className={`lesson ${lesson.type} ${now?'current':''} ${past?'past':''}`} onClick={event=>{if(!hw.editing && !(event.target as HTMLElement).closest('button,a,textarea,input,label'))hw.open();}}>
     <div className="lesson-time">
-      {pairLabel(lesson) && <span className="pair-no">{pairLabel(lesson)}</span>}
       <span className="range">{lesson.start}<span><i> – </i>{lesson.end}</span></span>
       {typeNames[lesson.type] && <span className={`tag ${lesson.type}`}>{typeNames[lesson.type]}</span>}
       {label && <span className="live">{label}</span>}

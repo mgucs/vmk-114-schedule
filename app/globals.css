@@ -470,7 +470,7 @@ textarea { font:inherit; }
 .pager > .slide[aria-hidden=true] { height:0; }
 .week-strip { display:flex; min-width:0; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:none; }
 .week-strip > .slide { flex:0 0 100%; min-width:0; scroll-snap-align:start; scroll-snap-stop:always; }
-.day-button .pairs, .lesson .pair-no { display:none; }
+.day-button .pairs { display:none; }
 /* A page not drawn yet (a quick run of swipes): the outline of three cards instead of nothing. */
 .pager > .slide:empty::before { content:''; display:block; height:330px; border-radius:20px; opacity:.5;
   background:linear-gradient(color-mix(in srgb,var(--card) 60%,transparent) 0 96px, transparent 96px 112px, color-mix(in srgb,var(--card) 60%,transparent) 112px 208px, transparent 208px 224px, color-mix(in srgb,var(--card) 60%,transparent) 224px 320px, transparent 320px); }
@@ -920,11 +920,10 @@ h1 .h-month { display:none; }
 .calendar-history { margin:8px 0 20px; }
 
 /* One lens follows the finger; the section changes once the gesture ends. */
-.drag-tabs { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
-.drag-tabs button { position:relative; z-index:1; -webkit-tap-highlight-color:transparent; touch-action:pan-y; }
-.tab-lens { display:none; pointer-events:none; }
-.drag-tabs button:focus-visible { outline:2px solid var(--accent-ink); outline-offset:2px; }
-.drag-tabs.dragging { cursor:grabbing; }
+.dock { user-select:none; -webkit-user-select:none; }
+.dock button { position:relative; z-index:1; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+.dock-lens { display:none; pointer-events:none; }
+.dock button:focus-visible { outline:2px solid var(--accent-ink); outline-offset:2px; }
 
 /* ——— Оформление: шапка с переключателем и крестиком на месте, листается только выбор.
    Стили — лентой вбок, темы — плотной сеткой: всё помещается почти без прокрутки. ——— */

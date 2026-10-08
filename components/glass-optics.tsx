@@ -3,7 +3,7 @@ import {useEffect, useRef} from 'react';
 const NS = 'http://www.w3.org/2000/svg';
 // Refraction is for the glass chrome that stays in place. Lesson cards move with every swipe:
 // displacing their backdrop each frame is what made swipes stutter, so they keep plain frosted glass.
-const surfaces = '.shell > .drag-tabs, .date-navigation, .header-actions, .heading .view-switch, .tab-lens';
+const surfaces = '.shell > .dock, .header-actions, .heading .view-switch';
 // «Жидкое стекло» (the slider) as 0…1: how clear the glass is and how strongly it bends what is behind.
 export const liquidLevel = () => {
   const value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--lg'));
@@ -80,13 +80,12 @@ export function GlassOptics() {
       const width = el.offsetWidth, height = el.offsetHeight;
       if (!width || !height) return;
       const level = liquidLevel();
-      const kind = el.classList.contains('tab-lens') ? 'drop' : 'edge';
       const radius = parseFloat(getComputedStyle(el).borderRadius) || 24;
       // Clearer glass bends more and over a wider rim.
-      const band = Math.round(12 + level * 14), scale = Math.round(kind === 'drop' ? 18 + level * 30 : 14 + level * 30);
-      const key = `${kind}:${width}:${height}:${radius}:${band}:${scale}`;
+      const band = Math.round(12 + level * 14), scale = Math.round(14 + level * 30);
+      const key = `edge:${width}:${height}:${radius}:${band}:${scale}`;
       if (sizes.get(el) === key) return;
-      const map = displacementMap(kind, width, height, radius, band);
+      const map = displacementMap('edge', width, height, radius, band);
       if (!map) return;
       let filter = filters.get(el);
       if (!filter) {
