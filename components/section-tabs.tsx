@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState,type CSSProperties,type PointerEvent} from 'react';
+import {useRef,useState,type CSSProperties,type PointerEvent} from 'react';
 import {BookOpen,CalendarClock,CalendarRange,GraduationCap} from 'lucide-react';
 
 const items=[['schedule','Расписание',CalendarClock],['calendar','Календарь',CalendarRange],['session','Сессия',GraduationCap],['info','Полезное',BookOpen]] as const;
@@ -14,15 +14,6 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
   const [position,setPosition]=useState<number|null>(null),[stretch,setStretch]=useState(1),[pressing,setPressing]=useState(false);
   const gesture=useRef<{id:number;x:number;y:number;dragged:boolean;lastX:number;lastT:number;live:number}|null>(null);
   const suppressClick=useRef(false);
-  // Like the iOS 26 tab bar: scrolling down shrinks it to a small pill of icons, scrolling up (or reaching the top) opens it.
-  const [compact,setCompact]=useState(false);
-  useEffect(()=>{
-    let last=scrollY,frame=0;
-    const check=()=>{frame=0;const y=scrollY,d=y-last;
-      if(y<80||d<-10){setCompact(false);last=y;}else if(d>14&&y>140){setCompact(true);last=y;}else if(Math.abs(d)>40)last=y;};
-    const onScroll=()=>{if(!frame)frame=requestAnimationFrame(check);};
-    addEventListener('scroll',onScroll,{passive:true});return()=>{removeEventListener('scroll',onScroll);cancelAnimationFrame(frame);};
-  },[]);
   // Each move of the lens restarts its squish (two identical animations, alternating).
   const moves=useRef({index,n:0});
   if(moves.current.index!==index)moves.current={index,n:moves.current.n+1};
@@ -37,7 +28,7 @@ export function SectionTabs({value,onChange}:{value:Section;onChange:(value:Sect
     if(g.dragged){suppressClick.current=!cancel;if(!cancel)onChange(items[Math.round(locate(e))][0]);}
     if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
   }
-  return <nav className={`tabs drag-tabs ${position!==null?'dragging':''} ${pressing?'pressing':''} ${compact&&position===null?'compact':''}`} aria-label="Разделы"
+  return <nav className={`tabs drag-tabs ${position!==null?'dragging':''} ${pressing?'pressing':''}`} aria-label="Разделы"
     style={{'--tab-position':position??index,'--tab-stretch':stretch} as CSSProperties}
     onPointerDown={e=>{if(!e.isPrimary||e.button!==0)return;suppressClick.current=false;setPressing(true);gesture.current={id:e.pointerId,x:e.clientX,y:e.clientY,dragged:false,lastX:e.clientX,lastT:e.timeStamp,live:index};}}
     onPointerMove={e=>{const g=gesture.current;if(!g||g.id!==e.pointerId)return;

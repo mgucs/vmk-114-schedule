@@ -4,7 +4,6 @@ import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {StylePreview} from './style-preview';
 import {calendarFile} from '../lib/calendar.mjs';
 import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
-import {TILT_KEY,disableTilt,enableTilt,tiltNeedsPermission,tiltWanted} from '../lib/tilt.mjs';
 import {loadChoice,setChoice} from '../lib/glass-quality.mjs';
 const QUALITY=[['auto','Авто'],['lite','Экономно'],['balanced','Красиво'],['full','Максимум']] as const;
 const tierNames:Record<string,string>={lite:'экономно',balanced:'красиво',full:'максимум'};
@@ -46,7 +45,6 @@ const themeKey='vmk114-theme',styleKey='vmk114-style';
 // «Жидкое стекло»: matte ↔ clear, applied live while the thumb moves and saved when it is let go.
 export function LiquidSlider(){
   const [value,setValue]=useState(loadLiquid);
-  const [tilt,setTilt]=useState(()=>tiltWanted()&&(!tiltNeedsPermission()||(()=>{try{return localStorage.getItem(TILT_KEY)==='on';}catch{return false;}})()));
   const change=(v:number)=>{setValue(v);applyLiquid(v);};
   return <div className="liquid-slider">
     <GlassQuality/>
@@ -56,10 +54,6 @@ export function LiquidSlider(){
       onChange={e=>change(Number(e.target.value))} onPointerUp={()=>applyLiquid(value,true)} onKeyUp={()=>applyLiquid(value,true)} onBlur={()=>applyLiquid(value,true)}/>
     <div className="liquid-ends"><span>Плотное</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);applyLiquid(LIQUID_DEFAULT,true);}}>Сбросить</button><span>Прозрачное</span></div>
     <p className="liquid-hint">Правее — ярче виден МГУ. Под текстом пар всегда остаётся затемнение, чтобы он читался.</p>
-    {typeof window!=='undefined' && 'DeviceOrientationEvent' in window && <label className="liquid-tilt">
-      <span><b>Блики от наклона телефона</b><small>Свет на стекле смещается, когда наклоняешь телефон</small></span>
-      <input type="checkbox" role="switch" checked={tilt} onChange={async e=>{if(e.target.checked)setTilt(await enableTilt());else{disableTilt();setTilt(false);}}}/>
-    </label>}
   </div>;
 }
 const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'glass';}catch{return 'glass';}};

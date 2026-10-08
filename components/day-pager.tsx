@@ -2,8 +2,8 @@ import {useDeferredValue,useEffect,useLayoutEffect,useRef,useState,type ReactNod
 
 // Pages are "day:2026-09-28" or "week:2026-09-28" (its Monday). Days lie side by side like pages of a book:
 // a horizontal swipe drags the neighbours in with the finger, and any change of day slides the new one in from its side.
-// The neighbours are rendered ahead of time, in the background and hidden: a swipe only reveals them (data-drag),
-// so its first frame does no React work.
+// The neighbours are rendered ahead of time and wait off screen in the same GPU layer (globals.css, .pager-track):
+// a swipe only moves that layer, so its first frame does no React work and no painting.
 const GAP = 32;
 const side = (a:string, b:string) => a.slice(0,4)!==b.slice(0,4) ? 0 : b>a ? 1 : b<a ? -1 : 0;
 const offset = (el:HTMLElement) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
@@ -125,7 +125,6 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
   if (shown.leaving) pages.push(shown.leaving);
   // Right after a turn the deferred page still lags: its neighbours would stand on the wrong side, so they wait.
   for (const d of [-1, 1]) { const p = neighbour(shown.page, d); if (p===neighbour(near, d) && !pages.some(x => x.page===p)) pages.push({page:p, side:d}); }
-  // While a page moves, Стекло drops the per-card backdrop blur (see glass.css): re-blurring every frame is what stutters on phones.
   return <div className="pager" ref={pager} data-paging={shown.leaving ? '' : undefined}>
     <div className="pager-track" ref={track} onTransitionEnd={e => { if (e.target===track.current && e.propertyName==='transform') finish(); }}>
       {pages.map(p => <div key={p.page} className="slide" data-side={p.side || undefined} aria-hidden={p.side ? true : undefined}

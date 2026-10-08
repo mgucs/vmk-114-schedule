@@ -455,10 +455,11 @@ textarea { font:inherit; }
 /* Days lie side by side: the neighbours wait off screen while a finger drags, the page slides home after.
    The pager reaches past the gutter so cards' shadows are not cut while it clips the pages beside. */
 .pager { position:relative; flex:1; display:flex; flex-direction:column; margin:-12px -12px -32px; padding:12px 12px 32px; overflow:hidden; overflow:clip; }
-.pager-track { position:relative; flex:1; display:flex; flex-direction:column; }
+/* The track is its own GPU layer for good, with the neighbours already drawn into it (off screen, clipped): a swipe
+   only moves the layer. Promoting it and painting the neighbours when the finger first moved cost the first frames. */
+.pager-track { position:relative; flex:1; display:flex; flex-direction:column; will-change:transform; }
 .slide { flex:1; display:flex; flex-direction:column; }
-.slide[data-side] { position:absolute; top:0; left:0; right:0; visibility:hidden; }
-.pager:is([data-paging],[data-drag]) .slide[data-side] { visibility:visible; }
+.slide[data-side] { position:absolute; top:0; left:0; right:0; }
 /* A new week in the strip comes from the side it lies on. */
 .day-lens { display:none; }
 .days[data-from=right] { animation:strip-from-right .42s cubic-bezier(.22,1,.36,1); }
@@ -1023,14 +1024,6 @@ h1 .h-month { display:none; }
 button.changed-note { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; width:100%; border:0; text-align:left; font:inherit; font-size:13px; cursor:pointer; }
 button.changed-note span { margin-left:auto; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
 .liquid-hint { margin:6px 0 0; color:var(--muted-foreground); font-size:12.5px; line-height:1.35; }
-.liquid-tilt { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); cursor:pointer; }
-.liquid-tilt span { display:flex; flex-direction:column; gap:1px; }
-.liquid-tilt b { font-size:14px; font-weight:650; }
-.liquid-tilt small { color:var(--muted-foreground); font-size:12px; }
-.liquid-tilt input { flex-shrink:0; width:46px; height:28px; margin:0; border-radius:999px; background:color-mix(in srgb,var(--foreground) 18%,transparent); -webkit-appearance:none; appearance:none; position:relative; cursor:pointer; transition:background .25s; }
-.liquid-tilt input::after { content:''; position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 2px 6px #0003; transition:transform .35s cubic-bezier(.3,1.2,.5,1); }
-.liquid-tilt input:checked { background:var(--ok, #34c759); }
-.liquid-tilt input:checked::after { transform:translateX(18px); }
 .glass-quality { margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border); }
 .quality-switch { display:grid; grid-template-columns:repeat(4,1fr); gap:2px; margin-top:8px; padding:3px; border-radius:12px; background:color-mix(in srgb,var(--foreground) 8%,transparent); }
 .quality-switch button { padding:7px 0; border:0; border-radius:9px; background:none; color:var(--muted-foreground); font-size:13px; font-weight:600; transition:background .2s, color .2s; }

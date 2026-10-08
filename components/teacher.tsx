@@ -23,8 +23,9 @@ export function useTeacherCard({table, session, dates, term, room}:{table:any; s
   const index = useMemo(() => searchIndex(table) as Row[], [table]);
   const key = name ? personKey(name) : '';
   const found = key ? people[key] : undefined;
-  const classes = index.filter(r => r.teacher && personKey(r.teacher)===key && occursOn(r, dates[r.day], term)).sort((a,b) => a.day-b.day || a.start.localeCompare(b.start));
-  const exams = session ? Object.entries(session.lists).flatMap(([group, list]) => list.filter(e => personKey(e.lecturer)===key).map(e => ({group, name:e.name}))) : [];
+  // Only while a card is open: otherwise every redraw of the page (each turn of a day) went through the whole course.
+  const classes = !key ? [] : index.filter(r => r.teacher && personKey(r.teacher)===key && occursOn(r, dates[r.day], term)).sort((a,b) => a.day-b.day || a.start.localeCompare(b.start));
+  const exams = key && session ? Object.entries(session.lists).flatMap(([group, list]) => list.filter(e => personKey(e.lecturer)===key).map(e => ({group, name:e.name}))) : [];
   const examSubjects = [...new Set(exams.map(e => e.name))];
   const dialog = <Dialog open={!!name} onOpenChange={open=>{if(!open)setName('');}}><DialogContent className="changes-dialog teacher-card">
     <DialogTitle>{found?.name || person(name)}</DialogTitle>

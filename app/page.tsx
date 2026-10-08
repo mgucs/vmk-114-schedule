@@ -180,7 +180,6 @@ export default function Home() {
   const [tab,setTab] = useState<'schedule'|'calendar'|'session'|'info'|'map'>('schedule'), [mapFrom,setMapFrom] = useState<Section>('schedule'), [mapTarget,setMapTarget] = useState<{to:string; from:string|null; n:number}|null>(null);
   const [view,setView] = useState('day'), [busy,setBusy] = useState(false), [online,setOnline] = useState(navigator.onLine);
   const [message,setMessage] = useState(''), [syncError,setSyncError] = useState(''), [offlineReady,setOfflineReady] = useState(false);
-  const [appUpdated,setAppUpdated] = useState(false);
   const [changesOpen,setChangesOpen] = useState(false);
   useEffect(()=>{const open=()=>setChangesOpen(true);window.addEventListener('vmk-open-changes',open);return()=>window.removeEventListener('vmk-open-changes',open);},[]);
   const [statusOpen,setStatusOpen] = useState(false), [pdfUrl,setPdfUrl] = useState(''), [pdfOpen,setPdfOpen] = useState(false), [pdfError,setPdfError] = useState('');
@@ -314,19 +313,19 @@ export default function Home() {
     const onOnline=()=>{setOnline(true);lastAttempt.current=0;void refresh();};
     const onOffline=()=>setOnline(false);
     // The saved app opens at once from the phone (sw.js), so a new version of the site arrives in the background.
-    // When it takes over before the user touched anything since opening or returning to the app, nothing is lost
-    // and the page reloads quietly; otherwise a banner offers to reload instead of interrupting.
-    let touched=false, registration:ServiceWorkerRegistration|null=null;
+    // It is never announced: if the user has not touched anything since opening or returning to the app, the page
+    // reloads at once; otherwise it reloads the next time the app goes to the background, when nobody sees it.
+    let touched=false, stale=false, registration:ServiceWorkerRegistration|null=null;
     const onTouch=()=>{touched=true;};
     window.addEventListener('pointerdown',onTouch,{passive:true});window.addEventListener('keydown',onTouch);
     const hadController=!!navigator.serviceWorker?.controller;
     const onNewVersion=()=>{
       if(!hadController)return;
       const busy=!!document.querySelector('[data-slot=dialog-content]') || document.activeElement?.matches('input,textarea');
-      if(!touched && !busy) location.reload(); else setAppUpdated(true);
+      if(!touched && !busy) location.reload(); else stale=true;
     };
     navigator.serviceWorker?.addEventListener('controllerchange',onNewVersion);
-    const onVisible=()=>{if(document.visibilityState==='visible'){touched=false;tick();void refresh();void registration?.update().catch(()=>{});}};
+    const onVisible=()=>{if(document.visibilityState==='hidden'&&stale&&!document.activeElement?.matches('input,textarea')){location.reload();return;}if(document.visibilityState==='visible'){touched=false;tick();void refresh();void registration?.update().catch(()=>{});}};
     window.addEventListener('online',onOnline);window.addEventListener('offline',onOffline);document.addEventListener('visibilitychange',onVisible);
     async function prepareOffline() {
       try {
@@ -494,7 +493,6 @@ export default function Home() {
         <strong>{{now:'до конца пары',before:'до первой пары',break:'до следующей пары'}[glance.kind as 'now']}</strong>
         <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
       </section>}
-      {appUpdated && <div className="message" role="status"><span>Сайт обновился — новая версия готова.<button className="message-more" onClick={()=>location.reload()}>Обновить</button></span><button className="dismiss-message" aria-label="Позже" onClick={()=>setAppUpdated(false)}><X size={15}/></button></div>}
       {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
       <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} surface={scheduleArea} onDrag={view==='day' ? followDrag : undefined}/>
     </main>

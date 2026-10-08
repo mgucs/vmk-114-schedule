@@ -79,12 +79,6 @@ html[data-style=glass] { background:var(--background); }
 /* Толстое стекло там, где под ним всегда текст: панель вкладок, окна, закреплённый день календаря. */
 [data-style=glass] .shell>.drag-tabs, [data-style=glass] [data-slot=dialog-content], [data-style=glass] .onboarding-card, [data-style=glass] .term-day {
   --g-fill:var(--g-thick); -webkit-backdrop-filter:var(--g-blur-thick); backdrop-filter:var(--g-blur-thick); }
-/* Блик: под пальцем при нажатии, под курсором при наведении. */
-[data-style=glass] .lesson::after, [data-style=glass] .session-item::after, [data-style=glass] .term-facts div::after {
-  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:0; transition:opacity .5s;
-  background:radial-gradient(circle at var(--mx,50%) var(--my,0%), #ffffff38, #ffffff00 58%); }
-[data-style=glass] .lesson:active::after, [data-style=glass] .session-item:active::after { opacity:1; transition-duration:.08s; }
-@media (hover:hover) { [data-style=glass] .lesson:hover::after, [data-style=glass] .session-item:hover::after, [data-style=glass] .term-facts div:hover::after { opacity:.75; } }
 
 /* Шапка: название группы и круглые стеклянные кнопки в одной капсуле. */
 [data-style=glass] .topbar { height:82px; text-shadow:none; }
@@ -116,7 +110,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .date-navigation>.icon-button svg { width:18px; height:18px; }
 [data-style=glass] .days { position:relative; gap:2px; }
 [data-style=glass] .day-lens { display:block; position:absolute; grid-area:1/1/2/2; inset:0; border-radius:18px; pointer-events:none;
-  background:var(--g-lens); box-shadow:var(--g-lens-shadow); transform:translateX(calc(var(--day) * (100% + 2px))); transition:transform .6s var(--spring), background .3s; }
+  background:var(--g-lens); box-shadow:var(--g-lens-shadow); translate:calc(var(--day) * (100% + 2px)) 0; }
 [data-style=glass] .day-lens.today { background:var(--g-lens); box-shadow:var(--g-lens-shadow); }
 [data-style=glass] .day-button { z-index:1; gap:3px; padding:7px 0 8px; border-radius:18px; }
 [data-style=glass] .day-button span { font-size:11.5px; font-weight:600; transition:color .3s; }
@@ -155,8 +149,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .tag::before { display:none; }
 [data-style=glass] .live::before { content:''; width:6px; height:6px; margin:0; border-radius:50%; color:inherit; background:currentColor; }
 [data-style=glass] .lesson.current .live { background:color-mix(in srgb,var(--now) 16%,transparent); color:var(--now); box-shadow:inset 0 1px 0 #ffffff20; }
-[data-style=glass] .lesson.current .live::before { animation:live-pulse 1.8s ease-in-out infinite; }
-@keyframes live-pulse { 50% { opacity:.3; } }
 [data-style=glass] .lesson .homework-button { height:24px; border:0; background:var(--g-chip); box-shadow:inset 0 1px 0 #ffffff1f; }
 [data-style=glass] .lesson h3 { margin:13px 0 0; font-size:22px; font-weight:600; line-height:1.22; letter-spacing:-.035em; }
 [data-style=glass] .list.roomy .lesson h3 { font-size:23px; }
@@ -215,10 +207,12 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .drag-tabs.dragging button[data-hovered=true] svg { transform:scale(1.14); }
 
 /* Разделы въезжают со своей стороны. Только сдвиг: прозрачность на контейнере отключила бы стекло внутри него. */
-[data-style=glass] .shell[data-pane=right] > :is(.pane,.heading,.date-navigation,main,.footer,.campus-map) { animation:pane-from-right .5s var(--glide) backwards; }
-[data-style=glass] .shell[data-pane=left] > :is(.pane,.heading,.date-navigation,main,.footer,.campus-map) { animation:pane-from-left .5s var(--glide) backwards; }
-@keyframes pane-from-right { from { transform:translate3d(36px,0,0); } }
-@keyframes pane-from-left { from { transform:translate3d(-36px,0,0); } }
+/* Only the new section's own content moves (one layer, transform and opacity): the header, the day strip and the
+   tab bar stay put. Cards have no backdrop blur on phones, so fading them is free. */
+[data-style=glass] .shell[data-pane=right] > :is(.pane,.campus-map) { animation:pane-from-right .28s var(--glide) backwards; }
+[data-style=glass] .shell[data-pane=left] > :is(.pane,.campus-map) { animation:pane-from-left .28s var(--glide) backwards; }
+@keyframes pane-from-right { from { opacity:0; transform:translate3d(20px,0,0); } }
+@keyframes pane-from-left { from { opacity:0; transform:translate3d(-20px,0,0); } }
 
 /* Окна и первый вход */
 [data-style=glass] [data-slot=dialog-overlay] { background:#00000047; }
@@ -392,7 +386,6 @@ html[data-style=glass] { background:var(--background); }
   --lg:.5; --lg2:0;
   --c-fill-d:64%; --c-fill-l:77%; --c-past-d:50%; --c-past-l:67%; --c-blur-px:17px;
   --g-fill-p:40%; --g-blur-px:10px; --g-thick-p:78%; --g-blur-thick-px:22px; --g-tabs-p:48%;
-  --tilt:0deg; --hx:30%;
   --wp-photo:calc(.28 + .72 * var(--lg2));
   /* Слой контента */
   --c-fill:color-mix(in srgb,var(--card) var(--c-fill-l),transparent);
@@ -402,9 +395,9 @@ html[data-style=glass] { background:var(--background); }
   --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
   --g-blur:blur(var(--g-blur-px)) saturate(1.8) brightness(1.04);
   --g-blur-thick:blur(var(--g-blur-thick-px)) saturate(1.5);
-  --g-sheen:radial-gradient(130% 120% at var(--hx) -30%,rgb(255 255 255 / .55),rgb(255 255 255 / 0) 55%),
+  --g-sheen:radial-gradient(130% 120% at 30% -30%,rgb(255 255 255 / .55),rgb(255 255 255 / 0) 55%),
             linear-gradient(180deg,rgb(255 255 255 / .12),rgb(255 255 255 / 0) 45%,rgb(255 255 255 / .1));
-  --g-rim:linear-gradient(calc(145deg + var(--tilt)),#ffffffff,#ffffff99 20%,#ffffff1a 48%,#ffffff40 78%,#ffffffd0);
+  --g-rim:linear-gradient(145deg,#ffffffff,#ffffff99 20%,#ffffff1a 48%,#ffffff40 78%,#ffffffd0);
   --g-lip:inset 0 1px 0 rgb(255 255 255 / .9), inset 0 7px 12px -10px rgb(255 255 255 / .9);
   --g-pool:inset 0 -1px 0 rgb(255 255 255 / .35), inset 0 -12px 16px -14px rgb(255 255 255 / .7);
   --g-drop:0 1px 2px rgb(20 40 60 / .1), 0 14px 34px -14px rgb(20 40 60 / .4);
@@ -423,9 +416,9 @@ html[data-style=glass] { background:var(--background); }
   --c-shadow:inset 0 0 0 .5px rgb(255 255 255 / .09), inset 0 1px 0 rgb(255 255 255 / .06), 0 1px 2px rgb(0 0 0 / .2), 0 14px 30px -18px rgb(0 0 0 / .7);
   --g-fill:color-mix(in srgb,var(--card) var(--g-fill-p),transparent); --g-thick:color-mix(in srgb,var(--card) var(--g-thick-p),transparent);
   --g-blur:blur(var(--g-blur-px)) saturate(1.7) brightness(1.08);
-  --g-sheen:radial-gradient(130% 120% at var(--hx) -30%,rgb(255 255 255 / .2),rgb(255 255 255 / 0) 55%),
+  --g-sheen:radial-gradient(130% 120% at 30% -30%,rgb(255 255 255 / .2),rgb(255 255 255 / 0) 55%),
             linear-gradient(180deg,rgb(255 255 255 / .06),rgb(255 255 255 / 0) 45%,rgb(255 255 255 / .05));
-  --g-rim:linear-gradient(calc(145deg + var(--tilt)),#ffffffa8,#ffffff4a 20%,#ffffff0c 48%,#ffffff1e 78%,#ffffff70);
+  --g-rim:linear-gradient(145deg,#ffffffa8,#ffffff4a 20%,#ffffff0c 48%,#ffffff1e 78%,#ffffff70);
   --g-lip:inset 0 1px 0 rgb(255 255 255 / .35), inset 0 7px 12px -10px rgb(255 255 255 / .3);
   --g-pool:inset 0 -1px 0 rgb(255 255 255 / .1), inset 0 -12px 16px -14px rgb(255 255 255 / .28);
   --g-drop:0 1px 2px rgb(0 0 0 / .25), 0 16px 36px -14px rgb(0 0 0 / .75);
@@ -455,30 +448,21 @@ html[data-style=glass] { background:var(--background); }
   background-origin:border-box; background-clip:padding-box, padding-box, padding-box, border-box;
   box-shadow:var(--g-lip), var(--g-pool), var(--g-drop); }
 [data-style=glass] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs,.footer-links button)::before { display:none; }
-/* Под пальцем стекло светится изнутри, свет расходится от точки касания. */
-[data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after { content:''; position:absolute; inset:0; z-index:0; border-radius:inherit; pointer-events:none;
-  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgb(255 255 255 / .28),rgb(255 255 255 / 0) 60%); opacity:0; transition:opacity .6s; }
-[data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs):active::after { opacity:1; transition-duration:.1s; }
-:root[data-scheme=dark][data-style=glass] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after { background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgb(255 255 255 / .16),rgb(255 255 255 / 0) 60%); }
 
-/* Панель вкладок: тонкая капсула, как в iOS 26. При прокрутке вниз сжимается до маленькой пилюли с иконками. */
+/* Панель вкладок: тонкая капсула, как в iOS 26. */
 [data-style=glass] .shell>.drag-tabs { height:60px; width:min(372px,calc(100% - 40px)); padding:5px; border-radius:999px; overflow:visible;
-  --g-fill:color-mix(in srgb,var(--card) var(--g-tabs-p),transparent);
-  transition:width .55s var(--gel), height .55s var(--gel), bottom .55s var(--gel); }
+  --g-fill:color-mix(in srgb,var(--card) var(--g-tabs-p),transparent); }
 [data-style=glass] .drag-tabs button { height:50px; border-radius:999px; gap:2px; font-size:9.5px; }
 [data-style=glass] .drag-tabs button svg { width:22px; height:22px; }
-[data-style=glass] .drag-tabs button span { transition:opacity .3s, max-height .45s var(--gel); max-height:14px; overflow:hidden; }
 [data-style=glass] .tab-lens { top:5px; bottom:5px; left:5px; width:calc((100% - 10px)/4); border-radius:999px; }
-[data-style=glass] .shell>.drag-tabs.compact { height:50px; width:min(232px,calc(100% - 40px)); bottom:calc(10px + env(safe-area-inset-bottom)); }
-[data-style=glass] .drag-tabs.compact button { height:40px; }
-[data-style=glass] .drag-tabs.compact button span { opacity:0; max-height:0; }
 
 /* Гель. Линзы едут на мягкой пружине (перелёт ~4%), вытягиваются по ходу движения и встают на место. */
 [data-style=glass] .tab-lens { transition:transform .6s var(--gel), scale .4s var(--gel), background .3s, box-shadow .3s; }
-[data-style=glass] .day-lens { transition:none; }  /* moved by day-lens.ts (Web Animations), not by CSS */
+[data-style=glass] .day-lens { transition:none; }  /* moved by day-lens.ts (Web Animations on translate and scale), not by CSS */
 /* Без отдельной анимации «сжатия»: она перезапускалась, когда палец отпускал день, и линза вздрагивала.
    Гель даёт сама пружина перемещения; при свайпе линзу ведёт палец (page.tsx, followDrag). */
-[data-style=glass] :is(.tab-lens,.day-lens) { animation:none; will-change:transform; }
+[data-style=glass] .tab-lens { animation:none; will-change:transform; }
+[data-style=glass] .day-lens { animation:none; will-change:translate, scale; }
 [data-style=glass] .drag-tabs.pressing:not(.dragging) .tab-lens { scale:1.06 1.1; }
 [data-style=glass] .drag-tabs.dragging .tab-lens { scale:1.04 1.12; }
 
@@ -499,8 +483,6 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] .list .lesson.current { padding-bottom:22px; }
   [data-style=glass] .lesson h3 { font-size:20px; }
 }
-/* Листание дней: дорожка — отдельный слой для видеокарты. */
-[data-style=glass] .pager:is([data-paging],[data-drag]) .pager-track { will-change:transform; }
 /* Кнопки пружинят под пальцем. */
 [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button) {
   transition:transform .4s var(--gel), background .2s, color .2s; }
@@ -509,7 +491,6 @@ html[data-style=glass] { background:var(--background); }
 @media (prefers-reduced-motion:reduce) {
   [data-style=glass] :is(.footer-links button,.header-actions .icon-button,.vmk-link,button.room,.update-scope button,button.changed-note,.changes-button,.stats-groups button,.group-grid button):active { transform:none; }
   [data-style=glass] :is(.tab-lens,.day-lens) { transition-duration:.01s; animation:none!important; scale:1!important; }
-  [data-style=glass] .shell>.drag-tabs { transition:none; }
 }
 /* Без прозрачности (настройка системы): подложки и стекло сплошные. */
 @media (prefers-reduced-transparency:reduce) {
@@ -519,9 +500,10 @@ html[data-style=glass] { background:var(--background); }
 /* ═══ Качество эффектов (lib/glass-quality.mjs): data-glass = lite | balanced | full ═══
    Размытие фона (backdrop-filter) пересчитывается на каждом кадре прокрутки для каждого элемента над
    фотографией — это и есть нагрузка. Поэтому:
-   • full     — всё: размытые подложки карточек, линзирование навигации (Chromium), блики от наклона.
-   • balanced — размытие только у четырёх маленьких элементов навигации; карточки — плотная подложка без размытия.
-   • lite     — без размытия вообще: стекло из бликов, кромки и тона. Для слабых телефонов.
+   • full     — компьютер: размытые подложки карточек, линзирование навигации (Chromium).
+   • balanced — телефон: размыта только плавающая панель вкладок. Шапка, полоса дней и окна — плотный тон
+                с бликом и кромкой: они едут вместе со страницей, и размывать фон под ними на каждом кадре дорого.
+   • lite     — без размытия вообще. Для слабых телефонов.
    Телефон сам переходит на ступень ниже, если не успевает рисовать кадры. */
 :root[data-style=glass]:not([data-glass=full]) {
   /* Без размытия подложка карточек плотнее: смесь с непрозрачным цветом карточки. */
@@ -534,23 +516,22 @@ html[data-style=glass] { background:var(--background); }
 }
 :root[data-style=glass]:not([data-glass=full]) :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
   -webkit-backdrop-filter:none; backdrop-filter:none; }
-/* balanced: навигация размыта слабее (стоимость растёт с радиусом), без яркости и линз. */
-:root[data-style=glass][data-glass=balanced] :is(.header-actions,.date-navigation,.heading .view-switch,.shell>.drag-tabs) {
-  -webkit-backdrop-filter:blur(min(var(--g-blur-px),9px)) saturate(1.5); backdrop-filter:blur(min(var(--g-blur-px),9px)) saturate(1.5); }
-:root[data-style=glass][data-glass=balanced] [data-slot=dialog-content] { -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
-/* lite: ни одного размытия. Навигация и окна — плотный тон того же цвета с бликами и кромкой. */
+/* balanced: одно размытие — панель вкладок, с небольшим радиусом (стоимость растёт с радиусом). */
+:root[data-style=glass][data-glass=balanced] *:not(.drag-tabs) { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
+:root[data-style=glass][data-glass=balanced] .shell>.drag-tabs { -webkit-backdrop-filter:blur(12px) saturate(1.4); backdrop-filter:blur(12px) saturate(1.4); }
+/* lite: ни одного размытия. */
 :root[data-style=glass][data-glass=lite] * { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
-:root[data-style=glass][data-glass=lite] {
+/* Без размытия навигация и окна — плотный тон того же цвета с бликами и кромкой. */
+:root[data-style=glass]:not([data-glass=full]) {
   --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
   --g-thick:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-thick-p),transparent),var(--card) 70%);
 }
-:root[data-scheme=dark][data-style=glass][data-glass=lite] {
+:root[data-scheme=dark][data-style=glass]:not([data-glass=full]) {
   --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
   --g-thick:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-thick-p),transparent),var(--card) 70%);
 }
 :root[data-style=glass][data-glass=lite] .shell>.drag-tabs { --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-tabs-p),transparent),var(--card) 60%); }
 :root[data-style=glass][data-glass=lite] .glass-campus { filter:none; }
-:root[data-style=glass][data-glass=lite] :is(.header-actions,.date-navigation,.shell>.drag-tabs)::after { display:none; }
 /* Лекция или семинар — видно сразу: у лекции цветная метка и полоса слева, у семинара спокойная метка. */
 [data-style=glass] .tag.lecture { background:var(--lecture); color:var(--lecture-ink); box-shadow:none; font-weight:700; }
 [data-style=glass] .tag.class { background:none; color:var(--muted-foreground); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--foreground) 22%,transparent); }
