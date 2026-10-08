@@ -644,3 +644,32 @@ html[data-style=glass] { background:var(--background); }
 /* Тёплая осень: фото МГУ тоже как под Night Shift — янтарный тон поверх (слой обоев статичный, рисуется один раз). */
 [data-style=glass][data-theme=amber] .wallpaper::after { content:''; position:absolute; inset:0; background:#ff9d2e; mix-blend-mode:multiply; opacity:.62; pointer-events:none; }
 :root[data-style=glass][data-theme=amber] { --g-accent:#ffc35c; }
+
+/* Кнопки шапки — как полоса дней: без общей капсулы, три тихие круглые иконки прямо на фоне;
+   под пальцем и при наведении — мягкий круг. */
+[data-style=glass] .header-actions { gap:2px; padding:0; border:0; background:none!important; box-shadow:none!important; -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
+[data-style=glass] .header-actions::before, [data-style=glass] .header-actions::after { display:none; }
+[data-style=glass] .header-actions .icon-button { width:40px; height:40px; border-radius:50%; background:none; color:color-mix(in srgb,var(--foreground) 88%,transparent); transition:background-color .2s, transform .25s cubic-bezier(.3,1.4,.5,1); }
+[data-style=glass] .header-actions .icon-button svg { width:21px; height:21px; stroke-width:1.8; }
+:root[data-scheme=dark][data-style=glass] .header-actions .icon-button svg { filter:drop-shadow(0 1px 6px rgb(0 0 0 / .45)); }
+[data-style=glass] .header-actions .icon-button:active { transform:scale(.88); background:color-mix(in srgb,var(--foreground) 12%,transparent); transition-duration:.1s; }
+@media (hover:hover) { [data-style=glass] .header-actions .icon-button:hover { background:color-mix(in srgb,var(--foreground) 9%,transparent); } }
+[data-style=glass] .more-button[data-fresh]::after { top:7px; right:6px; }
+
+/* Окно группы: текущая группа крупно, потоки — ряды кругов, как дни в полосе недели. */
+[data-style=glass] .groups-current { display:flex; align-items:center; gap:14px; margin:14px 0 6px; }
+[data-style=glass] .groups-current b { font-size:46px; font-weight:750; line-height:1; letter-spacing:-.05em; color:var(--g-accent); font-variant-numeric:tabular-nums; }
+[data-style=glass] .groups-current span { color:var(--muted-foreground); font-size:13.5px; line-height:1.35; }
+[data-style=glass] .groups-sheet .stream { padding:16px 0 0; border:0; }
+[data-style=glass] .groups-sheet .stream-head { margin-bottom:10px; }
+[data-style=glass] .groups-sheet .stream-head strong { font-size:15px; font-weight:700; }
+[data-style=glass] .groups-sheet .stream-head span { font-size:12.5px; }
+[data-style=glass] .groups-sheet .group-grid { grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+[data-style=glass] .groups-sheet .group-grid button { aspect-ratio:1; max-width:46px; justify-self:center; width:100%; padding:0; border-radius:50%; background:none;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--foreground) 16%,transparent); color:var(--foreground); font-size:14.5px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+  transition:background-color .2s, color .2s, transform .25s cubic-bezier(.3,1.4,.5,1); }
+[data-style=glass] .groups-sheet .group-grid button:active { transform:scale(.9); transition-duration:.1s; }
+[data-style=glass] .groups-sheet .group-grid button[aria-pressed=true] { background:var(--foreground); color:var(--background); box-shadow:0 6px 16px -6px rgb(0 0 0 / .6); }
+@media (hover:hover) { [data-style=glass] .groups-sheet .group-grid button:not([aria-pressed=true]):hover { background:color-mix(in srgb,var(--foreground) 9%,transparent); } }
+[data-style=glass] .groups-sheet .share-group { justify-content:flex-start; margin-top:22px; padding:10px 0 2px; border:0; border-top:1px solid color-mix(in srgb,var(--foreground) 8%,transparent); border-radius:0;
+  background:none; color:var(--muted-foreground); font-size:14px; }

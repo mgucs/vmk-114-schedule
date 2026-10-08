@@ -627,9 +627,11 @@ export default function Home() {
         ? <button className="changes-button" onClick={()=>{hideChanges();setChangesOpen(false);}}><X size={17}/><span><b>Убрать отметки из расписания</b><small>карточки пар и баннер станут обычными; история останется здесь</small></span></button>
         : seen && Date.now()-Date.parse(history[0].detectedAt)<RECENT && <button className="changes-button" onClick={showChanges}><History size={17}/><span><b>Снова отметить изменённые пары</b><small>в расписании за последнюю неделю</small></span></button>)}
     </DialogContent></Dialog>
-    <Dialog open={groupsOpen} onOpenChange={setGroupsOpen}><DialogContent className="changes-dialog"><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК по потокам. Доступно и без интернета.</DialogDescription>
+    {/* Groups as circles, a stream per row — the same language as the week strip; the chosen group is filled. */}
+    <Dialog open={groupsOpen} onOpenChange={setGroupsOpen}><DialogContent className="changes-dialog groups-sheet"><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК. Расписание всех групп сохранено и без интернета.</DialogDescription>
+      {(()=>{const mine=streams(table).find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}{mine.hall && <><br/>лекции в {mine.hall}</>}</span></div>;})()}
       {streams(table).map(stream=><section className="stream" key={stream.page}>
-        <div className="stream-head"><strong>{stream.title}</strong><span>{stream.range}</span></div>
+        <div className="stream-head"><strong>{stream.title}</strong><span>{stream.hall ? `лекции в ${stream.hall}` : stream.range}</span></div>
         <div className="group-grid">{stream.groups.map(name=><button key={name} aria-pressed={name===groupName} onClick={()=>setGroup(name)}>{name}</button>)}</div>
       </section>)}
       <button className="share-group" onClick={shareGroup}><Share2 size={16}/> Поделиться ссылкой на группу {groupName}</button>
