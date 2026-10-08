@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Palette,NotebookPen,Check,CalendarPlus} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {StylePreview} from './style-preview';
@@ -17,7 +17,7 @@ function GlassQuality(){
     <div className="quality-switch" role="radiogroup" aria-label="Качество эффектов стекла">
       {QUALITY.map(([name,label])=><button key={name} role="radio" aria-checked={choice===name} onClick={()=>{setChoice(name);setChoiceState(name);}}>{label}</button>)}
     </div>
-    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Без размытия: быстро на любом телефоне.':choice==='balanced'?'Размыты только панели навигации, карточки — плотные.':'Всё, включая искажение по краям (Android и компьютер). Может тормозить на слабых телефонах.'}</p>
+    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Без размытия и без фото МГУ на фоне: для самых слабых телефонов.':choice==='balanced'?'Без живого размытия: стекло из тона, бликов и кромки. Плавно на телефоне.':'Всё, включая искажение по краям (Android и компьютер). Может тормозить на слабых телефонах.'}</p>
   </div>;
 }
 
@@ -123,7 +123,7 @@ export function ThemeButton() {
 
 // All classes of the group as an .ics file: the phone's calendar imports them with weekly repeats.
 export function useCalendarExport(schedule:{group:number;year:number;lessons:unknown[];term?:{end:string}[]|null},subgroups:Record<string,string>){
-  const end=new Date((schedule.term?.at(-1)?.end||`${schedule.year}-12-31`)+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'long',timeZone:'UTC'});
+  const end=useMemo(()=>new Date((schedule.term?.at(-1)?.end||`${schedule.year}-12-31`)+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'long',timeZone:'UTC'}),[schedule.term,schedule.year]);
   const [open,setOpen]=useState(false),[done,setDone]=useState(false);
   function download(){
     const url=URL.createObjectURL(new Blob([calendarFile(schedule,subgroups)],{type:'text/calendar;charset=utf-8'}));

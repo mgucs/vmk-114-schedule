@@ -43,12 +43,19 @@ const RECENT = 7*86400000;
 const dataCache = 'vmk114-data-v1';
 const asset = (path:string) => import.meta.env.BASE_URL + path.replace(/^\//,'');
 const pdfKey = (hash:string) => asset(`saved-schedule-${hash}.pdf`);
-const isoMoscow = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-const clockMoscow = () => new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit'}).format(new Date());
+// Date formatters are made once: creating one (or calling toLocaleDateString, which makes one each time) is slow,
+// and a turn of the day formats dozens of dates — it was a visible part of the redraw on a phone.
+const formats = new Map<string,Intl.DateTimeFormat>();
+const fmt = (options:Intl.DateTimeFormatOptions, locale='ru-RU') => {
+  const key = locale+JSON.stringify(options);
+  let f = formats.get(key); if (!f) { f = new Intl.DateTimeFormat(locale,options); formats.set(key,f); } return f;
+};
+const isoMoscow = () => fmt({timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'},'sv-SE').format(new Date());
+const clockMoscow = () => fmt({timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit'}).format(new Date());
 const addDays = (iso:string,n:number) => new Date(new Date(iso+'T12:00:00Z').getTime()+n*86400000).toISOString().slice(0,10);
 const weekday = (iso:string) => (new Date(iso+'T12:00:00Z').getUTCDay()+6)%7;
-const formatDate = (iso:string,options:Intl.DateTimeFormatOptions={day:'numeric',month:'long'}) => new Date(iso+'T12:00:00Z').toLocaleDateString('ru-RU',{...options,timeZone:'Europe/Moscow'});
-const stamp = (iso:string|null) => iso && Number.isFinite(Date.parse(iso)) ? new Date(iso).toLocaleString('ru-RU',{timeZone:'Europe/Moscow',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'нет данных';
+const formatDate = (iso:string,options:Intl.DateTimeFormatOptions={day:'numeric',month:'long'}) => fmt({...options,timeZone:'Europe/Moscow'}).format(new Date(iso+'T12:00:00Z'));
+const stamp = (iso:string|null) => iso && Number.isFinite(Date.parse(iso)) ? fmt({timeZone:'Europe/Moscow',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(iso)) : 'нет данных';
 const plural = (n:number,forms:[string,string,string]) => forms[n%10===1&&n%100!==11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2];
 const lessonCount = (n:number) => n ? `${n} ${plural(n,['пара','пары','пар'])}` : 'Без пар';
 function ago(iso:string|null) {
@@ -239,7 +246,7 @@ export default function Home() {
   }
   // The strip already names the weekday and the number; the heading says only what the strip does not.
   const near = selected===today ? 'Сегодня' : selected===addDays(today,1) ? 'Завтра' : selected===addDays(today,-1) ? 'Вчера' : '';
-  const monthOf = (iso:string) => { const m=new Date(iso+'T12:00:00Z').toLocaleDateString('ru-RU',{month:'long',timeZone:'Europe/Moscow'}); return m[0].toUpperCase()+m.slice(1); };
+  const monthOf = (iso:string) => { const m=fmt({month:'long',timeZone:'Europe/Moscow'}).format(new Date(iso+'T12:00:00Z')); return m[0].toUpperCase()+m.slice(1); };
   const months = view==='day' ? monthOf(selected) : [...new Set([monthOf(monday),monthOf(week[6])])].join(' — ');
   const dayStart = selectedLessons.reduce((s,l)=>!s||l.start<s?l.start:s,''), dayEnd = selectedLessons.reduce((e,l)=>l.end>e?l.end:e,'');
   const checkedAgo = ago(saved.snapshot.checkedAt || null);
@@ -251,13 +258,21 @@ export default function Home() {
   const lensCtl = useDayLens(weekday(selected), monday);
   const target = useRef(selected);
   useLayoutEffect(() => { target.current = selected; }, [selected]);
-  function lensTo(date:string) { if (view==='day' && addDays(date,-weekday(date))===monday) lensCtl.glide(weekday(date)); }
+  // Into another week too: the strip stays, only its numbers change, and the drop travels to the new weekday.
+  function lensTo(date:string) { if (view==='day') lensCtl.glide(weekday(date)); }
   function go(date:string) { target.current=date; lensTo(date); setPinned(date===focus?null:date); }
   // From the latest target day, so two quick swipes move two days even before a re-render.
   function shift(direction:number) { const next=addDays(target.current,direction*(view==='week'?7:1)); target.current=next; lensTo(next); setPinned(next===focus?null:next); }
   // The week strip slides in from the side the new week lies on.
-  const stripFrom = useRef({monday, side:0});
-  if (stripFrom.current.monday!==monday) stripFrom.current = {monday, side:monday>stripFrom.current.monday?1:-1};
+  // A new week: the strip stays in place (it used to be rebuilt and slide in from the side, and the numbers jumped);
+  // the new numbers only fade in.
+  const shownMonday = useRef(monday);
+  useLayoutEffect(() => {
+    if (shownMonday.current===monday) return;
+    shownMonday.current = monday;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    dateNav.current?.querySelectorAll('.day-button strong, .day-button span').forEach(el => el.animate({opacity:[.15, 1]}, {duration:260, easing:'ease-out'}));
+  }, [monday]);
   const dateNav = useRef<HTMLElement>(null);
   // A swipe of the days: the finger holds the drop; on a turn shift() glides it on from there, otherwise it settles back.
   const followDrag = (fraction:number|null, turned=false) => { if (fraction!==null) lensCtl.follow(fraction); else if (!turned) lensCtl.settle(); };
@@ -362,7 +377,7 @@ export default function Home() {
   },[]);
   // The new section slides in from the side it lies on in the tab bar.
   const [paneDir,setPaneDir] = useState('');
-  function switchTab(next:Section){if(next===tab)return;if(tab==='map'){setTab(next);return;}stripFrom.current={monday,side:0};setPaneDir(sectionIndex(next)>sectionIndex(tab)?'right':'left');setTab(next);}
+  function switchTab(next:Section){if(next===tab)return;if(tab==='map'){setTab(next);return;}setPaneDir(sectionIndex(next)>sectionIndex(tab)?'right':'left');setTab(next);}
   const closePdf = React.useCallback(() => setPdfOpen(false), []);
   // The class before this one tells where the walk starts.
   function openRoom(room:string, date=today, start='') {
@@ -473,9 +488,9 @@ export default function Home() {
 
     <nav className="date-navigation" aria-label="Выбрать день" ref={dateNav}>
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
-      <div className="days" key={monday} data-from={stripFrom.current.side>0?'right':stripFrom.current.side<0?'left':undefined} style={{'--day':weekday(selected)} as CSSProperties}>
+      <div className="days" style={{'--day':weekday(selected)} as CSSProperties}>
         {view==='day' && <i ref={lensCtl.ref} className={`day-lens ${selected===today?'today':''}`} aria-hidden="true"/>}
-        {week.map((date,i)=><button key={date} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}
+        {week.map((date,i)=><button key={i} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}
       </div>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>

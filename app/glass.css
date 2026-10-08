@@ -501,9 +501,10 @@ html[data-style=glass] { background:var(--background); }
    Размытие фона (backdrop-filter) пересчитывается на каждом кадре прокрутки для каждого элемента над
    фотографией — это и есть нагрузка. Поэтому:
    • full     — компьютер: размытые подложки карточек, линзирование навигации (Chromium).
-   • balanced — телефон: размыта только плавающая панель вкладок. Шапка, полоса дней и окна — плотный тон
-                с бликом и кромкой: они едут вместе со страницей, и размывать фон под ними на каждом кадре дорого.
-   • lite     — без размытия вообще. Для слабых телефонов.
+   • balanced — телефон: ни одного живого размытия. Стекло — плотный тон с бликом и кромкой. Даже одна размытая
+                панель вкладок над листающимися днями заставляла браузер пересобирать слои на каждом кадре:
+                замер свайпа (процессор ×6) — 39 медленных кадров и 558 мс долгих задач с ней, 8 и 60 мс без неё.
+   • lite     — то же без фотографии МГУ на фоне. Для самых слабых телефонов.
    Телефон сам переходит на ступень ниже, если не успевает рисовать кадры. */
 :root[data-style=glass]:not([data-glass=full]) {
   /* Без размытия подложка карточек плотнее: смесь с непрозрачным цветом карточки. */
@@ -516,11 +517,8 @@ html[data-style=glass] { background:var(--background); }
 }
 :root[data-style=glass]:not([data-glass=full]) :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
   -webkit-backdrop-filter:none; backdrop-filter:none; }
-/* balanced: одно размытие — панель вкладок, с небольшим радиусом (стоимость растёт с радиусом). */
-:root[data-style=glass][data-glass=balanced] *:not(.drag-tabs) { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
-:root[data-style=glass][data-glass=balanced] .shell>.drag-tabs { -webkit-backdrop-filter:blur(12px) saturate(1.4); backdrop-filter:blur(12px) saturate(1.4); }
-/* lite: ни одного размытия. */
-:root[data-style=glass][data-glass=lite] * { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
+/* balanced и lite: ни одного размытия. */
+:root[data-style=glass]:not([data-glass=full]) * { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
 /* Без размытия навигация и окна — плотный тон того же цвета с бликами и кромкой. */
 :root[data-style=glass]:not([data-glass=full]) {
   --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
@@ -530,8 +528,8 @@ html[data-style=glass] { background:var(--background); }
   --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
   --g-thick:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-thick-p),transparent),var(--card) 70%);
 }
-:root[data-style=glass][data-glass=lite] .shell>.drag-tabs { --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-tabs-p),transparent),var(--card) 60%); }
-:root[data-style=glass][data-glass=lite] .glass-campus { filter:none; }
+:root[data-style=glass]:not([data-glass=full]) .shell>.drag-tabs { --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-tabs-p),transparent),var(--card) 68%); }
+:root[data-style=glass][data-glass=lite] .glass-campus { display:none; }
 /* Лекция или семинар — видно сразу: у лекции цветная метка и полоса слева, у семинара спокойная метка. */
 [data-style=glass] .tag.lecture { background:var(--lecture); color:var(--lecture-ink); box-shadow:none; font-weight:700; }
 [data-style=glass] .tag.class { background:none; color:var(--muted-foreground); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--foreground) 22%,transparent); }

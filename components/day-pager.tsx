@@ -9,10 +9,18 @@ import {useDeferredValue,useEffect,useLayoutEffect,useRef,useState,type ReactNod
 // already running: the new day keeps sliding through the redraw instead of waiting for it (on a phone the redraw
 // takes several frames, and the page used to stand still for them and then jump). After the redraw the same slide
 // continues in the new coordinates at the same moment of its timing, so there is no seam.
+// Nothing here reads the layout or the computed style back (offsetWidth, getComputedStyle): after React changed the
+// page that forces the browser to lay out the whole page there and then — it was most of a turn's cost on a phone.
+// The width is kept by a ResizeObserver, and the position is known from the motion's own timing.
 const GAP = 32;
 const EASE = 'cubic-bezier(.25,.75,.35,1)';
 const side = (a:string, b:string) => a.slice(0,4)!==b.slice(0,4) ? 0 : b>a ? 1 : b<a ? -1 : 0;
-const offset = (el:HTMLElement) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
+// cubic-bezier(.25,.75,.35,1) as a function of time, to know where the track is mid-slide without asking the browser.
+function bezier(x1:number, y1:number, x2:number, y2:number) {
+  const f = (t:number, a:number, b:number) => 3*a*t*(1-t)**2 + 3*b*t*t*(1-t) + t**3;
+  return (x:number) => { let lo = 0, hi = 1; for (let i = 0; i < 20; i++) { const mid = (lo+hi)/2; if (f(mid, x1, x2) < x) lo = mid; else hi = mid; } return f((lo+hi)/2, y1, y2); };
+}
+const eased = bezier(.25, .75, .35, 1);
 const at = (x:number) => `translate3d(${x}px,0,0)`;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 // An ease-out whose start is 3× its average speed: with the finger's speed v (px/ms) the start matches it.
@@ -38,19 +46,27 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
   // A swipe's slide reached the new day before React drew it.
   const landed = useRef(false);
   const gesture = useRef<Gesture|null>(null);
+  const width = useRef(0);   // the track's width, kept by a ResizeObserver
+  const rested = useRef(0);  // where the track stands when no motion runs
   if (shown.page!==page) {
     const d = side(shown.page, page);
-    from.current = track.current ? offset(track.current) : 0;
+    from.current = now();
     setShown({page, leaving:d && !calm() ? {page:shown.page, side:-d} : null});
   }
 
   // The finish event does not come while the page is hidden (the phone went to sleep mid-slide): a timer ends it.
   const guard = useRef(0);
+  // Where the track is drawn now.
+  function now() {
+    const m = motion.current; if (!m) return rested.current;
+    return m.from + (m.to-m.from)*eased(Math.min(1, Math.max(0, (Number(m.anim.currentTime) || 0)/m.ms)));
+  }
+  function place(x:number|null) { const el = track.current; if (el) el.style.transform = x===null ? '' : at(x); rested.current = x ?? 0; }
   function run(m:Omit<Motion,'anim'>, time=0) {
     const el = track.current!;
     const anim = el.animate({transform:[at(m.from), at(m.to)]}, {duration:m.ms, easing:EASE});
     anim.currentTime = time;
-    el.style.transform = at(m.to);
+    place(m.to);
     const current:Motion = {...m, anim};
     motion.current = current;
     const end = () => { if (motion.current===current) { motion.current = null; clearTimeout(guard.current); anim.cancel(); m.done(); } };
@@ -59,39 +75,44 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
   }
   // Move the track from where it is now to `to`, at the finger's release speed v.
   function move(to:number, v:number, done:()=>void, swipe=false) {
-    const el = track.current; if (!el) return;
-    const x = offset(el);
+    if (!track.current) return;
+    const x = now();
     stop();
     const distance = Math.abs(to-x);
-    if (calm() || distance<.5) { el.style.transform = at(to); done(); return; }
+    if (calm() || distance<.5) { place(to); done(); return; }
     run({from:x, to, ms:duration(distance, v, !!v && Math.sign(v)===Math.sign(to-x)), done, swipe});
   }
   // Freeze the track where it is drawn now.
   function stop() {
-    const el = track.current, m = motion.current; if (!el || !m) return;
-    const x = offset(el);
+    const m = motion.current; if (!m) return;
+    const x = now();
     motion.current = null; clearTimeout(guard.current); m.anim.cancel();
-    el.style.transform = at(x);
+    place(x);
   }
   function rest() {
-    const el = track.current;
-    if (el) el.style.transform = '';
+    place(null);
     setShown(s => s.leaving ? {...s, leaving:null} : s);
   }
   useEffect(() => () => { clearTimeout(guard.current); motion.current?.anim.cancel(); }, []);
+  useLayoutEffect(() => {
+    const el = track.current; if (!el) return;
+    width.current = el.offsetWidth;
+    const observer = new ResizeObserver(([entry]) => { width.current = entry.contentRect.width; });
+    observer.observe(el); return () => observer.disconnect();
+  }, []);
 
   useLayoutEffect(() => {
     const el = track.current, start = from.current;
     if (!el || start===null) return;
     from.current = null;
     const swiped = landed.current; landed.current = false;
-    if (!shown.leaving) { stop(); el.style.transform = ''; return; }
+    if (!shown.leaving) { stop(); place(null); return; }
     // The day that was on screen now sits one width to the side; the track shifts the other way to keep it in place.
-    const delta = -shown.leaving.side*(el.offsetWidth+GAP);
+    const delta = -shown.leaving.side*(width.current+GAP);
     const g = gesture.current;
     if (g?.axis==='x') {
       // A finger caught the page before the new day was drawn: it keeps holding it.
-      stop(); el.style.transform = at(offset(el)+delta); g.base += delta;
+      stop(); place(now()+delta); g.base += delta;
       setShown(s => ({...s, leaving:null}));
       return;
     }
@@ -103,10 +124,10 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
       run({from:m.from+delta, to:m.to+delta, ms:m.ms, done:rest}, time);
       return;
     }
-    if (swiped) { el.style.transform = at(offset(el)+delta); rest(); return; }
+    if (swiped) { rest(); return; }
     // A tap or an arrow: slide the new day in from its side, from wherever the track stood.
     stop();
-    el.style.transform = at(start+delta);
+    place(start+delta);
     move(0, 0, rest);
   }, [shown]);
 
@@ -128,7 +149,7 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
         g.axis = Math.abs(dx)>Math.abs(dy)*1.2 && !(e.target as Element).closest?.('textarea,input') ? 'x' : 'y';
         if (g.axis==='x') {
           // Catch a page that is still sliding: the finger takes it from where it is.
-          stop(); g.base = offset(el); g.x = t.clientX;
+          stop(); g.base = now(); g.x = t.clientX;
           setShown(s => s.leaving ? {...s, leaving:null} : s);
         }
       }
@@ -136,8 +157,8 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
       if (e.cancelable) e.preventDefault();
       const dt = Math.max(1, e.timeStamp-g.lastT);
       g.v = .7*(t.clientX-g.lastX)/dt+.3*g.v; g.lastX = t.clientX; g.lastT = e.timeStamp; g.dx = g.base+t.clientX-g.x;
-      el.style.transform = at(g.dx);
-      follow.current?.(g.dx/el.offsetWidth);
+      place(g.dx);
+      follow.current?.(g.dx/(width.current || 1));
     };
     const end = (e:TouchEvent) => {
       const s = gesture.current, el = track.current; gesture.current = null;
@@ -151,12 +172,12 @@ export function DayPager({page, render, neighbour, onTurn, surface, onDrag}:{pag
       if (s.axis!=='x') return;
       const fling = Math.abs(s.v)>.35 && Math.sign(s.v)===Math.sign(s.dx) && Math.abs(s.dx)>24;
       const v = e.timeStamp-s.lastT < 80 ? s.v : 0;
-      if (e.type==='touchend' && (Math.abs(s.dx)>el.offsetWidth*.22 || fling)) {
+      if (e.type==='touchend' && (Math.abs(s.dx)>width.current*.22 || fling)) {
         const d = s.dx<0 ? 1 : -1;
         follow.current?.(null, true);
         // The neighbour slides fully in right now; React draws the new day once this frame is out.
         landed.current = false;
-        move(-d*(el.offsetWidth+GAP), v, () => { landed.current = true; }, true);
+        move(-d*(width.current+GAP), v, () => { landed.current = true; }, true);
         // After the next frame (the slide is on the compositor by then); a timer in case frames are held back.
         let sent = false; const send = () => { if (!sent) { sent = true; turn.current(d); } };
         requestAnimationFrame(() => setTimeout(send)); setTimeout(send, 50);
