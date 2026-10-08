@@ -17,7 +17,7 @@ function GlassQuality(){
     <div className="quality-switch" role="radiogroup" aria-label="Качество эффектов стекла">
       {QUALITY.map(([name,label])=><button key={name} role="radio" aria-checked={choice===name} onClick={()=>{setChoice(name);setChoiceState(name);}}>{label}</button>)}
     </div>
-    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Плоско и легко: без бликов, теней и затемнений. Для слабых телефонов.':choice==='balanced'?'Стекло из тона, бликов и кромки, без живого размытия — листается плавно на любом телефоне.':'Живое размытие под карточками и панелями, на компьютере ещё и преломление по краям. Красивее всего, но на телефоне может подтормаживать при листании.'}</p>
+    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Плоско и легко: без бликов, теней и затемнений. Для слабых телефонов.':choice==='balanced'?'Стекло из тона, бликов и кромки, без живого размытия — листается плавно на любом телефоне.':'Живое размытие под панелью разделов, кнопками шапки и окнами, на компьютере ещё и преломление по краям. На слабом телефоне может подтормаживать.'}</p>
   </div>;
 }
 
@@ -45,15 +45,17 @@ const themeKey='vmk114-theme',styleKey='vmk114-style';
 // «Жидкое стекло»: matte ↔ clear, applied live while the thumb moves and saved when it is let go.
 export function LiquidSlider(){
   const [value,setValue]=useState(loadLiquid);
+  // The thumb moves with React's state; the photo follows through one variable on the wallpaper (lib/liquid.mjs).
   const change=(v:number)=>{setValue(v);applyLiquid(v);};
+  const save=(v:number)=>applyLiquid(v,true);
   return <div className="liquid-slider">
     <GlassQuality/>
-    <div className="liquid-head"><strong>Прозрачность</strong><span>{value<25?'плотное стекло':value<45?'приглушённое':value<=55?'обычное':value<80?'прозрачное':'видно МГУ'}</span></div>
-    <input type="range" min={0} max={100} step={1} value={value} aria-label="Прозрачность стекла: от плотного к прозрачному"
+    <div className="liquid-head"><strong>Фон</strong><span>{value<20?'светлый':value<45?'обычный':value<75?'приглушённый':'тёмный'}</span></div>
+    <input type="range" min={0} max={100} step={1} value={value} aria-label="Фон: от светлого к тёмному"
       style={{'--v':`${value}%`} as React.CSSProperties}
-      onChange={e=>change(Number(e.target.value))} onPointerUp={()=>applyLiquid(value,true)} onKeyUp={()=>applyLiquid(value,true)} onBlur={()=>applyLiquid(value,true)}/>
-    <div className="liquid-ends"><span>Плотное</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);applyLiquid(LIQUID_DEFAULT,true);}}>Сбросить</button><span>Прозрачное</span></div>
-    <p className="liquid-hint">Правее — ярче виден МГУ. Под текстом пар всегда остаётся затемнение, чтобы он читался.</p>
+      onChange={e=>change(Number(e.target.value))} onPointerUp={e=>save(Number(e.currentTarget.value))} onKeyUp={e=>save(Number(e.currentTarget.value))} onBlur={e=>save(Number(e.currentTarget.value))}/>
+    <div className="liquid-ends"><span>Светлее</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);save(LIQUID_DEFAULT);}}>Сбросить</button><span>Темнее</span></div>
+    <p className="liquid-hint">Насколько приглушить фото МГУ. Карточки с парами всегда остаются плотными, чтобы текст читался.</p>
   </div>;
 }
 const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'glass';}catch{return 'glass';}};

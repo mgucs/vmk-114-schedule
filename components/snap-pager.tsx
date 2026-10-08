@@ -16,15 +16,19 @@ const Slide = memo(function Slide({active, children}:{active:boolean; children:R
 });
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function SnapPager({count, index, render, onSettle, onPeek, handle, className, near = 1, label}:{count:number; index:number;
+// `keep`: a page drawn ahead all the time (today's), so «Сегодня» jumps to a page that is already there.
+export function SnapPager({count, index, render, onSettle, onPeek, handle, className, near = 1, keep, label}:{count:number; index:number;
   render:(i:number)=>ReactNode; onSettle:(i:number)=>void; onPeek?:(i:number)=>void; handle?:RefObject<PagerHandle|null>;
-  className:string; near?:number; label?:string}) {
+  className:string; near?:number; keep?:number; label?:string}) {
   const scroller = useRef<HTMLDivElement>(null);
   const shown = useRef(index);          // the page the scroller rests on or is heading to
   const settle = useRef(onSettle); settle.current = onSettle;
   const peek = useRef(onPeek); peek.current = onPeek;
   const peeked = useRef(index);
   const [passing, setPassing] = useState(index);   // the page under the finger, for drawing its neighbours early
+  // Our own glide (a tap, an arrow, «Сегодня»): the pages it passes are not reported as peeks — the parent already
+  // shows where it goes, and a peek at the page it leaves made the title and the strip blink back for a moment.
+  const gliding = useRef(false);
   const width = () => scroller.current?.clientWidth || 1;
 
   // First drawing, and the parent moving to another page (a tap, an arrow, «Сегодня»): a neighbour glides in,
@@ -35,14 +39,14 @@ export function SnapPager({count, index, render, onSettle, onPeek, handle, class
     const at = Math.round(el.scrollLeft / width());
     if (mounted.current && at === index && Math.abs(el.scrollLeft - index * width()) < 2) { shown.current = index; return; }
     const glide = mounted.current && Math.abs(at - index) === 1 && !calm();
-    mounted.current = true; shown.current = index; peeked.current = index;
+    mounted.current = true; shown.current = index; peeked.current = index; gliding.current = true;
     el.scrollTo({left:index * width(), behavior:glide ? 'smooth' : 'auto'});
   }, [index]);
   // For another pager to move this one at once (the strip following the days), before React draws.
   if (handle) handle.current = {show:i => {
     const el = scroller.current; if (!el || i === shown.current) return;
     const glide = Math.abs(i - shown.current) === 1 && !calm();
-    shown.current = i; peeked.current = i;
+    shown.current = i; peeked.current = i; gliding.current = true;
     el.scrollTo({left:i * width(), behavior:glide ? 'smooth' : 'auto'});
   }};
 
@@ -55,6 +59,7 @@ export function SnapPager({count, index, render, onSettle, onPeek, handle, class
       const off = el!.scrollLeft - i * w;
       if (Math.abs(off) > 3) return;                           // still between pages (a fling running)
       if (Math.abs(off) > .5) el!.scrollLeft = i * w;          // an interrupted glide stopped a pixel or two short
+      gliding.current = false;
       if (peeked.current !== i) { peeked.current = i; peek.current?.(i); setPassing(i); }
       if (i !== shown.current) { shown.current = i; settle.current(i); }
       else peek.current?.(i);                                  // back where it was: undo what a peek showed
@@ -64,21 +69,25 @@ export function SnapPager({count, index, render, onSettle, onPeek, handle, class
     const scroll = () => {
       clearTimeout(timer);
       const w = width(), x = el.scrollLeft, i = Math.round(x / w);
-      if (i !== peeked.current) { peeked.current = i; peek.current?.(i); setPassing(i); }
+      if (!gliding.current && i !== peeked.current) { peeked.current = i; peek.current?.(i); setPassing(i); }
       if (Math.abs(x - i * w) < .5 && i !== shown.current) { done(); return; }
       timer = window.setTimeout(done, 120);
     };
+    // A finger on the pages takes over from our glide: from here on, what it passes is reported again.
+    const touch = () => { gliding.current = false; };
+    el.addEventListener('pointerdown', touch, {passive:true});
+    el.addEventListener('touchstart', touch, {passive:true});
     el.addEventListener('scroll', scroll, {passive:true});
     el.addEventListener('scrollend', done);
     // A new width (rotation, a wider window): stay on the same page.
     const resize = new ResizeObserver(() => { el.scrollLeft = shown.current * width(); });
     resize.observe(el);
-    return () => { clearTimeout(timer); el.removeEventListener('scroll', scroll); el.removeEventListener('scrollend', done); resize.disconnect(); };
+    return () => { clearTimeout(timer); el.removeEventListener('pointerdown', touch); el.removeEventListener('touchstart', touch); el.removeEventListener('scroll', scroll); el.removeEventListener('scrollend', done); resize.disconnect(); };
   }, []);
 
   return <div className={className} ref={scroller} aria-label={label}>
     {Array.from({length:count}, (_, i) => <Slide key={i} active={i === index}>
-      {Math.abs(i - index) <= near || Math.abs(i - passing) <= near ? render(i) : null}
+      {Math.abs(i - index) <= near || Math.abs(i - passing) <= near || (keep !== undefined && Math.abs(i - keep) <= 1) ? render(i) : null}
     </Slide>)}
   </div>;
 }

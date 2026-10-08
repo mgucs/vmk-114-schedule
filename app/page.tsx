@@ -509,12 +509,12 @@ export default function Home() {
         A swipe of the strip opens the same weekday of that week. Dots under a number: how many classes that day. */}
     <nav className="date-navigation" aria-label="Выбрать день">
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
-      <SnapPager key={'strip'+rangeStart} className="week-strip" count={weekTotal} index={weekIndex} label="Недели" handle={strip}
+      <SnapPager key={'strip'+rangeStart} className="week-strip" count={weekTotal} index={weekIndex} keep={Math.floor(span(rangeStart,focus)/7)} label="Недели" handle={strip}
         onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))}
         render={i=>{const start=addDays(rangeStart,7*i); return <LiveDay selected={selected}>{d=><div className="days">{Array.from({length:7},(_,k)=>{
           const date=addDays(start,k), list=lessonsOn(data,date) as Lesson[], taken:string[]=Array(6).fill('');
           for (const l of list) for (const p of pairsOf(l)) taken[p] ||= l.type;
-          return <button key={k} className={`day-button ${date===today?'today':''} ${date<today?'past':''} ${list.length?'':'off'}`} aria-pressed={view==='day' && date===d} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(list.length).toLowerCase()}`}>
+          return <button key={k} data-date={date} className={`day-button ${date===today?'today':''} ${date<today?'past':''} ${list.length?'':'off'}`} aria-pressed={view==='day' && date===d} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(list.length).toLowerCase()}`}>
             <span>{shortDays[k]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[k]}</em>
             <i className="pairs" aria-hidden="true">{taken.map((t,j)=><b key={j} className={t}/>)}</i>
           </button>;})}</div>}</LiveDay>;}}/>
@@ -544,7 +544,7 @@ export default function Home() {
       </section>}
       {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
       {view==='day'
-        ? <SnapPager key={'days'+rangeStart} className="pager" count={dayTotal} index={dayIndex} near={2} label="Дни"
+        ? <SnapPager key={'days'+rangeStart} className="pager" count={dayTotal} index={dayIndex} near={2} keep={span(rangeStart,focus)} label="Дни"
             render={i=>renderPage('day:'+addDays(rangeStart,i))} onSettle={i=>settleOn(addDays(rangeStart,i))} onPeek={i=>peekDay(addDays(rangeStart,i))}/>
         : <SnapPager key={'weeks'+rangeStart} className="pager" count={weekTotal} index={weekIndex} label="Недели"
             render={i=>renderPage('week:'+addDays(rangeStart,7*i))} onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))} onPeek={i=>strip.current?.show(i)}/>}

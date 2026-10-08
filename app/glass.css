@@ -352,12 +352,11 @@ html[data-style=glass] { background:var(--background); }
    • Объём стекла: блик сверху, свет, собранный у нижнего края, тонкая кромка, мягкая тень; линзирование
      (искажение фона по краю) — там, где браузер умеет (Chromium). Большие элементы — «толще».
    • Движение — как гель: тянется вслед за пальцем и мягко встаёт на место, без качки.
-   Ползунок «Прозрачность» (lib/liquid.mjs) решает, насколько виден МГУ: снимает дымку с фото
-   и делает подложки тоньше, но не ниже порога читаемости. */
+   Ползунок «Фон» (lib/liquid.mjs, --shade) решает, насколько приглушён МГУ; подложки карточек всегда плотные. */
 :root[data-style=glass] {
-  --lg:.5; --lg2:0;
-  --c-fill-d:64%; --c-fill-l:77%; --c-past-d:50%; --c-past-l:67%; --c-blur-px:17px;
-  --g-fill-p:40%; --g-blur-px:10px; --g-thick-p:78%; --g-blur-thick-px:22px; --g-tabs-p:48%;
+  --lg:0; --lg2:0;
+  --c-fill-d:82%; --c-fill-l:90%; --c-past-d:68%; --c-past-l:80%; --c-blur-px:24px;
+  --g-fill-p:62%; --g-blur-px:16px; --g-thick-p:90%; --g-blur-thick-px:28px; --g-tabs-p:70%;
   --wp-photo:calc(.28 + .72 * var(--lg2));
   /* Слой контента */
   --c-fill:color-mix(in srgb,var(--card) var(--c-fill-l),transparent);
@@ -410,7 +409,7 @@ html[data-style=glass] { background:var(--background); }
 /* Подписи прямо на фотографии (заголовок, дата) — с мягкой тенью; чем ярче фото, тем она сильнее. */
 :root[data-scheme=dark][data-style=glass] :is(.heading,.topbar,.day-title,.term-sub,.session-title) { text-shadow:0 1px 12px rgb(0 0 0 / calc(.35 + var(--lg2) * .35)); }
 /* Правая половина ползунка снимает дымку с фотографии. */
-[data-style=glass] .glass-atmosphere { opacity:calc(1 - var(--lg2,0) * .6); }
+[data-style=glass] .glass-atmosphere { opacity:calc(min(1, .3 + var(--shade,.3) * 1.75)); }
 [data-style=glass] .glass-horizon { opacity:calc(1 - var(--lg2,0) * .8); }
 
 /* Слой навигации: объёмное стекло. Кромка — градиентная рамка (без маски и лишнего слоя), повторяет наклон телефона. */
@@ -462,16 +461,17 @@ html[data-style=glass] { background:var(--background); }
                 замер свайпа (процессор ×6) — 39 медленных кадров и 558 мс долгих задач с ней, 8 и 60 мс без неё.
    • lite     — то же, фото МГУ без цветокоррекции. Для самых слабых телефонов.
    Телефон сам переходит на ступень ниже, если не успевает рисовать кадры. */
-:root[data-style=glass]:not([data-glass=full]) {
-  /* Без размытия подложка карточек плотнее: смесь с непрозрачным цветом карточки. */
+:root[data-style=glass] {
+  /* Подложка карточек плотная во всех режимах: смесь с непрозрачным цветом карточки. Размытие под карточками
+     («Красиво» раньше) делало страницу мутной и тормозило листание; живое размытие осталось у дока, кнопок шапки и окон. */
   --c-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--c-fill-l),transparent),var(--card) 28%);
   --c-past:color-mix(in srgb,color-mix(in srgb,var(--card) var(--c-past-l),transparent),var(--card) 22%);
 }
-:root[data-scheme=dark][data-style=glass]:not([data-glass=full]) {
+:root[data-scheme=dark][data-style=glass] {
   --c-fill:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-fill-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 24%);
   --c-past:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-past-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 18%);
 }
-:root[data-style=glass]:not([data-glass=full]) :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
+:root[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-month,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
   -webkit-backdrop-filter:none; backdrop-filter:none; }
 /* balanced и lite: ни одного размытия. */
 :root[data-style=glass]:not([data-glass=full]) * { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
@@ -617,8 +617,8 @@ html[data-style=glass] { background:var(--background); }
 :root[data-scheme=dark][data-style=glass] .dayhead { text-shadow:0 1px 14px rgb(0 0 0 / .5); }
 :root[data-scheme=dark][data-style=glass] .dayhead button { text-shadow:none; }
 
-/* Карточки на мягком фоне: тонкая подложка и волосяная кромка вместо плотного стекла — фокус на тексте. */
-:root[data-scheme=dark][data-style=glass]:not([data-glass=full]) {
+/* Карточки на мягком фоне: подложка и волосяная кромка — фокус на тексте. */
+:root[data-scheme=dark][data-style=glass] {
   --c-fill:color-mix(in srgb,color-mix(in srgb,var(--card) 78%,#000) calc(var(--c-fill-d) - 16%),transparent);
   --c-past:color-mix(in srgb,color-mix(in srgb,var(--card) 78%,#000) calc(var(--c-past-d) - 22%),transparent);
   --c-shadow:inset 0 0 0 1px rgb(255 255 255 / .07), inset 0 1px 0 rgb(255 255 255 / .05), 0 10px 24px -18px rgb(0 0 0 / .8); }
@@ -648,3 +648,7 @@ html[data-style=glass] { background:var(--background); }
 :root[data-scheme=light][data-style=glass] .dayhead { text-shadow:0 0 10px rgb(255 255 255 / .7); }
 :root[data-scheme=light][data-style=glass] .dayhead p { color:color-mix(in srgb,var(--foreground) 78%,transparent); }
 :root[data-scheme=light][data-style=glass] .dayhead button { text-shadow:none; }
+
+/* «Фон»: поверх фото — затемнение цветом фона, от нуля слева до 70 % справа (--shade из lib/liquid.mjs;
+   задаётся на .wallpaper, поэтому при движении ползунка пересчитывается только фото). */
+[data-style=glass] .glass-dim { position:absolute; inset:0; background:var(--background); opacity:calc(var(--shade,.3) * .7); pointer-events:none; }
