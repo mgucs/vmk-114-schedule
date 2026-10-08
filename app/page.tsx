@@ -1,5 +1,5 @@
 import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties} from 'react';
-import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
+import {ArrowUpRight, CalendarClock, Ellipsis, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
 import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,type Task} from '@/components/personal';
@@ -164,7 +164,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
     <div className="lesson-time">
       <span className="range">{lesson.start}<span><i> – </i>{lesson.end}</span></span>
       {typeNames[lesson.type] && <span className={`tag ${lesson.type}`}>{typeNames[lesson.type]}</span>}
-      {label && <span className="live">{label}</span>}
+      {label && <span className={`live ${now?'on':'next'}`}>{label}</span>}
       <HomeworkButton task={hw.task} onClick={hw.open}/>
     </div>
     <h3>{cleanTitle(lesson)}</h3>
@@ -232,7 +232,7 @@ export default function Home() {
   const fiit = Number(groupName)>=140, parity = fiit ? weekOf(faculty.term,selected)?.odd : undefined;
   const [readNotices,setReadNotices] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem(noticeKey)||'[]');}catch{return [];}});
   const freshNotices = faculty.notices.filter(n=>!readNotices.includes(n));
-  const [statsOpen,setStatsOpen] = useState(false);
+  const [statsOpen,setStatsOpen] = useState(false), [moreOpen,setMoreOpen] = useState(false);
   const [contactsOpen,setContactsOpen] = useState(false), [onboarding,setOnboarding] = useState(needsOnboarding), [shared,setShared] = useState('');
   // Lecturer of each subject this term, by the first letters of its name.
   const lecturers = Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];}));
@@ -292,7 +292,7 @@ export default function Home() {
   function aboutDay(d:string) {
     const list = lessonsOn(data,d) as Lesson[], first = list.reduce((s,l)=>!s||l.start<s?l.start:s,''), last = list.reduce((e,l)=>l.end>e?l.end:e,'');
     const odd = fiit ? weekOf(faculty.term,d)?.odd : undefined;
-    return <><b>{nearOf(d) || dayNames[weekday(d)]}</b>{`, ${formatDate(d)}`}<span>{' · '}{lessonCount(list.length)}{first && ` · ${first}–${last}`}{odd!=null && ` · ${odd?'нечётная':'чётная'} неделя`}</span></>;
+    return <>{formatDate(d)} · {lessonCount(list.length).toLowerCase()}{first && ` · ${first}–${last}`}{odd!=null && ` · ${odd?'нечётная':'чётная'}`}</>;
   }
 
   async function savePdf(hash:string) {
@@ -460,11 +460,12 @@ export default function Home() {
   return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><Wallpaper/><div className="shell" data-pane={paneDir}>
     <MsuDecor/>
     <header className="topbar">
-      <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><small className="glass-only">МГУ · ВМК</small><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
+      <button className="brand" onClick={()=>setGroupsOpen(true)} aria-label={`Группа ${groupName}, сменить`}><span className="brandmark" aria-hidden="true"><i style={{maskImage:`url(${asset('brand/vmk-mark.png')})`, WebkitMaskImage:`url(${asset('brand/vmk-mark.png')})`}}/></span><span><small className="glass-only">МГУ · ВМК<i className={`brand-status ${tone}`} aria-hidden="true"/></small><strong>{groupName} группа <ChevronDown size={14}/></strong></span></button>
       <div className="header-actions">
         <a className="vmk-link" href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer" aria-label="Расписание на сайте ВМК">ВМК<ArrowUpRight size={13}/></a>
         {search.button}
         <ThemeButton/>
+        <button className="icon-button glass-only more-button" aria-label="Ещё: изменения, подгруппы, PDF, статус" data-fresh={history.length>0 && Date.now()-Date.parse(history[0].detectedAt)<RECENT || undefined} onClick={()=>setMoreOpen(true)}><Ellipsis size={20}/></button>
       </div>
     </header>
 
@@ -487,12 +488,6 @@ export default function Home() {
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
     </main> : <>
-    {/* Стекло: the month on top (and «Сегодня» when another day is open), then the week strip, then one line about
-        the chosen day. Each line has a fixed height whatever the day, so nothing below moves when the day changes. */}
-    <LiveDay selected={selected}>{d=>{const away = view==='week' ? pinned!==null : d!==focus; return <div className="dayhead glass-only">
-      <h1>{view==='day' ? monthOf(d) : months}<span>{(view==='day'?d:monday).slice(0,4)}</span></h1>
-      <button className="dayhead-back" data-on={away || undefined} tabIndex={away ? 0 : -1} aria-hidden={!away || undefined} onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>
-    </div>;}}</LiveDay>
     <div className={`heading ${view}`}>
       <div className="heading-text">
         <p className="glass-only glass-date">{view==='day' ? `${dayNames[weekday(selected)]}, ${formatDate(selected,{day:'numeric',month:'long'})}` : 'Расписание на неделю'}</p>
@@ -525,9 +520,17 @@ export default function Home() {
           </button>;})}</div>}</LiveDay>;}}/>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>
-    {view==='day'
-      ? <LiveDay selected={selected}>{d=><p className="dayline glass-only">{aboutDay(d)}</p>}</LiveDay>
-      : <p className="dayline glass-only"><b>Неделя</b>{`, ${weekRange}`}<span>{' · '}{lessonCount(shownWeekCount)}{parity!=null && ` · ${parity?'нечётная':'чётная'} неделя`}</span></p>}
+    {/* Стекло: under the strip, the chosen day in large type — it is what the page is about — and one quiet line under
+        it. «Неделя»/«День» and «К ближайшим» sit on its right. Each line has a fixed height whatever the day, and
+        during a swipe it follows the day passing under the finger (live-day.tsx). */}
+    <LiveDay selected={selected}>{d=>{const away = view==='week' ? pinned!==null : d!==focus; return <div className="dayhead glass-only">
+      <div className="dayhead-text">
+        <h1>{view==='day' ? nearOf(d) || dayNames[weekday(d)] : 'Неделя'}</h1>
+        <p>{view==='day' ? aboutDay(d) : <>{weekRange} · {lessonCount(shownWeekCount)}{parity!=null && ` · ${parity?'нечётная':'чётная'}`}</>}</p>
+      </div>
+      <button className="dayhead-back" data-on={away || undefined} tabIndex={away ? 0 : -1} aria-hidden={!away || undefined} onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>
+      <button className="view-toggle" aria-pressed={view==='week'} onClick={()=>{setView(view==='week'?'day':'week');scrollTo({top:0});}}>{view==='week'?'День':'Неделя'}</button>
+    </div>;}}</LiveDay>
 
     <main ref={scheduleArea}>
       {recent.length>0 && <section className="changes-banner" aria-label="Изменения расписания">
@@ -598,6 +601,24 @@ export default function Home() {
       <div className="source-links"><a href="https://cs.msu.ru/studies/contacts" target="_blank" rel="noreferrer">Страница на сайте ВМК<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>}
     {onboarding && <Onboarding streams={streams(table)} onGroup={name=>{setGroupState(name);try{localStorage.setItem(groupKey,name);}catch{}}} onDone={()=>setOnboarding(false)}/>}
+    {/* «Ещё»: everything that is not the day's classes, out of the way. A row closes the sheet and opens its own window. */}
+    <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="changes-dialog more-sheet">
+      <DialogTitle>Ещё</DialogTitle>
+      <DialogDescription className="sr-only">Изменения, подгруппы, учебная часть, PDF и статус расписания</DialogDescription>
+      <div className="more-list" onClickCapture={e=>{if((e.target as HTMLElement).closest('button,a'))setMoreOpen(false);}}>
+        {history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения расписания</button>}
+        <button onClick={()=>setStatsOpen(true)}>Сколько пар · {weekCount} в неделю</button>
+        {subgroups.button}
+        {calendar.button}
+        {pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF расписания</button>}
+        {faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}
+        <a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Расписание на сайте ВМК<ArrowUpRight size={15}/></a>
+      </div>
+      <button className={`more-status ${tone}`} onClick={()=>{setMoreOpen(false);setStatusOpen(true);}}>
+        <span className="status-icon">{!online?<WifiOff size={12}/>:busy?<RefreshCw size={12} className="spin"/>:<span className="status-dot"/>}</span><span>{statusText}</span>
+      </button>
+      <AppVersion/>
+    </DialogContent></Dialog>
     <Dialog open={changesOpen} onOpenChange={setChangesOpen}><DialogContent className="changes-dialog wide"><DialogTitle>Изменения расписания</DialogTitle><DialogDescription>Что ВМК поменял в каждой новой версии PDF: было → стало. Сначала твоя группа, остальные — кнопками.</DialogDescription>
       {history.length ? history.map((entry,i)=><UpdateEntry key={entry.detectedAt} open={i===0} entry={entry} group={groupName} all={Object.keys(table.groups)}
         pdf={entry.pdfChanged ? (i===0 ? 'latest.pdf' : history.slice(0,i).reverse().find(h=>h.pdfChanged)?.previousPdf) : undefined}/>)

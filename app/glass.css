@@ -29,7 +29,7 @@
   --wp-photo:.48; --wp-wash:color-mix(in srgb,var(--background) 45%,transparent);
   --g-text-shadow:0 1px 8px #00000035;
 }
-:root[data-style=glass][data-scheme=light] .glass-campus { background-image:var(--photo-day); }
+:root[data-style=glass][data-scheme=light] :is(.glass-campus,.glass-soft) { background-image:var(--photo-day); }
 :root[data-style=glass][data-theme=msu-light] {
   --background:#e9eff6; --card:#f8fbff; --foreground:#13233a; --muted:#dde6f0; --muted-foreground:#56687f;
   --lecture:#bf7a47; --accent-ink:#9c5427; --lecture-soft:#f3e6da; --now:#2c74c9; --now-soft:#dbe9f7;
@@ -45,7 +45,7 @@
 html[data-style=glass] { background:var(--background); }
 [data-style=glass] body { background:transparent; }
 [data-style=glass] .wallpaper { display:block; position:fixed; inset:0; height:100vh; height:100lvh; z-index:-1; pointer-events:none; overflow:hidden; background:var(--background); }
-[data-style=glass] .glass-campus { position:absolute; inset:0; background-image:var(--photo-night); background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(calc(.3 + var(--lg2,0) * .7)); }
+[data-style=glass] :is(.glass-campus,.glass-soft) { position:absolute; inset:0; background-image:var(--photo-night); background-size:cover; background-position:50% 38%; opacity:var(--wp-photo); filter:saturate(calc(.3 + var(--lg2,0) * .7)); }
 [data-style=glass] .glass-atmosphere { position:absolute; inset:0; background:linear-gradient(180deg,var(--background) 0%,var(--wp-wash) 32%,transparent 65%,var(--background) 100%); }
 [data-style=glass] .glass-horizon { position:absolute; inset:0; background:radial-gradient(ellipse at 0% 40%,color-mix(in srgb,var(--lecture) 10%,transparent),transparent 60%),linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--background) 45%,transparent)); }
 [data-style=glass] :is(.msu-hero,.msu-emblem) { display:none; }
@@ -265,7 +265,7 @@ html[data-style=glass] { background:var(--background); }
   [data-style=glass] .shell { padding-top:16px; }
   [data-style=glass] .heading { padding-top:28px; }
   [data-style=glass] .heading h1 { font-size:44px; }
-  [data-style=glass] .glass-campus { background-position:50% 56%; }
+  [data-style=glass] :is(.glass-campus,.glass-soft) { background-position:50% 56%; }
   [data-style=glass] .list .lesson { padding:22px 26px; }
   [data-style=glass] .list .lesson.current { padding-bottom:32px; }
   [data-style=glass] .lesson h3 { font-size:24px; }
@@ -286,7 +286,7 @@ html[data-style=glass] { background:var(--background); }
 /* МГУ на большом экране: главное здание целиком, днём или ночью, без дымки. Мягкая тень только
    под колонкой расписания, чтобы подписи читались; на телефоне фото остаётся приглушённым, как было. */
 @media (min-width:900px) {
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-campus { opacity:1; filter:none; background-position:50% 62%; }
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.glass-campus,.glass-soft) { opacity:1; filter:none; background-position:50% 62%; }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-atmosphere {
     background:linear-gradient(90deg, transparent calc(50% - 520px), color-mix(in srgb,var(--background) 42%,transparent) calc(50% - 330px), color-mix(in srgb,var(--background) 42%,transparent) calc(50% + 330px), transparent calc(50% + 520px)); }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-horizon { display:none; }
@@ -338,9 +338,9 @@ html[data-style=glass] { background:var(--background); }
 
 /* МГУ на телефоне: здание видно за шапкой и первыми парами, ниже фото уходит в фон. */
 @media (max-width:899px) {
-  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-campus { opacity:.9; filter:none; background-position:50% 20%; }
+  :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.glass-campus,.glass-soft) { opacity:.9; filter:none; background-position:50% 20%; }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-atmosphere {
-    background:linear-gradient(180deg, color-mix(in srgb,var(--background) 22%,transparent) 0%, transparent 30%, color-mix(in srgb,var(--background) 32%,transparent) 62%, color-mix(in srgb,var(--background) 62%,transparent) 100%); }
+    background:linear-gradient(180deg, color-mix(in srgb,var(--background) 22%,transparent) 0%, transparent 30%, color-mix(in srgb,var(--background) 12%,transparent) 62%, color-mix(in srgb,var(--background) 45%,transparent) 100%); }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-horizon { display:none; }
   :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) :is(.heading,.topbar) { text-shadow:0 1px 10px color-mix(in srgb,var(--background) 85%,transparent); }
 }
@@ -484,7 +484,7 @@ html[data-style=glass] { background:var(--background); }
   --g-fill:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-fill-p),transparent),var(--card) 55%);
   --g-thick:color-mix(in srgb,color-mix(in srgb,var(--card) var(--g-thick-p),transparent),var(--card) 70%);
 }
-:root[data-style=glass][data-glass=lite] .glass-campus { filter:none; }
+:root[data-style=glass][data-glass=lite] :is(.glass-campus,.glass-soft) { filter:none; }
 /* Лекция или семинар — видно сразу: у лекции цветная метка и полоса слева, у семинара спокойная метка. */
 [data-style=glass] .tag.lecture { background:var(--lecture); color:var(--lecture-ink); box-shadow:none; font-weight:700; }
 [data-style=glass] .tag.class { background:none; color:var(--muted-foreground); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--foreground) 22%,transparent); }
@@ -497,13 +497,6 @@ html[data-style=glass] { background:var(--background); }
    при смене дня меняется только текст и едет капля. Стрелки — только там, где есть мышь; на телефоне дни листают
    пальцем или нажимают. */
 [data-style=glass] .heading { display:none; }
-/* Месяц и «Сегодня» */
-[data-style=glass] .dayhead { display:flex; align-items:center; gap:10px; height:40px; padding:4px 2px 0; }
-[data-style=glass] .dayhead h1 { flex:1; min-width:0; margin:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:30px; font-weight:700; line-height:40px; letter-spacing:-.04em; }
-[data-style=glass] .dayhead h1 span { margin-left:8px; color:var(--muted-foreground); font-size:18px; font-weight:500; letter-spacing:-.01em; }
-[data-style=glass] .dayhead-back { flex-shrink:0; height:30px; padding:0 14px; border:0; border-radius:999px; background:var(--g-lens); box-shadow:var(--g-lens-shadow); color:var(--foreground); font-size:13px; font-weight:650; visibility:hidden; }
-[data-style=glass] .dayhead-back[data-on] { visibility:visible; }
-:root[data-scheme=dark][data-style=glass] :is(.dayhead,.dayline) { text-shadow:0 1px 12px rgb(0 0 0 / .55); }
 
 /* Полоса недели — без подложки, прямо на фоне, как неделя в календаре iPhone. Под каждым числом шесть кружков —
    шесть пар дня (08:45 … 18:00): золотой — лекция, светлый — семинар, голубой — консультация или физкультура,
@@ -528,7 +521,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .day-button .pairs b.lecture { background:var(--lecture); }
 [data-style=glass] .day-button .pairs b:is(.consultation,.sport) { background:var(--now); }
 [data-style=glass] .day-button.off strong { color:var(--muted-foreground); }
-[data-style=glass] .day-button.past:not([aria-pressed=true]) :is(span,strong,.pairs) { opacity:.45; }
+[data-style=glass] .day-button.past:not([aria-pressed=true]) :is(span,strong,.pairs) { opacity:.68; }
 [data-style=glass] .day-button.today span, [data-style=glass] .day-button.today strong { color:var(--g-accent); }
 [data-style=glass] .day-button.today::after { display:none; }
 [data-style=glass] .day-button[aria-pressed=true] strong { background:var(--foreground)!important; color:var(--background); box-shadow:0 6px 16px -6px rgb(0 0 0 / .6); text-shadow:none; }
@@ -551,10 +544,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .gap::after { background:linear-gradient(270deg,transparent,color-mix(in srgb,var(--foreground) 28%,transparent)); }
 [data-style=glass] .gap.now { color:var(--now); }
 
-/* Строка о выбранном дне — под полосой */
-[data-style=glass] .dayline { display:block; height:22px; margin:10px 2px 8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:15px; line-height:22px; color:var(--foreground); font-variant-numeric:tabular-nums; }
-[data-style=glass] .dayline b { font-weight:700; }
-[data-style=glass] .dayline span { color:var(--muted-foreground); }
 
 /* Статус и версия — одна тонкая строка под кнопками. */
 [data-style=glass] .footer-meta { display:inline-flex; max-width:100%; flex-wrap:nowrap; gap:0; margin-top:6px; padding:3px 11px; border-radius:999px; overflow:hidden; white-space:nowrap;
@@ -563,23 +552,12 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .footer-meta .status { display:inline-flex; align-items:center; gap:5px; }
 [data-style=glass] .footer-meta .app-version { flex-shrink:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 [data-style=glass] .footer-meta .app-version::before { content:'·'; margin:0 6px; }
-/* Нижняя строка (Вся неделя, пары, изменения, статус, версия) стоит на одном месте над вкладками при любом дне:
-   у короткого дня — на своём месте, у длинного прилипает там же и уходит под последнюю пару в конце прокрутки.
-   Отступ страницы снизу равен месту прилипания, поэтому оба положения совпадают. (!important: общее правило
-   .shell > :not(…) ставит всем блокам position:relative и весит больше.) */
-[data-style=glass] .shell { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
-[data-style=glass] .footer { position:sticky!important; bottom:calc(88px + env(safe-area-inset-bottom)); z-index:20; padding-top:12px; }
-/* Под нижней строкой и вкладками — лёгкое затемнение к низу экрана (градиент, не размытие). Оно закреплено на экране,
-   а не на строке: при резком рывке страницы вверх (отскок у края) оно не уезжает вместе с ней. */
-[data-style=glass] .shell::after { content:''; position:fixed; z-index:15; left:0; right:0; bottom:0; height:calc(150px + env(safe-area-inset-bottom)); pointer-events:none;
-  background:linear-gradient(to bottom, transparent, color-mix(in srgb,var(--background) 55%,transparent) 45%, color-mix(in srgb,var(--background) 72%,transparent)); }
 
 
 /* Экономно: плоское стекло — без бликов, теней, затемнения снизу и цветокоррекции фото. */
 :root[data-style=glass][data-glass=lite] { --g-sheen:linear-gradient(#0000,#0000); --g-drop:0 0 #0000; --g-lip:inset 0 0 #0000; --g-pool:inset 0 0 #0000;
   --c-shadow:inset 0 0 0 .5px rgb(255 255 255 / .08); --g-lens-shadow:inset 0 0 0 1px rgb(255 255 255 / .2); }
-:root[data-style=glass][data-glass=lite] .shell::after { display:none; }
-:root[data-style=glass][data-glass=lite] :is(.dayhead,.dayline,.topbar,.heading) { text-shadow:none; }
+:root[data-style=glass][data-glass=lite] :is(.dayhead,.topbar,.heading) { text-shadow:none; }
 
 /* ═══ Док — панель разделов ═══
    Тонкая тёмная капсула со светлой кромкой сверху и глубокой тенью; внутри мягкая светлая линза под выбранным
@@ -608,3 +586,65 @@ html[data-style=glass] { background:var(--background); }
   box-shadow:inset 0 0 0 1px rgb(0 0 0 / .06), inset 0 1px 0 rgb(255 255 255 / .9), 0 2px 6px rgb(20 40 60 / .1), 0 20px 40px -16px rgb(20 40 60 / .4); }
 :root[data-scheme=light][data-style=glass] .dock-lens { background:linear-gradient(180deg,#fff,rgb(255 255 255 / .75)); box-shadow:inset 0 0 0 1px rgb(0 0 0 / .05), 0 6px 14px -6px rgb(20 40 60 / .35); }
 :root[data-style=glass][data-glass=lite] .dock-lens { box-shadow:none; }
+
+/* ═══ Одна иерархия ═══
+   Главное на странице — пары выбранного дня. МГУ — атмосфера: чёткий за шапкой и неделей, а под парами — его мягкая
+   копия (заранее размытая и приглушённая картинка, ничего не размывается на лету), поэтому прозрачные карточки
+   читаются и ничего не рябит. Всё второстепенное — в «Ещё» (⋯ в шапке). */
+[data-style=glass] .glass-soft { -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent 17%, #000 31%); mask-image:linear-gradient(to bottom, transparent 0, transparent 17%, #000 31%); }
+@media (min-width:900px) { :root[data-style=glass]:is([data-theme=msu],[data-theme=msu-classic],[data-theme=msu-light]) .glass-soft { display:none; } }
+[data-style=glass] .footer { display:none; }
+[data-style=glass] .vmk-link { display:none; }
+
+/* Шапка: статус проверки — точка у «МГУ · ВМК»; «⋯» — всё остальное, с точкой, если ВМК недавно что-то поменял. */
+[data-style=glass] .brand-status { display:inline-block; width:5px; height:5px; margin:0 0 1px 6px; border-radius:50%; background:var(--ok); vertical-align:middle; }
+[data-style=glass] .brand-status.warn { background:var(--warn-fg); }
+[data-style=glass] .brand-status.offline { background:var(--muted-foreground); }
+[data-style=glass] .more-button { position:relative; display:inline-flex; }
+[data-style=glass] .more-button[data-fresh]::after { content:''; position:absolute; top:8px; right:7px; width:6px; height:6px; border-radius:50%; background:var(--now); box-shadow:0 0 0 2px var(--background); }
+
+/* День — главный заголовок; строка под ним тихая. Справа «К ближайшим» (только когда открыт другой день) и «Неделя». */
+[data-style=glass] .dayhead { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:2px 8px; height:62px; margin:10px 0 6px; padding:0 2px; }
+[data-style=glass] .dayhead-text { display:contents; }
+[data-style=glass] .dayhead h1 { grid-area:1/1; }
+[data-style=glass] .dayhead p { grid-area:2/1/3/4; }
+[data-style=glass] .dayhead h1 { margin:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:31px; font-weight:700; line-height:36px; letter-spacing:-.045em; }
+[data-style=glass] .dayhead p { height:20px; margin:2px 0 0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted-foreground); font-size:13.5px; line-height:20px; font-variant-numeric:tabular-nums; }
+[data-style=glass] :is(.dayhead-back,.view-toggle) { flex-shrink:0; height:30px; padding:0 12px; border:0; border-radius:999px; font-size:12.5px; font-weight:650; }
+[data-style=glass] .dayhead-back { background:var(--foreground); color:var(--background); visibility:hidden; }
+[data-style=glass] .dayhead-back[data-on] { visibility:visible; }
+[data-style=glass] .view-toggle { background:color-mix(in srgb,var(--foreground) 10%,transparent); color:var(--foreground); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--foreground) 12%,transparent); }
+:root[data-scheme=dark][data-style=glass] .dayhead { text-shadow:0 1px 14px rgb(0 0 0 / .5); }
+:root[data-scheme=dark][data-style=glass] .dayhead button { text-shadow:none; }
+
+/* Карточки на мягком фоне: тонкая подложка и волосяная кромка вместо плотного стекла — фокус на тексте. */
+:root[data-scheme=dark][data-style=glass]:not([data-glass=full]) {
+  --c-fill:color-mix(in srgb,color-mix(in srgb,var(--card) 78%,#000) calc(var(--c-fill-d) - 16%),transparent);
+  --c-past:color-mix(in srgb,color-mix(in srgb,var(--card) 78%,#000) calc(var(--c-past-d) - 22%),transparent);
+  --c-shadow:inset 0 0 0 1px rgb(255 255 255 / .07), inset 0 1px 0 rgb(255 255 255 / .05), 0 10px 24px -18px rgb(0 0 0 / .8); }
+[data-style=glass] .lesson.past h3 { color:color-mix(in srgb,var(--foreground) 72%,transparent); }
+
+/* «Ещё» — список строк. */
+[data-style=glass] .more-sheet { gap:0; }
+[data-style=glass] .more-list { display:flex; flex-direction:column; margin:12px -6px 8px; }
+[data-style=glass] .more-list > :is(button,a) { display:flex; align-items:center; gap:8px; width:100%; min-height:48px; padding:0 8px; border:0; border-bottom:1px solid color-mix(in srgb,var(--foreground) 8%,transparent);
+  border-radius:0; background:none; color:var(--foreground); font-size:15.5px; font-weight:550; text-align:left; text-decoration:none; }
+[data-style=glass] .more-list > :is(button,a):last-child { border-bottom:0; }
+[data-style=glass] .more-list > button::after { content:'›'; margin-left:auto; color:var(--muted-foreground); font-size:20px; font-weight:400; }
+[data-style=glass] .more-list > a svg { margin-left:auto; color:var(--muted-foreground); }
+[data-style=glass] .more-list > .fresh-changes::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--now); }
+[data-style=glass] .more-status { display:flex; align-items:center; gap:8px; margin:4px 2px 2px; padding:0; border:0; background:none; color:var(--muted-foreground); font-size:13px; text-align:left; }
+[data-style=glass] .more-sheet .app-version { margin:4px 2px 0; font-size:12px; opacity:.75; }
+/* Окна без живого размытия — плотные, фон под ними темнее: в окне фокус на окне. */
+:root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-content] { background:color-mix(in srgb,color-mix(in srgb,var(--card) 82%,#000) 97%,transparent); }
+:root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-overlay] { background:rgb(0 0 0 / .55); }
+/* МГУ на телефоне чуть ниже: над неделей — чистое небо (дни читаются), шпиль — за заголовком дня. Сверху фото
+   переходит в цвет неба. */
+@media (max-width:899px) {
+  :root[data-scheme=dark][data-style=glass]:is([data-theme=msu],[data-theme=msu-classic]) :is(.glass-campus,.glass-soft) { background-size:auto 88%; background-position:50% 100%; background-repeat:no-repeat; }
+}
+/* «через 8 ч» на карточке следующей пары повторяет строку «до первой пары» над ней — оставлено только «идёт». */
+[data-style=glass] .lesson .live.next { display:none; }
+:root[data-scheme=light][data-style=glass] .dayhead { text-shadow:0 0 10px rgb(255 255 255 / .7); }
+:root[data-scheme=light][data-style=glass] .dayhead p { color:color-mix(in srgb,var(--foreground) 78%,transparent); }
+:root[data-scheme=light][data-style=glass] .dayhead button { text-shadow:none; }
