@@ -1,4 +1,4 @@
-import React, {Suspense, createContext, lazy, startTransition, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties} from 'react';
+import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties} from 'react';
 import {ArrowUpRight, CalendarClock, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
@@ -16,7 +16,7 @@ import {StatsDialog} from '@/components/term-stats';
 import {UsefulView} from '@/components/useful';
 import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
-import {SnapPager} from '@/components/snap-pager';
+import {SnapPager, type PagerHandle} from '@/components/snap-pager';
 import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
@@ -274,9 +274,14 @@ export default function Home() {
   function go(date:string) { target.current=date; setPinned(date===focus?null:date); }
   // From the latest target day, so two quick key presses move two days even before a re-render.
   function shift(direction:number) { go(addDays(target.current,direction*(view==='week'?7:1))); }
-  // A swipe that settled: the page is already in view, so React draws the rest as interruptible work — a new touch
-  // is not kept waiting for it.
-  const settleOn = (date:string) => { target.current=date; startTransition(()=>setPinned(date===focus?null:date)); };
+  const settleOn = go;
+  // While a swipe of the days goes on, the strip follows at once, without waiting for React: the day more than half in
+  // view is marked, and the strip slides to its week. React's drawing after the swipe then finds it all in place.
+  const strip = useRef<PagerHandle|null>(null), dateNav = useRef<HTMLElement>(null);
+  function peekDay(date:string) {
+    dateNav.current?.querySelectorAll<HTMLElement>('.day-button').forEach(b => b.setAttribute('aria-pressed', String(view==='day' && b.dataset.date===date)));
+    strip.current?.show(Math.floor(span(rangeStart,date)/7));
+  }
 
   async function savePdf(hash:string) {
     if (!('caches' in window)) throw Error('Сохранение PDF недоступно в этом браузере.');
@@ -495,13 +500,13 @@ export default function Home() {
 
     {/* The strip is a row of weeks in its own snap scroller: a new week slides in whole, the numbers never change in place.
         A swipe of the strip opens the same weekday of that week. Dots under a number: how many classes that day. */}
-    <nav className="date-navigation" aria-label="Выбрать день">
+    <nav className="date-navigation" aria-label="Выбрать день" ref={dateNav}>
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
-      <SnapPager key={'strip'+rangeStart} className="week-strip" count={weekTotal} index={weekIndex} label="Недели"
+      <SnapPager key={'strip'+rangeStart} className="week-strip" count={weekTotal} index={weekIndex} label="Недели" handle={strip}
         onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))}
         render={i=>{const start=addDays(rangeStart,7*i); return <div className="days">{Array.from({length:7},(_,k)=>{
           const date=addDays(start,k), n=lessonsOn(data,date).length;
-          return <button key={k} className={`day-button ${date===today?'today':''} ${n?'':'off'}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(n).toLowerCase()}`}>
+          return <button key={k} data-date={date} className={`day-button ${date===today?'today':''} ${n?'':'off'}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(n).toLowerCase()}`}>
             <span>{shortDays[k]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[k]}</em>
             <i className="dots" aria-hidden="true">{Array.from({length:Math.min(n,4)},(_,j)=><b key={j}/>)}</i>
           </button>;})}</div>;}}/>
@@ -522,9 +527,9 @@ export default function Home() {
       {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
       {view==='day'
         ? <SnapPager key={'days'+rangeStart} className="pager" count={dayTotal} index={dayIndex} near={2} label="Дни"
-            render={i=>renderPage('day:'+addDays(rangeStart,i))} onSettle={i=>settleOn(addDays(rangeStart,i))}/>
+            render={i=>renderPage('day:'+addDays(rangeStart,i))} onSettle={i=>settleOn(addDays(rangeStart,i))} onPeek={i=>peekDay(addDays(rangeStart,i))}/>
         : <SnapPager key={'weeks'+rangeStart} className="pager" count={weekTotal} index={weekIndex} label="Недели"
-            render={i=>renderPage('week:'+addDays(rangeStart,7*i))} onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))}/>}
+            render={i=>renderPage('week:'+addDays(rangeStart,7*i))} onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))} onPeek={i=>strip.current?.show(i)}/>}
     </main>
 
     <footer className="footer">
