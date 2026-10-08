@@ -1145,3 +1145,4 @@ button.changed-note span { margin-left:auto; font-weight:700; text-decoration:un
 [data-slot=dialog-content] > [data-slot=dialog-close] { top:6px; right:6px; display:grid; place-items:center; width:44px; height:44px; border-radius:50%; opacity:.8; }
 [data-slot=dialog-content] > [data-slot=dialog-close] svg { width:20px!important; height:20px!important; }
 [data-slot=dialog-content] > [data-slot=dialog-close]:active { background:color-mix(in srgb,var(--foreground) 12%,transparent); }
+

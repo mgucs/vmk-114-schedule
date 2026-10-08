@@ -116,6 +116,13 @@ function streams(table:Table) {
     return {page, groups, title:fiit ? 'ФИИТ' : `${i+1} поток`, range:`${groups[0]}–${groups.at(-1)}`, total:all.length};
   });
 }
+// The group window: every stream at once, a small label over large tiles; the chosen group is filled.
+function GroupPicker({list, current, onPick}:{list:ReturnType<typeof streams>; current:string; onPick:(group:string)=>void}) {
+  return <>{list.map(stream => <section className="stream" key={stream.page} aria-label={`${stream.title}, группы ${stream.range}`}>
+    <div className="stream-head"><strong>{stream.title}</strong><span>{stream.range}</span></div>
+    <div className="group-grid group-tiles">{stream.groups.map(name => <button key={name} aria-pressed={name===current} onClick={() => onPick(name)}>{name}</button>)}</div>
+  </section>)}</>;
+}
 function loadGroup() { try { return localStorage.getItem(groupKey) || DEFAULT_GROUP; } catch { return DEFAULT_GROUP; } }
 function describeUpdate(entry:HistoryEntry, group:string) {
   const list = entry.changes[group] || [];
@@ -626,11 +633,7 @@ export default function Home() {
     </DialogContent></Dialog>
     {/* Groups as circles, a stream per row — the same language as the week strip; the chosen group is filled. */}
     <Dialog open={groupsOpen} onOpenChange={setGroupsOpen}><DialogContent className="changes-dialog groups-sheet"><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК. Расписание всех групп сохранено и без интернета.</DialogDescription>
-      {(()=>{const mine=streams(table).find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}<br/>группы {mine.range}</span></div>;})()}
-      {streams(table).map(stream=><section className="stream" key={stream.page}>
-        <div className="stream-head"><strong>{stream.title}</strong><span>{stream.range}</span></div>
-        <div className="group-grid">{stream.groups.map(name=><button key={name} aria-pressed={name===groupName} onClick={()=>setGroup(name)}>{name}</button>)}</div>
-      </section>)}
+      <GroupPicker list={streams(table)} current={groupName} onPick={setGroup}/>
       <button className="share-group" onClick={shareGroup}><Share2 size={16}/> Поделиться ссылкой на группу {groupName}</button>
       {shared && <p className="personal-hint share-result">{shared}</p>}
     </DialogContent></Dialog>
