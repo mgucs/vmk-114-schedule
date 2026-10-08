@@ -2,16 +2,19 @@ import {readdir,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import path from 'node:path';
 const root=path.resolve('dist');
-const manifestPath=path.join(root,'manifest.webmanifest');
-const manifest=JSON.parse(await readFile(manifestPath,'utf8'));
 const base=process.env.VITE_BASE||'/';
-manifest.id=base; manifest.start_url=base; manifest.scope=base;
-manifest.theme_color='#090d24'; manifest.background_color='#090d24';
-for(const icon of manifest.icons)icon.src=base+icon.src.replace(/^\//,'');
-await writeFile(manifestPath,JSON.stringify(manifest));
+// manifest.webmanifest (the default icon) and manifest-<icon>.webmanifest for each icon the user can choose (index.html).
+for(const name of (await readdir(root)).filter(n=>/^manifest(-[a-z]+)?\.webmanifest$/.test(n))){
+  const manifestPath=path.join(root,name),manifest=JSON.parse(await readFile(manifestPath,'utf8'));
+  manifest.id=base; manifest.start_url=base; manifest.scope=base;
+  manifest.theme_color='#090d24'; manifest.background_color='#090d24';
+  for(const icon of manifest.icons)icon.src=base+icon.src.replace(/^\//,'');
+  await writeFile(manifestPath,JSON.stringify(manifest));
+}
 async function walk(dir){const found=[];for(const item of await readdir(dir,{withFileTypes:true})){const name=path.join(dir,item.name);if(item.isDirectory())found.push(...await walk(name));else found.push(path.relative(root,name).replaceAll('\\','/'));}return found;}
-// PDF parsing runs on GitHub; pdf.js is cached only for the in-app PDF viewer.
-const paths=(await walk(root)).filter(p=>!['sw.js','precache.json','latest.pdf','source.json','parser.mjs'].includes(p)&&!p.startsWith('archive/')&&!(p.startsWith('vendor/')&&!/^vendor\/pdf(\.worker)?\.mjs$/.test(p))).sort();
+// PDF parsing runs on GitHub; pdf.js is cached only for the in-app PDF viewer. App icons are read only when the site
+// is added to the home screen (online), so the offline copy leaves them out.
+const paths=(await walk(root)).filter(p=>!['sw.js','precache.json','latest.pdf','source.json','parser.mjs'].includes(p)&&!p.startsWith('icons/')&&!p.startsWith('archive/')&&!(p.startsWith('vendor/')&&!/^vendor\/pdf(\.worker)?\.mjs$/.test(p))).sort();
 const sw=await readFile(path.join(root,'sw.js'),'utf8');
 const hash=createHash('sha256').update(sw);
 // Each file with a hash of its content: the service worker keeps files that did not change from the previous version.

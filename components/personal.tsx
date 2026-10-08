@@ -96,9 +96,29 @@ export function ThemeButton() {
         ? <p className="dial-name">Как в системе</p>
         : <><Dial key={scheme} className="theme-dial" label="Тема" items={themeItems} value={choice} onPick={pick}/>
           <p className="dial-name">{THEMES.find(t=>t[0]===choice)?.[1]||''}</p></>}
+      <IconPicker/>
       {style==='glass' && <LiquidSlider/>}
     </DialogContent></Dialog>
   </>;
+}
+
+// The app icon: the phone takes it when the site is added to the home screen, from the links index.html points at
+// the chosen icon (manifest-<icon>.webmanifest for Android, apple-touch-icon-<icon>.png for iPhone).
+const ICONS=[['night','МГУ ночью'],['day','МГУ днём'],['sunset','МГУ на закате'],['emblem','Эмблема МГУ'],['vmk','Знак ВМК']] as const;
+function IconPicker(){
+  const [icon,setIcon]=useState(()=>{try{return localStorage.getItem('vmk114-icon')||'night';}catch{return 'night';}});
+  const [changed,setChanged]=useState(false);
+  function choose(key:string){
+    setIcon(key);setChanged(true);try{localStorage.setItem('vmk114-icon',key);}catch{}
+    const base=import.meta.env.BASE_URL;
+    document.querySelector('link[rel=manifest]')?.setAttribute('href',`${base}manifest-${key}.webmanifest`);
+    document.querySelector('link[rel=apple-touch-icon]')?.setAttribute('href',`${base}icons/apple-touch-icon-${key}.png`);
+  }
+  return <div className="icon-picker">
+    <div className="icon-row" role="radiogroup" aria-label="Иконка приложения">{ICONS.map(([key,label])=><button key={key} role="radio" aria-checked={icon===key} aria-label={label} onClick={()=>choose(key)}>
+      <img src={`${import.meta.env.BASE_URL}icons/icon-${key}-192.png`} alt="" width={48} height={48} loading="lazy" decoding="async"/></button>)}</div>
+    <p className="icon-note">{changed?'Чтобы иконка сменилась, добавь сайт на экран «Домой» заново.':'Иконка для экрана «Домой»'}</p>
+  </div>;
 }
 
 // A horizontal dial like the iPhone camera's zoom or modes: a native snap scroller; whatever reaches the middle is the

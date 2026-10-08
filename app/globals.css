@@ -1187,3 +1187,13 @@ button.changed-note span { margin-left:auto; font-weight:700; text-decoration:un
 .settings-sheet .quality-switch { margin-top:6px; }
 .settings-sheet .liquid-slider input[type=range] { height:30px; }
 .settings-sheet .liquid-ends { font-size:11.5px; }
+
+/* Иконка приложения: пять вариантов в ряд, выбранная — в кольце. */
+.icon-picker { padding-top:12px; border-top:1px solid color-mix(in srgb,var(--foreground) 8%,transparent); }
+.icon-row { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; justify-items:center; }
+.icon-row button { width:50px; height:50px; padding:0; border:0; border-radius:13px; background:none; overflow:hidden; box-shadow:0 0 0 1px color-mix(in srgb,var(--foreground) 12%,transparent);
+  transition:box-shadow .2s, transform .2s; }
+.icon-row button img { display:block; width:100%; height:100%; }
+.icon-row button[aria-checked=true] { box-shadow:0 0 0 2px var(--background), 0 0 0 4px var(--foreground); }
+.icon-row button:active { transform:scale(.92); }
+.icon-note { margin:8px 0 0; color:var(--muted-foreground); font-size:12px; text-align:center; }
