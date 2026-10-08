@@ -73,7 +73,7 @@ button:disabled { cursor:default; opacity:.45; }
 a { color:inherit; text-decoration:none; }
 button:focus-visible, a:focus-visible { outline:2px solid var(--ring); outline-offset:3px; }
 .shell { max-width:720px; margin:auto; padding:0 14px max(20px,env(safe-area-inset-bottom)); min-height:100dvh; display:flex; flex-direction:column; }
-.shell>main { flex:1; touch-action:pan-y; }
+.shell>main { flex:1; }
 
 /* Dialogs */
 .changes-dialog { max-height:85dvh; overflow-y:auto; }
@@ -416,7 +416,8 @@ textarea { font:inherit; }
    jumped by 3px on every day it appeared. */
 .eyebrow { height:20px; line-height:20px; overflow:hidden; }
 .eyebrow .text-button { padding:0; font-size:inherit; line-height:inherit; }
-.app-version { margin:14px 2px 0; color:var(--muted-foreground); font-size:11.5px; line-height:1.5; opacity:.8; }
+.footer-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:14px; }
+.app-version { margin:0 2px; color:var(--muted-foreground); font-size:11.5px; line-height:1.5; opacity:.8; }
 .app-version .text-button { padding:0; font-size:inherit; color:var(--now, var(--foreground)); }
 .eyebrow .count::after, .eyebrow .e-rel::after { content:'·'; margin-left:6px; opacity:.6; }
 .eyebrow .status { flex-shrink:1; min-width:0; }
@@ -457,14 +458,17 @@ textarea { font:inherit; }
 .glance-line span { min-width:0; overflow:hidden; color:var(--muted-foreground); white-space:nowrap; text-overflow:ellipsis; }
 
 /* Lessons: cards. Time line, subject, teacher with the room on the right. Tap a card to write homework. */
-/* Days lie side by side: the neighbours wait off screen while a finger drags, the page slides home after.
-   The pager reaches past the gutter so cards' shadows are not cut while it clips the pages beside. */
-.pager { position:relative; flex:1; display:flex; flex-direction:column; margin:-12px -12px -32px; padding:12px 12px 32px; overflow:hidden; overflow:clip; }
-/* The track is its own GPU layer for good, with the neighbours already drawn into it (off screen, clipped): a swipe
-   only moves the layer. Promoting it and painting the neighbours when the finger first moved cost the first frames. */
-.pager-track { position:relative; flex:1; display:flex; flex-direction:column; will-change:transform; }
-.slide { flex:1; display:flex; flex-direction:column; }
-.slide[data-side] { position:absolute; top:0; left:0; right:0; }
+/* Days lie side by side in the browser's own horizontal scroller (day-pager.tsx): a swipe is a native scroll that
+   snaps to a page. Each page is the scroller's full width; its side padding is the gap between pages and leaves room
+   for the cards' shadows, which the scroller would otherwise cut. */
+.pager { flex:1; display:flex; margin:-12px -12px -32px; padding:12px 0 32px; overflow-x:auto; overflow-y:hidden;
+  scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:none; }
+.pager::-webkit-scrollbar { display:none; }
+.slide { flex:0 0 100%; min-width:0; padding:0 12px; display:flex; flex-direction:column; scroll-snap-align:start; scroll-snap-stop:always; }
+/* Only the day in view sets the height: the pages beside it are cut to it while they slide in. Otherwise a long
+   neighbour stretched the page, and the buttons under it stood lower or higher depending on the next day. */
+.slide[aria-hidden=true] { height:0; }
+/* The drop on the day strip is Стекло's own (glass.css). */
 .day-lens { display:none; }
 .slide>section.day { flex:1; display:flex; flex-direction:column; }
 .list { display:flex; flex-direction:column; gap:8px; }

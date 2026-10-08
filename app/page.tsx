@@ -235,7 +235,14 @@ export default function Home() {
   const status = verification(saved.snapshot);
   // Places of this group's timetable the server could not read with confidence.
   const checks = (saved.snapshot.parseWarnings || []).filter(w => w.group===groupName);
-  const glance = view==='day' && (selected===today || selected===focus) ? dayGlance(data,today,clock,subgroups.selected) : null;
+  // «Мой день сейчас» lives on the page of today (and of the nearest teaching day): it moves with that page instead of
+  // appearing and disappearing above the pager, which pushed everything below it up and down on every turn.
+  const glance = dayGlance(data,today,clock,subgroups.selected);
+  const glanceLine = glance && glance.kind!=='done' && glance.kind!=='now' ? <section className={`glance-line ${glance.kind}`} aria-label="Мой день сейчас">
+    <b>{glance.left!=null && (glance.left<60 ? `${glance.left} мин` : `${Math.floor(glance.left/60)}:${String(glance.left%60).padStart(2,'0')}`)}</b>
+    <strong>{{now:'до конца пары',before:'до первой пары',break:'до следующей пары'}[glance.kind as 'now']}</strong>
+    <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
+  </section> : null;
   function dismissNotices(){const next=[...readNotices,...freshNotices].slice(-30);setReadNotices(next);try{localStorage.setItem(noticeKey,JSON.stringify(next));}catch{}}
   async function shareGroup(){
     const url=location.origin+import.meta.env.BASE_URL+'?g='+groupName;
@@ -248,6 +255,8 @@ export default function Home() {
   const near = selected===today ? 'Сегодня' : selected===addDays(today,1) ? 'Завтра' : selected===addDays(today,-1) ? 'Вчера' : '';
   const monthOf = (iso:string) => { const m=fmt({month:'long',timeZone:'Europe/Moscow'}).format(new Date(iso+'T12:00:00Z')); return m[0].toUpperCase()+m.slice(1); };
   const months = view==='day' ? monthOf(selected) : [...new Set([monthOf(monday),monthOf(week[6])])].join(' — ');
+  const weekRange = week[0].slice(5,7)===week[6].slice(5,7) ? `${Number(week[0].slice(-2))}–${formatDate(week[6])}` : `${formatDate(week[0])} – ${formatDate(week[6])}`;
+  const shownWeekCount = week.reduce((n,date)=>n+lessonsOn(data,date).length,0);
   const dayStart = selectedLessons.reduce((s,l)=>!s||l.start<s?l.start:s,''), dayEnd = selectedLessons.reduce((e,l)=>l.end>e?l.end:e,'');
   const checkedAgo = ago(saved.snapshot.checkedAt || null);
   const statusText = !online ? 'Без интернета' : busy ? 'Обновляем…' : syncError ? 'Не удалось получить обновления'
@@ -264,15 +273,6 @@ export default function Home() {
   // From the latest target day, so two quick swipes move two days even before a re-render.
   function shift(direction:number) { const next=addDays(target.current,direction*(view==='week'?7:1)); target.current=next; lensTo(next); setPinned(next===focus?null:next); }
   // The week strip slides in from the side the new week lies on.
-  // A new week: the strip stays in place (it used to be rebuilt and slide in from the side, and the numbers jumped);
-  // the new numbers only fade in.
-  const shownMonday = useRef(monday);
-  useLayoutEffect(() => {
-    if (shownMonday.current===monday) return;
-    shownMonday.current = monday;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    dateNav.current?.querySelectorAll('.day-button strong, .day-button span').forEach(el => el.animate({opacity:[.15, 1]}, {duration:260, easing:'ease-out'}));
-  }, [monday]);
   const dateNav = useRef<HTMLElement>(null);
   // A swipe of the days: the finger holds the drop; on a turn shift() glides it on from there, otherwise it settles back.
   const followDrag = (fraction:number|null, turned=false) => { if (fraction!==null) lensCtl.follow(fraction); else if (!turned) lensCtl.settle(); };
@@ -402,7 +402,7 @@ export default function Home() {
   const pageDate = (id:string) => id.slice(id.indexOf(':')+1);
   // Drawn pages are reused while nothing they show has changed: turning a day used to redraw the current day and
   // both neighbours (twice, with the deferred neighbours), which froze the day lens for a moment on every turn.
-  const pageDeps = [data.hash, groupName, faculty.term?.[0]?.start, today, clock, nextId, JSON.stringify(subgroups.selected), JSON.stringify(homework.tasks),
+  const pageDeps = [data.hash, groupName, faculty.term?.[0]?.start, today, focus, clock, nextId, JSON.stringify(glance), JSON.stringify(subgroups.selected), JSON.stringify(homework.tasks),
     homework.editing, homework.error, recent.map(c=>c.id).join(), faculty.notices.join('|'), checks.map(w=>w.id+w.text).join()].join('§');
   const pageCache = useRef(new Map<string,{deps:string; node:React.ReactNode}>());
   const renderPage = (id:string) => {
@@ -430,6 +430,7 @@ export default function Home() {
     }
     const density = weekly ? 'compact' : list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
     return <section className={weekly?'week-day':'day'} key={date} aria-label={formatDate(date)}>
+      {!weekly && (date===today || date===focus) && glanceLine}
       {weekly && <div className="day-title"><h2>{dayNames[weekday(date)]}<span> · {formatDate(date,{day:'numeric',month:'short'})}</span></h2><span>{lessonCount(list.length)}</span></div>}
       {list.length ? <div className={`list ${density} ${weekly?'':'fill'}`}>{items}</div>
         : kind.kind==='holiday' ? <div className="empty"><CalendarDays size={22}/><p>{kind.name}</p><small>Праздник, пар нет</small></div>
@@ -469,6 +470,15 @@ export default function Home() {
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
     </main> : <>
+    {/* Стекло: one fixed-height block — what day, its date, how many classes and when. Every line keeps its height
+        whatever the day, so nothing below moves when the day changes; «Сегодня» keeps its place even while hidden. */}
+    <div className="dayhead glass-only">
+      <h1>{view==='day' ? near || dayNames[weekday(selected)] : 'Неделя'}<span>{view==='day' ? formatDate(selected) : weekRange}</span></h1>
+      <div className="dayhead-row">
+        <p className="dayhead-sub">{view==='day' ? <>{lessonCount(selectedLessons.length)}{dayStart && ` · ${dayStart}–${dayEnd}`}</> : lessonCount(shownWeekCount)}{parity!=null && ` · ${parity?'нечётная':'чётная'} неделя`}</p>
+        <button className="dayhead-back" data-on={pinned!==null || undefined} tabIndex={pinned!==null ? 0 : -1} aria-hidden={pinned===null || undefined} onClick={()=>go(focus)}>{focus===today?'Сегодня':'К ближайшим'}</button>
+      </div>
+    </div>
     <div className={`heading ${view}`}>
       <div className="heading-text">
         <p className="glass-only glass-date">{view==='day' ? `${dayNames[weekday(selected)]}, ${formatDate(selected,{day:'numeric',month:'long'})}` : 'Расписание на неделю'}</p>
@@ -490,7 +500,7 @@ export default function Home() {
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
       <div className="days" style={{'--day':weekday(selected)} as CSSProperties}>
         {view==='day' && <i ref={lensCtl.ref} className={`day-lens ${selected===today?'today':''}`} aria-hidden="true"/>}
-        {week.map((date,i)=><button key={i} className={`day-button ${date===today?'today':''}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}
+        {week.map((date,i)=><button key={i} className={`day-button ${date===today?'today':''} ${lessonsOn(data,date).length?'':'off'}`} aria-pressed={view==='day' && date===selected} onClick={()=>{setView('day');go(date);}} aria-label={dayNames[i]+', '+formatDate(date)}><span>{shortDays[i]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[i]}</em></button>)}
       </div>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>
@@ -505,18 +515,19 @@ export default function Home() {
         <div className="notices-head"><strong>Объявление ВМК</strong><button className="dismiss-message" aria-label="Прочитано" onClick={dismissNotices}><X size={15}/></button></div>
         {freshNotices.map(n=><p key={n}>{n}</p>)}
       </section>}
-      {glance && glance.kind!=='done' && glance.kind!=='now' && <section className={`glance-line ${glance.kind}`} aria-label="Мой день сейчас">
-        <b>{glance.left!=null && (glance.left<60 ? `${glance.left} мин` : `${Math.floor(glance.left/60)}:${String(glance.left%60).padStart(2,'0')}`)}</b>
-        <strong>{{now:'до конца пары',before:'до первой пары',break:'до следующей пары'}[glance.kind as 'now']}</strong>
-        <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
-      </section>}
       {message && <div className="message" role="status"><span>{message}{history.length>0 && message!=='Изменений нет' && <button className="message-more" onClick={()=>setChangesOpen(true)}>Что поменялось у всех групп</button>}</span><button className="dismiss-message" aria-label="Закрыть уведомление" onClick={()=>setMessage('')}><X size={15}/></button></div>}
-      <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} surface={scheduleArea} onDrag={view==='day' ? followDrag : undefined}/>
+      <DayPager page={pageId} render={renderPage} neighbour={neighbourPage} onTurn={shift} onDrag={view==='day' ? followDrag : undefined}/>
     </main>
 
     <footer className="footer">
       <div className="footer-links"><button className={view==='week'?'fresh-view':''} aria-pressed={view==='week'} onClick={()=>{setView(view==='week'?'day':'week');scrollTo({top:0});}}>{view==='week'?'По дням':'Вся неделя'}</button><button className="footer-count" onClick={()=>setStatsOpen(true)}>{weekCount} {plural(weekCount,['пара','пары','пар'])} в неделю</button>{history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения</button>}{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
-      <AppVersion/>
+      <div className="footer-meta">
+        <button className={`status glass-only ${tone}`} onClick={()=>setStatusOpen(true)} aria-label={`Статус проверки: ${statusText}`}>
+          <span className="status-icon">{!online?<WifiOff size={12}/>:busy?<RefreshCw size={12} className="spin"/>:<span className="status-dot"/>}</span>
+          <span>{statusText}</span>
+        </button>
+        <AppVersion/>
+      </div>
     </footer>
     </>}
 

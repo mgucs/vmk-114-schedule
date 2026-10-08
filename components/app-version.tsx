@@ -9,7 +9,7 @@ const own = (import.meta.url.match(/index-([\w-]+)\.js/) || [])[1] || 'dev';
 export const appCode = own.slice(0, 6);
 export const appDate = (() => {
   const d = new Date(__APP_DATE__);
-  return Number.isFinite(d.getTime()) ? d.toLocaleString('ru-RU', {timeZone:'Europe/Moscow', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'}) : '';
+  return Number.isFinite(d.getTime()) ? d.toLocaleString('ru-RU', {timeZone:'Europe/Moscow', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}).replace(',', '') : '';
 })();
 
 // The script the server publishes now; null if it cannot be asked (offline, dev server).
@@ -22,7 +22,7 @@ export async function publishedCode() {
 }
 export const isOutdated = async () => { const latest = await publishedCode(); return own !== 'dev' && !!latest && latest !== own; };
 
-// «Версия от 8 октября, 21:49 · a1b2c3 · последняя», or a button when a newer one is out.
+// «Версия 8 окт. 21:49 · a1b2c3 · последняя», or a button when a newer one is out.
 export function AppVersion() {
   const [state, setState] = useState<'checking'|'latest'|'outdated'|'unknown'>('checking');
   useEffect(() => {
@@ -34,7 +34,7 @@ export function AppVersion() {
     return () => { live = false; document.removeEventListener('visibilitychange', back); };
   }, []);
   return <p className="app-version">
-    Версия{appDate ? ` от ${appDate}` : ''} · {appCode}
+    Версия{appDate ? ` ${appDate}` : ''} · {appCode}
     {state === 'latest' && <span> · последняя</span>}
     {state === 'outdated' && <> · <button className="text-button" onClick={() => location.reload()}>есть новее — обновить</button></>}
   </p>;
