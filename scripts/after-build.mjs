@@ -14,6 +14,8 @@ async function walk(dir){const found=[];for(const item of await readdir(dir,{wit
 const paths=(await walk(root)).filter(p=>!['sw.js','precache.json','latest.pdf','source.json','parser.mjs'].includes(p)&&!p.startsWith('archive/')&&!(p.startsWith('vendor/')&&!/^vendor\/pdf(\.worker)?\.mjs$/.test(p))).sort();
 const sw=await readFile(path.join(root,'sw.js'),'utf8');
 const hash=createHash('sha256').update(sw);
-for(const name of paths){hash.update(name);hash.update(await readFile(path.join(root,name)));}
-await writeFile(path.join(root,'precache.json'),JSON.stringify(paths));
+// Each file with a hash of its content: the service worker keeps files that did not change from the previous version.
+const list={};
+for(const name of paths){const bytes=await readFile(path.join(root,name));hash.update(name);hash.update(bytes);list[name]=createHash('sha256').update(bytes).digest('hex').slice(0,16);}
+await writeFile(path.join(root,'precache.json'),JSON.stringify(list));
 await writeFile(path.join(root,'sw.js'),sw.replace('__BUILD_ID__',hash.digest('hex').slice(0,16)));

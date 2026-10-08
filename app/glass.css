@@ -538,3 +538,4 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .tag.consultation { background:color-mix(in srgb,var(--now) 18%,transparent); color:var(--now); box-shadow:none; }
 [data-style=glass] .list .lesson.lecture { box-shadow:inset 3px 0 0 var(--lecture), var(--c-shadow); }
 [data-style=glass] .list .lesson.lecture.current { box-shadow:inset 3px 0 0 var(--lecture), inset 0 0 0 1px color-mix(in srgb,var(--now) 45%,transparent), var(--c-shadow); }
+[data-style=glass] .app-version { display:table; padding:3px 10px; border-radius:999px; background:var(--c-fill); box-shadow:var(--c-shadow); opacity:1; }

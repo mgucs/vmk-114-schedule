@@ -412,7 +412,12 @@ textarea { font:inherit; }
 .heading .view-switch { grid-column:2; grid-row:1; }
 .eyebrow { grid-column:1/-1; display:flex; align-items:center; gap:6px; min-width:0; margin:0; color:var(--muted-foreground); font-size:14px; font-weight:450; white-space:nowrap; }
 .eyebrow>* { flex-shrink:0; }
-.eyebrow .text-button { padding:0; font-size:14px; }
+/* One fixed line: «К ближайшим» (a button) is taller than plain text, and the heading and the day strip under it
+   jumped by 3px on every day it appeared. */
+.eyebrow { height:20px; line-height:20px; overflow:hidden; }
+.eyebrow .text-button { padding:0; font-size:inherit; line-height:inherit; }
+.app-version { margin:14px 2px 0; color:var(--muted-foreground); font-size:11.5px; line-height:1.5; opacity:.8; }
+.app-version .text-button { padding:0; font-size:inherit; color:var(--now, var(--foreground)); }
 .eyebrow .count::after, .eyebrow .e-rel::after { content:'·'; margin-left:6px; opacity:.6; }
 .eyebrow .status { flex-shrink:1; min-width:0; }
 .view-switch { display:flex; flex-shrink:0; padding:2px; border-radius:9px; background:var(--muted); }

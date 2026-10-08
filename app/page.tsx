@@ -21,6 +21,7 @@ import {useDayLens} from '@/components/day-lens';
 import {Wallpaper} from '@/components/wallpaper';
 import {findRoom} from '@/lib/map-route.mjs';
 import {PdfViewer} from '@/components/pdf-viewer';
+import {AppVersion, isOutdated} from '@/components/app-version';
 // three.js is loaded only when the map is opened.
 const CampusMap = lazy(() => import('@/components/campus-map').then(m => ({default:m.CampusMap})));
 import seed from '@/public/source.json';
@@ -319,8 +320,9 @@ export default function Home() {
     const onTouch=()=>{touched=true;};
     window.addEventListener('pointerdown',onTouch,{passive:true});window.addEventListener('keydown',onTouch);
     const hadController=!!navigator.serviceWorker?.controller;
-    const onNewVersion=()=>{
-      if(!hadController)return;
+    const onNewVersion=async()=>{
+      // The page itself may already be the new version (it opens from the network first, sw.js): then nothing to do.
+      if(!hadController || !await isOutdated())return;
       const busy=!!document.querySelector('[data-slot=dialog-content]') || document.activeElement?.matches('input,textarea');
       if(!touched && !busy) location.reload(); else stale=true;
     };
@@ -499,6 +501,7 @@ export default function Home() {
 
     <footer className="footer">
       <div className="footer-links"><button className={view==='week'?'fresh-view':''} aria-pressed={view==='week'} onClick={()=>{setView(view==='week'?'day':'week');scrollTo({top:0});}}>{view==='week'?'По дням':'Вся неделя'}</button><button className="footer-count" onClick={()=>setStatsOpen(true)}>{weekCount} {plural(weekCount,['пара','пары','пар'])} в неделю</button>{history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения</button>}{subgroups.button}{faculty.contacts && <button onClick={()=>setContactsOpen(true)}>Учебная часть</button>}{calendar.button}{pdfUrl && <button onClick={()=>setPdfOpen(true)}>PDF</button>}</div>
+      <AppVersion/>
     </footer>
     </>}
 
