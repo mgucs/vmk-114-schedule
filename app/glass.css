@@ -349,7 +349,7 @@ html[data-style=glass] { background:var(--background); }
   --lg:0; --lg2:0;
   --c-fill-d:82%; --c-fill-l:90%; --c-past-d:68%; --c-past-l:80%; --c-blur-px:24px;
   --g-fill-p:62%; --g-blur-px:16px; --g-thick-p:90%; --g-blur-thick-px:28px; --g-tabs-p:70%;
-  --wp-photo:.66;  /* светлые темы: здание видно (было .28 — МГУ почти пропадал) */
+  --wp-photo:calc(.28 + .72 * var(--lg2));
   /* Слой контента */
   --c-fill:color-mix(in srgb,var(--card) var(--c-fill-l),transparent);
   --c-past:color-mix(in srgb,var(--card) var(--c-past-l),transparent);
@@ -372,7 +372,7 @@ html[data-style=glass] { background:var(--background); }
   :root[data-style=glass] { --gel:linear(0, 0.077, 0.246, 0.44, 0.622, 0.772, 0.883, 0.959, 1.005, 1.029, 1.038, 1.037, 1.032, 1.024, 1.017, 1.011, 1.006, 1.003, 1, 0.999, 0.999, 0.999, 0.999, 0.999, 1); }
 }
 :root[data-scheme=dark][data-style=glass] {
-  --wp-photo:.9;  /* тёмные темы: здание чёткое, как было у МГУ ночь */
+  --wp-photo:calc(.48 + .52 * var(--lg2));
   /* Затемнение под текстом: цвет карточки, смешанный с чёрным. */
   --c-fill:color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-fill-d),transparent);
   --c-past:color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-past-d),transparent);
@@ -642,6 +642,7 @@ html[data-style=glass] { background:var(--background); }
 :root[data-peek] .liquid-slider input[type=range] { visibility:visible; }
 
 /* Тёплая осень: фото МГУ тоже как под Night Shift — янтарный тон поверх (слой обоев статичный, рисуется один раз). */
+[data-style=glass][data-theme=amber] .wallpaper::after { content:''; position:absolute; inset:0; background:#ff9d2e; mix-blend-mode:multiply; opacity:.62; pointer-events:none; }
 :root[data-style=glass][data-theme=amber] { --g-accent:#ffc35c; }
 
 /* Кнопки шапки — как полоса дней: без общей капсулы, три тихие круглые иконки прямо на фоне;
@@ -673,37 +674,5 @@ html[data-style=glass] { background:var(--background); }
 @media (hover:hover) { [data-style=glass] .groups-sheet .group-tiles button:not([aria-pressed=true]):hover { background:color-mix(in srgb,var(--foreground) 11%,transparent); } }
 [data-style=glass] .groups-sheet .share-group { justify-content:flex-start; margin-top:22px; padding:10px 0 2px; border:0; border-top:1px solid color-mix(in srgb,var(--foreground) 8%,transparent); border-radius:0;
   background:none; color:var(--muted-foreground); font-size:14px; }
-
-/* Лёгкий оттенок фото у каждой темы (слой обоев статичный, рисуется один раз); Оникс — чёрно-белый снимок,
-   Тёплая осень — Night Shift. МГУ ночь и МГУ день — исходный снимок. */
-[data-style=glass] .wallpaper::after { content:''; position:absolute; inset:0; pointer-events:none;
-  background:var(--tint,#0000); mix-blend-mode:var(--tint-mode,color); opacity:var(--tint-a,0); }
-:root[data-theme=midnight] { --tint:#7a5cff; --tint-a:.14; }
-:root[data-theme=winter]   { --tint:#5fd2ff; --tint-a:.14; }
-:root[data-theme=ocean]    { --tint:#14b8b2; --tint-a:.16; }
-:root[data-theme=forest]   { --tint:#3fa35c; --tint-a:.16; }
-:root[data-theme=steel]    { --tint:#8b929c; --tint-a:.4; }
-:root[data-theme=onyx]     { --tint:#808080; --tint-a:1; }
-:root[data-theme=graphite] { --tint:#8a8f86; --tint-a:.7; }
-:root[data-theme=night]    { --tint:#ffbe2e; --tint-a:.12; }
-:root[data-theme=autumn]   { --tint:#d2581f; --tint-a:.16; }
-:root[data-theme=amber]    { --tint:#ff9d2e; --tint-mode:multiply; --tint-a:.5; }
-:root[data-theme=snow]     { --tint:#d3d9e0; --tint-a:.5; }
-:root[data-theme=fog]      { --tint:#8ea3b8; --tint-a:.3; }
-:root[data-theme=mint]     { --tint:#2fbf9a; --tint-a:.14; }
-:root[data-theme=lavender] { --tint:#9a80f0; --tint-a:.14; }
-:root[data-theme=pearl]    { --tint:#d6bf98; --tint-a:.25; }
-:root[data-theme=paper]    { --tint:#f2dfae; --tint-mode:multiply; --tint-a:.3; }
-:root[data-theme=spring]   { --tint:#9ad45a; --tint-a:.14; }
-:root[data-theme=summer]   { --tint:#ffa233; --tint-a:.18; }
-
-/* Подача фото как была у МГУ ночь — теперь у всех тем: лёгкая дымка (сверху чуть, к низу плотнее), подсвеченное небо
-   видно, без цветного свечения у горизонта. Затемнение — ползунком «Фон» (.glass-dim). */
-@media (max-width:899px) {
-  [data-style=glass] .glass-atmosphere { background:linear-gradient(180deg, color-mix(in srgb,var(--background) 22%,transparent) 0%, transparent 30%, color-mix(in srgb,var(--background) 12%,transparent) 62%, color-mix(in srgb,var(--background) 45%,transparent) 100%); }
-  [data-style=glass] .glass-horizon { display:none; }
-}
-/* Тёмные темы на телефоне: здание чуть ниже — над неделей чистое небо, шпиль за заголовком дня (так было у МГУ ночь). */
-@media (max-width:899px) {
-  :root[data-scheme=dark][data-style=glass] :is(.glass-campus,.glass-soft) { background-size:auto 88%; background-position:50% 100%; background-repeat:no-repeat; }
-}
+/* Оникс — чёрно-белый снимок (слой обоев статичный, рисуется один раз). */
+[data-style=glass][data-theme=onyx] .wallpaper::after { content:''; position:absolute; inset:0; background:#808080; mix-blend-mode:color; pointer-events:none; }
