@@ -1,7 +1,6 @@
-import React,{useEffect,useMemo,useRef,useState} from 'react';
+import React,{useEffect,useLayoutEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {Palette,NotebookPen,Check,CalendarPlus} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
-import {StylePreview} from './style-preview';
 import {calendarFile} from '../lib/calendar.mjs';
 import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
 import {loadChoice,setChoice} from '../lib/glass-quality.mjs';
@@ -17,7 +16,6 @@ function GlassQuality(){
     <div className="quality-switch" role="radiogroup" aria-label="Качество эффектов стекла">
       {QUALITY.map(([name,label])=><button key={name} role="radio" aria-checked={choice===name} onClick={()=>{setChoice(name);setChoiceState(name);}}>{label}</button>)}
     </div>
-    <p className="liquid-hint">{choice==='auto'?'Телефон сам выбирает: если при листании не успевает, эффектов становится меньше.':choice==='lite'?'Плоско и легко: без бликов, теней и затемнений. Для слабых телефонов.':choice==='balanced'?'Стекло из тона, бликов и кромки, без живого размытия — листается плавно на любом телефоне.':'Живое размытие под панелью разделов, кнопками шапки и окнами, на компьютере ещё и преломление по краям. На слабом телефоне может подтормаживать.'}</p>
   </div>;
 }
 
@@ -58,7 +56,6 @@ export function LiquidSlider(){
       onPointerDown={()=>peek(true)} onPointerCancel={()=>peek(false)} onLostPointerCapture={()=>peek(false)}
       onChange={e=>change(Number(e.target.value))} onPointerUp={e=>save(Number(e.currentTarget.value))} onKeyUp={e=>save(Number(e.currentTarget.value))} onBlur={e=>save(Number(e.currentTarget.value))}/>
     <div className="liquid-ends"><span>Светлее</span><button className="text-button" onClick={()=>{change(LIQUID_DEFAULT);save(LIQUID_DEFAULT);}}>Сбросить</button><span>Темнее</span></div>
-    <p className="liquid-hint">Насколько приглушить фото МГУ. Карточки с парами всегда остаются плотными, чтобы текст читался.</p>
   </div>;
 }
 const loadStyle=()=>{try{const s=localStorage.getItem(styleKey);return STYLES.some(x=>x[0]===s)?s!:'glass';}catch{return 'glass';}};
@@ -83,14 +80,6 @@ export function useStyleChoice() {
   }
   return [style,pickStyle] as const;
 }
-export function StylePicker({value,onChange}:{value:string;onChange:(name:string)=>void}) {
-  // The chosen style is in view when the list opens.
-  const list=useRef<HTMLDivElement>(null);
-  useEffect(()=>{const el=list.current,on=el?.querySelector<HTMLElement>('[aria-pressed=true]');if(el&&on)el.scrollLeft=on.offsetLeft-(el.clientWidth-on.offsetWidth)/2;},[]);
-  return <div className="style-grid style-gallery" ref={list}>{STYLES.map(([name,label,hint])=><button key={name} aria-label={`${label}: ${hint}`} aria-pressed={value===name} onClick={()=>onChange(name)}>
-    <StylePreview name={name}/><span className="style-choice-title"><strong>{label}</strong><span className="style-check" aria-hidden="true">{value===name&&<Check size={12}/>}</span></span><small>{hint}</small>
-  </button>)}</div>;
-}
 export function ThemeButton() {
   // MSU is the default look; anyone can switch.
   const [choice,setChoice]=useState(()=>{try{return legacy(localStorage.getItem(themeKey))||'msu';}catch{return 'msu';}});
@@ -103,27 +92,60 @@ export function ThemeButton() {
     media.addEventListener('change',follow);return()=>media.removeEventListener('change',follow);
   },[choice,style]);
   function pick(name:string){setChoice(name);try{localStorage.setItem(themeKey,name);}catch{}}
+  // Dark / light / system: the dial shows only that scheme's themes. Switching the scheme puts on its МГУ theme.
+  const schemeOf=(c:string)=>c==='auto'?'auto':(THEMES.find(t=>t[0]===c)?.[2]||'dark');
+  const [scheme,setScheme]=useState(()=>schemeOf(choice));
+  function chooseScheme(next:'dark'|'light'|'auto'){setScheme(next);if(next==='auto')pick('auto');else if(schemeOf(choice)!==next)pick(next==='dark'?'msu':'msu-light');}
+  const themeItems=THEMES.filter(t=>t[2]===scheme).map(([name,label,,c])=>({key:name,title:label,node:<span className="dial-swatch" style={{'--a':c[0],'--b':c[1],'--c':c[2]} as React.CSSProperties}/>}));
+  const styleItems=STYLES.map(([name,label])=>({key:name,title:label,node:<span>{label}</span>}));
   return <>
-    <button className="icon-button" aria-label="Оформление" title="Оформление" onClick={()=>setOpen(true)}><Palette size={18}/></button>
-    {/* The title, the switch and the close button stay in place; only the choices scroll. */}
-    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog settings-dialog"><DialogTitle>Оформление</DialogTitle><DialogDescription>Сохраняется на этом устройстве.</DialogDescription>
-      <div className="segmented" role="tablist" aria-label="Что настраивать">
-        <button role="tab" aria-selected={section==='style'} onClick={()=>setSection('style')}>Стиль</button>
-        <button role="tab" aria-selected={section==='theme'} onClick={()=>setSection('theme')}>Тема</button>
+    <button className="icon-button" aria-label="Оформление" title="Оформление" onClick={()=>{setScheme(schemeOf(choice));setOpen(true);}}><Palette size={18}/></button>
+    {/* A sheet at the bottom with no veil: the real page above it is the preview, and changes as the dials turn. */}
+    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog settings-sheet">
+      <DialogTitle className="sr-only">Оформление</DialogTitle><DialogDescription className="sr-only">Стиль и цветовая тема, сохраняются на этом устройстве</DialogDescription>
+      <Dial className="style-dial" label="Стиль" items={styleItems} value={style} onPick={pickStyle}/>
+      <div className="scheme-switch" role="radiogroup" aria-label="Тёмные или светлые темы">
+        {([['dark','Тёмные'],['light','Светлые'],['auto','Авто']] as const).map(([k,label])=><button key={k} role="radio" aria-checked={scheme===k} onClick={()=>chooseScheme(k)}>{label}</button>)}
       </div>
-      <div className="settings-scroll">
-      {section==='style' ? <>{style==='glass' && <LiquidSlider/>}<StylePicker value={style} onChange={pickStyle}/></>
-      : (['light','dark'] as const).map(scheme=><div key={scheme}>
-        <h4 className="theme-section">{scheme==='light'?'Светлые':'Тёмные'}</h4>
-        <div className="theme-grid">
-          {scheme==='light' && <button aria-pressed={choice==='auto'} onClick={()=>pick('auto')}><span className="swatch auto"/>Как в системе</button>}
-          {THEMES.filter(t=>t[2]===scheme).map(([name,label,,colors])=><button key={name} aria-pressed={choice===name} onClick={()=>pick(name)}>
-            <span className="swatch" style={{background:colors[0]}}><i style={{background:colors[1]}}/><i style={{background:colors[2]}}/></span>{label}</button>)}
-        </div>
-      </div>)}
-      </div>
+      {scheme==='auto'
+        ? <p className="dial-name">Как в системе</p>
+        : <><Dial key={scheme} className="theme-dial" label="Тема" items={themeItems} value={choice} onPick={pick}/>
+          <p className="dial-name">{THEMES.find(t=>t[0]===choice)?.[1]||''}</p></>}
+      {style==='glass' && <LiquidSlider/>}
     </DialogContent></Dialog>
   </>;
+}
+
+// A horizontal dial like the iPhone camera's zoom or modes: a native snap scroller; whatever reaches the middle is the
+// choice and is applied at once, so the page behind shows it. Items grow toward the middle (--near, 0…1), so the next
+// one is seen coming. Item centres are measured once (and on resize), not on every scroll step.
+function Dial({items,value,onPick,className,label}:{items:{key:string;title:string;node:ReactNode}[];value:string;onPick:(key:string)=>void;className:string;label:string}) {
+  const ref=useRef<HTMLDivElement>(null),centers=useRef<number[]>([]),at=useRef(value),frame=useRef(0);
+  const pick=useRef(onPick);pick.current=onPick;
+  const keys=items.map(x=>x.key).join();
+  useLayoutEffect(()=>{
+    const el=ref.current;if(!el)return;
+    const kids=()=>[...el.children] as HTMLElement[];
+    const measure=()=>{centers.current=kids().map(k=>k.offsetLeft+k.offsetWidth/2);};
+    function paint(){
+      frame.current=0;const mid=el!.scrollLeft+el!.clientWidth/2;let best=0,gap=Infinity;
+      kids().forEach((k,i)=>{const d=Math.abs(centers.current[i]-mid);k.style.setProperty('--near',Math.max(0,1-d/140).toFixed(3));if(d<gap){gap=d;best=i;}});
+      const key=items[best]?.key;
+      if(key&&key!==at.current){at.current=key;navigator.vibrate?.(3);pick.current(key);}
+    }
+    measure();
+    const i=Math.max(0,items.findIndex(x=>x.key===value));
+    el.scrollLeft=centers.current[i]-el.clientWidth/2;at.current=items[i]?.key;paint();
+    const scroll=()=>{if(!frame.current)frame.current=requestAnimationFrame(paint);};
+    el.addEventListener('scroll',scroll,{passive:true});
+    const resize=new ResizeObserver(()=>{measure();paint();});resize.observe(el);
+    return()=>{el.removeEventListener('scroll',scroll);resize.disconnect();cancelAnimationFrame(frame.current);};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[keys]);
+  const center=(i:number)=>{const el=ref.current;if(el)el.scrollTo({left:centers.current[i]-el.clientWidth/2,behavior:'smooth'});};
+  return <div className={`dial ${className}`} ref={ref} role="listbox" aria-label={label}>
+    {items.map((x,i)=><button key={x.key} role="option" aria-selected={x.key===value} aria-label={x.title} onClick={()=>center(i)}>{x.node}</button>)}
+  </div>;
 }
 
 // All classes of the group as an .ics file: the phone's calendar imports them with weekly repeats.

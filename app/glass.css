@@ -509,9 +509,9 @@ html[data-style=glass] { background:var(--background); }
   font-size:19px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-.02em; transform:none!important; transition:background-color .2s, color .2s; }
 [data-style=glass] .day-button .pairs { display:flex; gap:2px; height:4px; margin-top:7px; }
 [data-style=glass] .day-button .pairs b { width:4px; height:4px; border-radius:50%; background:color-mix(in srgb,var(--foreground) 16%,transparent); }
-[data-style=glass] .day-button .pairs b.class { background:var(--foreground); }
+[data-style=glass] .day-button .pairs b:is(.class,.consultation,.sport) { background:var(--foreground); }
 [data-style=glass] .day-button .pairs b.lecture { background:var(--lecture); }
-[data-style=glass] .day-button .pairs b:is(.consultation,.sport) { background:color-mix(in srgb,var(--foreground) 55%,transparent); }
+
 [data-style=glass] .day-button.off strong { color:var(--muted-foreground); }
 [data-style=glass] .day-button.past:not([aria-pressed=true]) :is(span,strong,.pairs) { opacity:.68; }
 [data-style=glass] .day-button.today span, [data-style=glass] .day-button.today strong { color:var(--g-accent); }
@@ -623,7 +623,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .more-status { display:flex; align-items:center; gap:8px; margin:4px 2px 2px; padding:0; border:0; background:none; color:var(--muted-foreground); font-size:13px; text-align:left; }
 [data-style=glass] .more-sheet .app-version { margin:4px 2px 0; font-size:12px; opacity:.75; }
 /* Окна без живого размытия — плотные, фон под ними темнее: в окне фокус на окне. */
-:root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-content] { background:color-mix(in srgb,color-mix(in srgb,var(--card) 82%,#000) 97%,transparent); }
+:root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-content] { background:color-mix(in srgb,var(--card) 82%,#000); }
 :root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-overlay] { background:rgb(0 0 0 / .55); }
 /* «через 8 ч» на карточке следующей пары повторяет строку «до первой пары» над ней — оставлено только «идёт». */
 [data-style=glass] .lesson .live.next { display:none; }

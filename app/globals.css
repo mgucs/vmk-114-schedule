@@ -1146,3 +1146,44 @@ button.changed-note span { margin-left:auto; font-weight:700; text-decoration:un
 [data-slot=dialog-content] > [data-slot=dialog-close] svg { width:20px!important; height:20px!important; }
 [data-slot=dialog-content] > [data-slot=dialog-close]:active { background:color-mix(in srgb,var(--foreground) 12%,transparent); }
 
+
+/* ═══ Оформление: шторка внизу без затемнения — страница над ней и есть превью ═══ */
+[data-slot=dialog-content].settings-sheet { top:auto!important; bottom:calc(10px + env(safe-area-inset-bottom))!important; translate:-50% 0!important;
+  display:flex; flex-direction:column; gap:10px; max-height:none; padding:16px 0 14px; border-radius:30px; overflow:hidden; }
+[data-slot=dialog-overlay]:has(+ .settings-sheet) { background:transparent!important; }
+.settings-sheet > :not(.dial) { margin-inline:18px; }
+.settings-sheet > [data-slot=dialog-close] { margin:0; }
+
+/* Колесо: родная прокрутка с примагничиванием; то, что в центре, — выбрано. Элементы растут к центру (--near). */
+.dial { display:flex; align-items:center; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory; scrollbar-width:none; overscroll-behavior-x:contain;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent); mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent); }
+.dial::-webkit-scrollbar { display:none; }
+.dial::before, .dial::after { content:''; flex:0 0 50%; }
+.dial > button { flex:0 0 auto; display:grid; place-items:center; padding:0; border:0; background:none; scroll-snap-align:center; -webkit-tap-highlight-color:transparent; }
+
+/* Стиль — подписи, как режимы камеры. */
+.style-dial { height:30px; margin-right:34px; }
+.style-dial > button { padding:0 11px; color:var(--muted-foreground); font-size:12.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  opacity:calc(.45 + var(--near,0) * .55); transition:color .2s; }
+.style-dial > button[aria-selected=true] { color:var(--accent-ink, var(--foreground)); }
+
+.scheme-switch { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; padding:3px; border-radius:999px; background:color-mix(in srgb,var(--foreground) 7%,transparent); }
+.scheme-switch button { height:30px; border:0; border-radius:999px; background:none; color:var(--muted-foreground); font-size:13px; font-weight:650; }
+.scheme-switch button[aria-checked=true] { background:var(--foreground); color:var(--background); }
+
+/* Тема — цветные круги: фон темы, её акцент и цвет «сейчас». */
+.theme-dial { height:76px; }
+.theme-dial > button { width:60px; height:76px; }
+.dial-swatch { position:relative; display:block; width:44px; height:44px; border-radius:50%; overflow:hidden;
+  background:conic-gradient(from 210deg, var(--b) 0 33%, var(--c) 0 50%, var(--a) 0);
+  box-shadow:inset 0 0 0 1px rgb(255 255 255 / .18), 0 4px 12px -4px rgb(0 0 0 / .5);
+  transform:scale(calc(.66 + var(--near,0) * .5)); opacity:calc(.4 + var(--near,0) * .6); }
+.dial-swatch::after { content:''; position:absolute; inset:9px; border-radius:50%; background:var(--a); box-shadow:inset 0 0 0 1px rgb(255 255 255 / .12); }
+.theme-dial > button[aria-selected=true] .dial-swatch { box-shadow:0 0 0 2px var(--background), 0 0 0 3.5px var(--foreground), 0 6px 16px -6px rgb(0 0 0 / .6); }
+.dial-name { margin:-4px 18px 0; text-align:center; font-size:15px; font-weight:700; letter-spacing:-.01em; }
+.settings-sheet .liquid-slider { margin:2px 18px 0; padding:12px 0 0; border-radius:0; background:none; border-top:1px solid color-mix(in srgb,var(--foreground) 8%,transparent); }
+.settings-sheet .liquid-head strong { font-size:13px; font-weight:650; color:var(--muted-foreground); }
+.settings-sheet .liquid-head span { font-size:12px; }
+.settings-sheet .quality-switch { margin-top:6px; }
+.settings-sheet .liquid-slider input[type=range] { height:30px; }
+.settings-sheet .liquid-ends { font-size:11.5px; }

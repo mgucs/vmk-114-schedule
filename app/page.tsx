@@ -58,10 +58,15 @@ const formatDate = (iso:string,options:Intl.DateTimeFormatOptions={day:'numeric'
 const stamp = (iso:string|null) => iso && Number.isFinite(Date.parse(iso)) ? fmt({timeZone:'Europe/Moscow',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(iso)) : 'нет данных';
 const plural = (n:number,forms:[string,string,string]) => forms[n%10===1&&n%100!==11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2];
 const lessonCount = (n:number) => n ? `${n} ${plural(n,['пара','пары','пар'])}` : 'Без пар';
-// The six pairs of a VMK day. A class takes every pair its time overlaps (most take one; some, like 15:10–18:50,
-// take several) — the strip shows a day as these six places.
+// The six pairs of a VMK day; the strip shows a day as these six places. A class is one class: it takes the pair its
+// time overlaps most (PE at 16:50–18:20 touches the 5th and the 6th pair but is one class, in the 5th).
 const PAIRS = [['08:45','10:20'],['10:30','12:05'],['12:50','14:25'],['14:35','16:10'],['16:20','17:55'],['18:00','19:35']];
-const pairsOf = (l:{start:string;end:string}) => PAIRS.flatMap(([s,e],i)=>l.start<e && l.end>s ? [i] : []);
+const toMin = (t:string) => Number(t.slice(0,2))*60+Number(t.slice(3,5));
+function pairsOf(l:{start:string;end:string}) {
+  let best = -1, most = 0;
+  PAIRS.forEach(([s,e],i) => { const o = Math.min(toMin(e),toMin(l.end)) - Math.max(toMin(s),toMin(l.start)); if (o>most) { most = o; best = i; } });
+  return best<0 ? [] : [best];
+}
 
 function ago(iso:string|null) {
   if (!iso || !Number.isFinite(Date.parse(iso))) return '';
