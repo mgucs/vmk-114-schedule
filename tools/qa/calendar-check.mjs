@@ -28,7 +28,7 @@ const frames = async run => {
   return page.evaluate(() => { const f = window.__frames, gaps = f.slice(1).map((t, i) => Math.round(t - f[i]));
     return {frames:gaps.length, over34:gaps.filter(g => g > 34).length, worst:Math.max(0, ...gaps), longFrames:window.__long}; });
 };
-console.log('open tab  ', await frames(async () => { await page.tap('.dock button:nth-child(3)'); await page.waitForSelector('.term-month'); await page.waitForTimeout(800); }));
+console.log('open tab  ', await frames(async () => { await page.tap('.dock button:nth-child(3)'); await page.waitForSelector('.term-page .term-top'); await page.waitForTimeout(800); }));
 const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', {type, touchPoints:type === 'touchEnd' ? [] : [{x, y}]});
 async function swipe(dx) {
   const b = await page.locator('.term-pager').boundingBox(); const y = b.y + 150; let x = dx < 0 ? b.x + b.width - 40 : b.x + 40;
@@ -36,9 +36,9 @@ async function swipe(dx) {
   for (let i = 0; i < 12; i++) { x += dx / 12; await touch('touchMove', x, y); await page.waitForTimeout(16); }
   await touch('touchEnd', x, y); await page.waitForTimeout(700);
 }
-const month = () => page.evaluate(() => { const el = document.querySelector('.term-pager'); return document.querySelectorAll('.term-month h2')[Math.round(el.scrollLeft / el.clientWidth)]?.textContent; });
+const month = () => page.evaluate(() => { const el = document.querySelector('.term-pager'); return document.querySelectorAll('.term-page')[Math.round(el.scrollLeft / el.clientWidth)]?.querySelector('h2')?.textContent; });
 console.log('swipe →→ ', await frames(async () => { await swipe(-260); await swipe(-260); }), await month());
 console.log('swipe ←  ', await frames(async () => { await swipe(260); }), await month());
-console.log('tap day   ', await frames(async () => { await page.tap('.term-month:nth-child(2) .term-cell[aria-label*="18"]'); await page.waitForTimeout(400); }),
+console.log('tap day   ', await frames(async () => { await page.tap('.term-page:nth-child(2) .term-cell[aria-label*="18"]'); await page.waitForTimeout(400); }),
   await page.evaluate(() => document.querySelector('.term-day strong')?.textContent));
 await browser.close(); server.close();

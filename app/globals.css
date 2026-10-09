@@ -78,7 +78,7 @@ button { font:inherit; cursor:pointer; }
 button:disabled { cursor:default; opacity:.45; }
 a { color:inherit; text-decoration:none; }
 button:focus-visible, a:focus-visible { outline:2px solid var(--ring); outline-offset:3px; }
-.shell { max-width:720px; margin:auto; padding:0 14px max(20px,env(safe-area-inset-bottom)); min-height:100dvh; display:flex; flex-direction:column; }
+.shell { --gutter:14px; max-width:720px; margin:auto; padding:0 14px max(20px,env(safe-area-inset-bottom)); min-height:100dvh; display:flex; flex-direction:column; }
 .shell>main { flex:1; }
 
 /* Dialogs */
@@ -155,7 +155,7 @@ textarea { font:inherit; }
 .spin { animation:spin 1s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 @media (max-width:360px) {
-  .shell { padding-left:10px; padding-right:10px; }
+  .shell { --gutter:10px; padding-left:10px; padding-right:10px; }
   h1 { font-size:28px; }
   .lesson { padding:7px 10px 8px; }
   .lesson h3 { font-size:15.5px; }
@@ -385,7 +385,7 @@ textarea { font:inherit; }
 
 /* ——— Frame shared by every style. Sentence case everywhere, one typeface per style,
    the accent means only "now" and "today"; a lecture is marked by the theme's lecture colour. ——— */
-.shell { max-width:640px; padding:0 16px calc(84px + env(safe-area-inset-bottom)); }
+.shell { --gutter:16px; max-width:640px; padding:0 16px calc(84px + env(safe-area-inset-bottom)); }
 .shell>main { display:flex; flex-direction:column; }
 .text-button { padding:6px 2px; border:0; background:none; color:var(--foreground); font-size:14px; font-weight:550; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--hair-strong); }
 .text-button.danger { color:var(--danger); text-decoration:none; }
@@ -556,7 +556,7 @@ button.room:hover { text-decoration:underline; text-underline-offset:3px; text-d
 .theme-grid button, .style-grid button { border-radius:14px; }
 .eyebrow .day-end { font-weight:inherit; }
 @media (max-width:360px) {
-  .shell { padding-left:12px; padding-right:12px; }
+  .shell { --gutter:12px; padding-left:12px; padding-right:12px; }
   .heading h1 { font-size:26px; }
   .teacher-row { flex-wrap:wrap; }
 }
@@ -814,18 +814,26 @@ h1 .h-month { display:none; }
 .tabs button { width:min(104px,25%); }
 .term { padding:6px 0 0; }
 .term-sub { margin:2px 0 0; color:var(--muted-foreground); font-size:14px; }
-.term-cal { position:relative; margin:12px 0 0; padding:10px 4px 12px; border-radius:22px; background:var(--card); box-shadow:var(--shadow); }
-.term-nav { position:absolute; top:9px; right:8px; z-index:2; display:flex; align-items:center; gap:0; }
-.term-nav button { display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:none; color:var(--foreground); -webkit-tap-highlight-color:transparent; transition:opacity .2s, background-color .2s; }
-.term-nav button:disabled { opacity:.22; }
-.term-nav button:not(:disabled):active { background:color-mix(in srgb,var(--foreground) 12%,transparent); }
-.term-nav .term-today { width:auto; height:28px; margin-right:6px; padding:0 12px; border-radius:999px; background:var(--foreground); color:var(--background); font-size:12.5px; font-weight:650; visibility:hidden; }
-.term-nav .term-today[data-on] { visibility:visible; }
-.term-pager { display:flex; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory; scrollbar-width:none; overscroll-behavior-x:contain; }
+/* Месяцы — карусель целых карточек от края до края экрана (--gutter — поле .shell), как дни на главной:
+   карточка уезжает за край экрана, а не обрезается краем неподвижной рамки. Снизу запас под тень карточки. */
+.term-pager { display:flex; margin:12px calc(-1 * var(--gutter, 16px)) -18px; padding:0 0 18px; overflow-x:auto; overflow-y:hidden;
+  scroll-snap-type:x mandatory; scrollbar-width:none; overscroll-behavior-x:contain; }
 .term-pager::-webkit-scrollbar { display:none; }
-.term-month { flex:0 0 100%; min-width:0; padding:0 4px; scroll-snap-align:start; scroll-snap-stop:always; }
-.term-month h2 { height:36px; margin:0 0 2px 10px; font-size:21px; font-weight:700; line-height:36px; letter-spacing:-.03em; }
-.term-month h2 span { color:var(--muted-foreground); font-weight:500; }
+.term-page { flex:0 0 100%; min-width:0; display:flex; padding:0 var(--gutter, 16px); scroll-snap-align:start; scroll-snap-stop:always; }
+.term-cal { flex:1; min-width:0; padding:10px 8px 12px; border-radius:22px; background:var(--card); box-shadow:var(--shadow); }
+.term-top { display:flex; align-items:center; height:36px; margin:0 0 2px 10px; }
+.term-top h2 { flex:1; min-width:0; margin:0; overflow:hidden; font-size:21px; font-weight:700; line-height:36px; letter-spacing:-.03em; white-space:nowrap; }
+.term-top h2 span { color:var(--muted-foreground); font-weight:500; }
+.term-top button { display:grid; place-items:center; flex-shrink:0; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:none; color:var(--foreground);
+  -webkit-tap-highlight-color:transparent; transition:background-color .2s; }
+.term-top button:disabled { opacity:.22; }
+.term-top button:not(:disabled):active { background:color-mix(in srgb,var(--foreground) 12%,transparent); }
+.term-top .term-today { width:auto; height:28px; margin-right:6px; padding:0 12px; border-radius:999px; background:var(--foreground); color:var(--background); font-size:12.5px; font-weight:650; }
+.term-top .term-today:active { background:var(--foreground); opacity:.8; }
+/* Свои цвета календаря, одни во всех темах: сессия — оранжевая, каникулы — зелёные, зачёт — синий. Цвета тем
+   (лекции, «сейчас») для этого не годятся: в «Лесе» лекции зелёные, и сессия сливалась с каникулами. */
+.term { --cal-session:#ec8500; --cal-vacation:#1e9e57; --cal-credit:#2f7be0; --cal-band:20%; }
+[data-scheme=dark] .term { --cal-session:#ff9f1c; --cal-vacation:#3fcf83; --cal-credit:#5aa9ff; --cal-band:30%; }
 .term-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); grid-template-rows:22px; grid-auto-rows:44px; }
 .term-grid.with-weeks { grid-template-columns:16px repeat(7,minmax(0,1fr)); }
 .term-head { color:var(--muted-foreground); font-size:10.5px; font-weight:650; line-height:16px; letter-spacing:.07em; text-transform:uppercase; text-align:center; }
@@ -837,8 +845,8 @@ h1 .h-month { display:none; }
 /* Одна точка под числом: пары, зачёт или экзамен. */
 .term-cell::after { content:''; z-index:1; width:4px; height:4px; border-radius:50%; background:var(--dot,transparent); }
 .term-cell.classes { --dot:color-mix(in srgb,var(--foreground) 40%,transparent); }
-.term-cell.credit { --dot:var(--now); font-weight:700; }
-.term-cell.exam { --dot:var(--lecture); font-weight:750; }
+.term-cell.credit { --dot:var(--cal-credit); font-weight:700; }
+.term-cell.exam { --dot:var(--cal-session); font-weight:750; }
 .term-cell.exam::after, .term-cell.credit::after { width:5px; height:5px; }
 .term-cell.off { color:var(--muted-foreground); }
 .term-cell.holiday { color:var(--danger, var(--now)); font-weight:700; }
@@ -848,9 +856,8 @@ h1 .h-month { display:none; }
 .term-cell.band.b-start::before { left:4px; border-radius:17px 0 0 17px; }
 .term-cell.band.b-end::before { right:4px; border-radius:0 17px 17px 0; }
 .term-cell.band.b-start.b-end::before { border-radius:17px; }
-.term-cell.session { --band:color-mix(in srgb,var(--lecture) 22%,transparent); }
-.term-cell.vacation { --band:color-mix(in srgb,var(--ok, #2e9d62) 24%,transparent); }
-.term-cell.est::before { opacity:.6; }
+.term-cell.session { --band:color-mix(in srgb,var(--cal-session) var(--cal-band),transparent); }
+.term-cell.vacation { --band:color-mix(in srgb,var(--cal-vacation) var(--cal-band),transparent); }
 .term-cell.today .n { color:var(--accent-ink, var(--now)); font-weight:750; }
 .term-cell.selected .n { background:var(--foreground); color:var(--background); }
 .term-cell.today.selected .n { background:var(--accent-ink, var(--now)); color:var(--background); }
@@ -859,11 +866,11 @@ h1 .h-month { display:none; }
 .term-legend span { display:inline-flex; align-items:center; gap:5px; }
 .term-legend i { display:inline-block; width:6px; height:6px; border-radius:50%; }
 .term-legend .l-classes { width:5px; height:5px; background:color-mix(in srgb,var(--foreground) 40%,transparent); }
-.term-legend .l-credit { background:var(--now); }
-.term-legend .l-exam { background:var(--lecture); }
+.term-legend .l-credit { background:var(--cal-credit); }
+.term-legend .l-exam { background:var(--cal-session); }
 .term-legend :is(.l-session,.l-vacation) { width:15px; height:8px; border-radius:4px; }
-.term-legend .l-session { background:color-mix(in srgb,var(--lecture) 40%,transparent); }
-.term-legend .l-vacation { background:color-mix(in srgb,var(--ok, #2e9d62) 45%,transparent); }
+.term-legend .l-session { background:color-mix(in srgb,var(--cal-session) 55%,transparent); }
+.term-legend .l-vacation { background:color-mix(in srgb,var(--cal-vacation) 55%,transparent); }
 .term-legend .l-holiday { color:var(--danger, var(--now)); font-weight:750; }
 .term-legend b { color:var(--foreground); font-weight:700; }
 .term-day { display:flex; align-items:center; gap:12px; margin:10px 0 0; padding:12px 12px 12px 16px; border-radius:20px; background:var(--muted); font-size:13.5px; line-height:1.35; }
@@ -883,14 +890,16 @@ h1 .h-month { display:none; }
 .term-dates li button > span:first-child { color:var(--muted-foreground); font-size:12.5px; font-weight:650; font-variant-numeric:tabular-nums; }
 .term-dates li b { font-weight:600; }
 .term-dates li small { margin-left:6px; color:var(--muted-foreground); font-size:12.5px; }
-.term-dates li.exam b::before, .term-dates li.credit b::before { content:''; display:inline-block; width:6px; height:6px; margin:0 7px 2px 0; border-radius:50%; background:var(--lecture); vertical-align:middle; }
-.term-dates li.credit b::before { background:var(--now); }
+.term-dates li.exam b::before, .term-dates li.credit b::before { content:''; display:inline-block; width:6px; height:6px; margin:0 7px 2px 0; border-radius:50%; background:var(--cal-session); vertical-align:middle; }
+.term-dates li.credit b::before { background:var(--cal-credit); }
+.term-dates li:is(.session,.break) button > span:first-child { color:var(--cal-session); }
+.term-dates li.break button > span:first-child { color:var(--cal-vacation); }
 .term-dates li.holiday button > span:first-child { color:var(--danger, var(--now)); }
 .term-dates li.holiday b { font-weight:500; }
 .term-dates li.gone { opacity:.42; }
 .term-note { margin:6px 0 8px; color:var(--muted-foreground); font-size:12px; line-height:1.4; }
 .session-plan li small { color:var(--muted-foreground); font-size:12.5px; }
-[data-style=atelier] .term-month h2, [data-style=atelier] .term-dates h2 { font-family:var(--serif); font-size:24px; font-weight:600; }
+[data-style=atelier] .term-top h2, [data-style=atelier] .term-dates h2 { font-family:var(--serif); font-size:24px; font-weight:600; }
 [data-style=atelier] .term-cell { font-family:var(--serif); font-size:18px; }
 [data-style=atelier] .term-facts div { border-radius:4px; box-shadow:none; background:none; border:1px solid var(--hair-strong); }
 [data-style=atelier] .term-facts b { font-family:var(--serif); font-size:20px; font-weight:600; }

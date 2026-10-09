@@ -41,13 +41,32 @@ function marksOf(sessions:Session[], group:string) {
   return out;
 }
 
-// One month: always six weeks, so the card keeps its height from month to month; days of the neighbouring months
-// fill the corners, faint. The look of a day is worked out once (look keeps it until the year or the timetable
-// changes); a month redraws only when the chosen day comes into it or leaves it.
-const Month = memo(function Month({month, look, weeks, term, selected, onPick}:{month:string; look:(date:string)=>[string,string]; weeks:boolean; term:Term; selected:string; onPick:(date:string)=>void}) {
+function Legend({past, weeks}:{past:boolean; weeks:boolean}) {
+  return <div className="term-legend">
+    {!past && <span><i className="l-classes"/>пары</span>}
+    <span><i className="l-credit"/>зачёт</span><span><i className="l-exam"/>экзамен</span>
+    <span><i className="l-session"/>сессия</span><span><i className="l-vacation"/>каникулы</span>
+    <span><b className="l-holiday">7</b>праздник</span>
+    {weeks && <span><b>н</b>/<b>ч</b> неделя</span>}
+  </div>;
+}
+
+type Nav = {turn:(i:number)=>void; today:()=>void};
+// One month is one card, and the whole card slides, like the days on the main page: nothing is cut by the edge of a
+// card standing still, and no script runs while it moves. Its title, arrows and «Сегодня» ride with it. Always six
+// weeks, so every card has the same height; days of the neighbouring months fill the corners, faint. The look of a
+// day is worked out once (look keeps it until the year or the timetable changes); a month redraws only when the
+// chosen day comes into it or leaves it.
+const Month = memo(function Month({month, i, count, look, weeks, past, term, selected, away, nav, onPick}:{month:string; i:number; count:number; look:(date:string)=>[string,string];
+  weeks:boolean; past:boolean; term:Term; selected:string; away:boolean; nav:Nav; onPick:(date:string)=>void}) {
   const start = plus(month, -weekday(month));
-  return <section className="term-month" aria-label={`${monthOnly(month)} ${month.slice(0,4)}`}>
-    <h2>{monthOnly(month)} <span>{month.slice(0,4)}</span></h2>
+  return <section className="term-page" aria-label={`${monthOnly(month)} ${month.slice(0,4)}`}><div className="term-cal">
+    <div className="term-top">
+      <h2>{monthOnly(month)} <span>{month.slice(0,4)}</span></h2>
+      {away && <button className="term-today" onClick={nav.today}>Сегодня</button>}
+      <button aria-label="Предыдущий месяц" disabled={i===0} onClick={()=>nav.turn(i-1)}><ChevronLeft size={20}/></button>
+      <button aria-label="Следующий месяц" disabled={i===count-1} onClick={()=>nav.turn(i+1)}><ChevronRight size={20}/></button>
+    </div>
     <div className={`term-grid ${weeks ? 'with-weeks' : ''}`}>
       {weeks && <span className="term-head"/>}
       {shortDays.map(d => <span key={d} className="term-head">{d}</span>)}
@@ -62,7 +81,8 @@ const Month = memo(function Month({month, look, weeks, term, selected, onPick}:{
           })];
       })}
     </div>
-  </section>;
+    <Legend past={past} weeks={weeks}/>
+  </div></section>;
 });
 
 // The academic year, month by month as in the iPhone's Calendar: the month is the first thing on the page and turns
@@ -98,7 +118,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
       const known = cache.get(date); if (known) return known;
       const holiday = !!holidayOn(date), list = marks.get(date) || [], period = periodOn(plan, date), n = past ? 0 : classesOn(date), band = bandOf(date), col = weekday(date);
       const cls = ['term-cell',
-        band && `band ${band}`, band && period?.estimated && 'est',
+        band && `band ${band}`,
         band && (col===0 || date.endsWith('-01') || bandOf(plus(date,-1))!==band) && 'b-start',
         band && (col===6 || plus(date,1).slice(0,7)!==date.slice(0,7) || bandOf(plus(date,1))!==band) && 'b-end',
         list.some(m => m.kind==='exam') ? 'exam' : list.length ? 'credit' : !holiday && n ? 'classes' : '',
@@ -114,34 +134,21 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
   const focus = past ? (selected.startsWith(String(year)) || selected.startsWith(String(year+1)) ? selected : first) : selected;
   const monthIndex = (iso:string) => Math.max(0, months.findIndex(m => m.slice(0,7)===iso.slice(0,7)));
 
-  // The month in view lives in the scroller, not in React: turning a month redraws nothing. The arrows and «Сегодня»
-  // follow it through their attributes.
-  const pager = useRef<HTMLDivElement>(null), prev = useRef<HTMLButtonElement>(null), next = useRef<HTMLButtonElement>(null), back = useRef<HTMLButtonElement>(null);
-  const state = useRef({focus, count:months.length, home:monthIndex(today), past});
-  state.current = {focus, count:months.length, home:monthIndex(today), past};
-  function sync() {
-    const el = pager.current; if (!el) return;
-    const i = Math.round(el.scrollLeft/Math.max(1, el.clientWidth)), s = state.current;
-    if (prev.current) prev.current.disabled = i<=0;
-    if (next.current) next.current.disabled = i>=s.count-1;
-    back.current?.toggleAttribute('data-on', !s.past && (i!==s.home || s.focus!==today));
-  }
+  // The month in view lives only in the scroller: a swipe is the phone's own scroll, React hears nothing of it.
+  const pager = useRef<HTMLDivElement>(null);
   function turn(i:number, smooth=true) {
     const el = pager.current; if (!el) return;
     el.scrollTo({left:Math.max(0, Math.min(months.length-1, i))*el.clientWidth, behavior:smooth ? 'smooth' : 'auto'});
   }
-  function current() { const el = pager.current; return el ? Math.round(el.scrollLeft/Math.max(1, el.clientWidth)) : 0; }
   // A year opens on the chosen day's month (today's in the current year, September in a past one).
-  useLayoutEffect(() => { turn(monthIndex(focus), false); sync(); }, [year]); // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => { turn(monthIndex(focus), false); }, [year]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A new width (the phone turned) keeps the same month in view.
   useEffect(() => {
     const el = pager.current; if (!el) return;
-    let frame = 0;
-    const on = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; sync(); }); };
-    el.addEventListener('scroll', on, {passive:true});
-    const resize = new ResizeObserver(() => { turn(current(), false); sync(); }); resize.observe(el);
-    return () => { el.removeEventListener('scroll', on); resize.disconnect(); cancelAnimationFrame(frame); };
+    let width = el.clientWidth;
+    const resize = new ResizeObserver(() => { if (el.clientWidth===width) return; const i = Math.round(el.scrollLeft/Math.max(1, width)); width = el.clientWidth; turn(i, false); });
+    resize.observe(el); return () => resize.disconnect();
   }, [year]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(sync, [focus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The month in view and its neighbours are drawn at once, the rest of the year a moment later: the tab opens faster.
   const [whole, setWhole] = useState(false);
@@ -149,6 +156,9 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
 
   function pick(next:number) { setYear(next); setSelected(next<academicYear ? `${next}-09-01` : today); }
   function goTo(date:string, top=false) { setSelected(date); turn(monthIndex(date)); if (top) scrollTo({top:0, behavior:'smooth'}); }
+  // The cards' arrows and «Сегодня»: one object for good, so the months stay memoized.
+  const act = useRef({turn, goTo}); act.current = {turn, goTo};
+  const nav = useMemo<Nav>(() => ({turn:i => act.current.turn(i), today:() => act.current.goTo(today)}), [today]);
 
   function describe(date:string) {
     const holiday = holidayOn(date), list = marks.get(date) || [], n = lessons(date), period = periodOn(plan, date);
@@ -190,24 +200,11 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
     </div>
     {past && <p className="term-sub">Прошлый год — по архиву сессий ВМК</p>}
 
-    <div className="term-cal">
-      <div className="term-nav">
-        {!past && <button ref={back} className="term-today" onClick={()=>goTo(today)}>Сегодня</button>}
-        <button ref={prev} aria-label="Предыдущий месяц" onClick={()=>turn(current()-1)}><ChevronLeft size={20}/></button>
-        <button ref={next} aria-label="Следующий месяц" onClick={()=>turn(current()+1)}><ChevronRight size={20}/></button>
-      </div>
-      <div className="term-pager" ref={pager} key={year} aria-label="Месяцы">
-        {months.map((month, i) => whole || Math.abs(i-monthIndex(focus))<=1
-          ? <Month key={month} month={month} look={look} weeks={weeks} term={term} selected={focus.slice(0,7)===month.slice(0,7) ? focus : ''} onPick={setSelected}/>
-          : <section key={month} className="term-month" aria-hidden="true"/>)}
-      </div>
-      <div className="term-legend">
-        {!past && <span><i className="l-classes"/>пары</span>}
-        <span><i className="l-credit"/>зачёт</span><span><i className="l-exam"/>экзамен</span>
-        <span><i className="l-session"/>сессия</span><span><i className="l-vacation"/>каникулы</span>
-        <span><b className="l-holiday">7</b>праздник</span>
-        {weeks && <span><b>н</b>/<b>ч</b> неделя</span>}
-      </div>
+    <div className="term-pager" ref={pager} key={year} aria-label="Месяцы">
+      {months.map((month, i) => whole || Math.abs(i-monthIndex(focus))<=1
+        ? <Month key={month} month={month} i={i} count={months.length} look={look} weeks={weeks} past={past} term={term}
+            selected={focus.slice(0,7)===month.slice(0,7) ? focus : ''} away={!past && (month.slice(0,7)!==today.slice(0,7) || focus!==today)} nav={nav} onPick={setSelected}/>
+        : <section key={month} className="term-page" aria-hidden="true"><div className="term-cal"/></section>)}
     </div>
 
     <div className="term-day" aria-live="polite">
