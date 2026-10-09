@@ -1,5 +1,6 @@
-import {memo, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {memo, useMemo, useRef, useState} from 'react';
 import {ChevronLeft, ChevronRight} from 'lucide-react';
+import {SnapPager} from './snap-pager';
 import {holidayOn, weekOf} from '../lib/term.mjs';
 import {periodOn, yearPlan} from '../lib/academic-year.mjs';
 import {eventsOf} from '../lib/events.mjs';
@@ -55,15 +56,15 @@ function Legend({past, weeks, events}:{past:boolean; weeks:boolean; events:boole
 }
 
 type Nav = {turn:(i:number)=>void; today:()=>void};
-// One month is one card, and the whole card slides, like the days on the main page: nothing is cut by the edge of a
-// card standing still, and no script runs while it moves. Its title, arrows and «Сегодня» ride with it. Always six
-// weeks, so every card has the same height; days of the neighbouring months fill the corners, faint. The look of a
-// day is worked out once (look keeps it until the year or the timetable changes); a month redraws only when the
-// chosen day comes into it or leaves it.
+// One month is one card, a page of the same pager as the days on the main page (snap-pager.tsx): on a phone the
+// months turned abruptly in a scroller of their own, while the days glided. Its title, arrows and «Сегодня» ride with
+// it. Always six weeks, so every card has the same height; days of the neighbouring months fill the corners, faint.
+// The look of a day is worked out once (look keeps it until the year or the timetable changes); a month redraws only
+// when the chosen day comes into it or leaves it.
 const Month = memo(function Month({month, i, count, look, weeks, past, events, term, selected, away, nav, onPick}:{month:string; i:number; count:number; look:(date:string)=>[string,string];
   weeks:boolean; past:boolean; events:boolean; term:Term; selected:string; away:boolean; nav:Nav; onPick:(date:string)=>void}) {
   const start = plus(month, -weekday(month));
-  return <section className="term-page" aria-label={`${monthOnly(month)} ${month.slice(0,4)}`}><div className="term-cal">
+  return <section className="term-cal" aria-label={`${monthOnly(month)} ${month.slice(0,4)}`}>
     <div className="term-top">
       <h2>{monthOnly(month)} <span>{month.slice(0,4)}</span></h2>
       {away && <button className="term-today" onClick={nav.today}>Сегодня</button>}
@@ -85,7 +86,7 @@ const Month = memo(function Month({month, i, count, look, weeks, past, events, t
       })}
     </div>
     <Legend past={past} weeks={weeks} events={events}/>
-  </div></section>;
+  </section>;
 });
 
 // The academic year, month by month as in the iPhone's Calendar: the month is the first thing on the page and turns
@@ -141,27 +142,13 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
   const focus = past ? (selected.startsWith(String(year)) || selected.startsWith(String(year+1)) ? selected : first) : selected;
   const monthIndex = (iso:string) => Math.max(0, months.findIndex(m => m.slice(0,7)===iso.slice(0,7)));
 
-  // The month in view lives only in the scroller: a swipe is the phone's own scroll, React hears nothing of it.
-  const pager = useRef<HTMLDivElement>(null);
-  function turn(i:number, smooth=true) {
-    const el = pager.current; if (!el) return;
-    el.scrollTo({left:Math.max(0, Math.min(months.length-1, i))*el.clientWidth, behavior:smooth ? 'smooth' : 'auto'});
-  }
-  // A year opens on the chosen day's month (today's in the current year, September in a past one).
-  useLayoutEffect(() => { turn(monthIndex(focus), false); }, [year]); // eslint-disable-line react-hooks/exhaustive-deps
-  // A new width (the phone turned) keeps the same month in view.
-  useEffect(() => {
-    const el = pager.current; if (!el) return;
-    let width = el.clientWidth;
-    const resize = new ResizeObserver(() => { if (el.clientWidth===width) return; const i = Math.round(el.scrollLeft/Math.max(1, width)); width = el.clientWidth; turn(i, false); });
-    resize.observe(el); return () => resize.disconnect();
-  }, [year]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The month in view: the pager reports where a swipe settles; the arrows, «Сегодня» and the dates below move it.
+  // A year opens on today's month (September in a past year); the pager draws only the months near it.
+  const [page, setPage] = useState(() => monthIndex(today));
+  const at = Math.max(0, Math.min(months.length-1, page));
+  function turn(i:number) { setPage(Math.max(0, Math.min(months.length-1, i))); }
 
-  // The month in view and its neighbours are drawn at once, the rest of the year a moment later: the tab opens faster.
-  const [whole, setWhole] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setWhole(true), 300); return () => clearTimeout(t); }, []);
-
-  function pick(next:number) { setYear(next); setSelected(next<academicYear ? `${next}-09-01` : today); }
+  function pick(next:number) { setYear(next); setSelected(next<academicYear ? `${next}-09-01` : today); setPage(next<academicYear ? 0 : (Number(today.slice(0,4))-next)*12+Number(today.slice(5,7))-9); }
   function goTo(date:string, top=false) { setSelected(date); turn(monthIndex(date)); if (top) scrollTo({top:0, behavior:'smooth'}); }
   // The cards' arrows and «Сегодня»: one object for good, so the months stay memoized.
   const act = useRef({turn, goTo}); act.current = {turn, goTo};
@@ -212,12 +199,9 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
     </div>
     {past && <p className="term-sub">Прошлый год — по архиву сессий ВМК</p>}
 
-    <div className="term-pager" ref={pager} key={year} aria-label="Месяцы">
-      {months.map((month, i) => whole || Math.abs(i-monthIndex(focus))<=1
-        ? <Month key={month} month={month} i={i} count={months.length} look={look} weeks={weeks} past={past} events={announced.size>0} term={term}
-            selected={focus.slice(0,7)===month.slice(0,7) ? focus : ''} away={!past && (month.slice(0,7)!==today.slice(0,7) || focus!==today)} nav={nav} onPick={setSelected}/>
-        : <section key={month} className="term-page" aria-hidden="true"><div className="term-cal"/></section>)}
-    </div>
+    <SnapPager key={year} className="term-pager" label="Месяцы" count={months.length} index={at} keep={past ? undefined : monthIndex(today)} onSettle={setPage}
+      render={i => { const month = months[i]; return <Month month={month} i={i} count={months.length} look={look} weeks={weeks} past={past} events={announced.size>0} term={term}
+        selected={focus.slice(0,7)===month.slice(0,7) ? focus : ''} away={!past && (month.slice(0,7)!==today.slice(0,7) || focus!==today)} nav={nav} onPick={setSelected}/>; }}/>
 
     <div className="term-day" aria-live="polite">
       <div><strong>{cap(dayLong(focus))}</strong>{describe(focus).map(l => <p key={l}>{l}</p>)}</div>
