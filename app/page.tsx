@@ -16,6 +16,7 @@ import {StatsDialog} from '@/components/term-stats';
 import {UsefulView} from '@/components/useful';
 import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
+import {eventsOn} from '@/lib/events.mjs';
 import {SnapPager, type PagerHandle} from '@/components/snap-pager';
 import {LiveDay, setLiveDay} from '@/components/live-day';
 import {Wallpaper} from '@/components/wallpaper';
@@ -460,6 +461,8 @@ export default function Home() {
     const density = weekly ? 'compact' : list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
     return <section className={weekly?'week-day':'day'} key={date} aria-label={formatDate(date)}>
       {!weekly && (date===today || date===focus) && glanceLine}
+      {/* A control work or a colloquium announced for the group (lib/events.mjs): the day, not a class — no time was said. */}
+      {eventsOn(groupName,date).map(e=><p key={e.title} className={`event-line ${e.kind}`}>{e.title}</p>)}
       {weekly && <div className="day-title"><h2>{dayNames[weekday(date)]}<span> · {formatDate(date,{day:'numeric',month:'short'})}</span></h2><span>{lessonCount(list.length)}</span></div>}
       {list.length ? <div className={`list ${density} ${weekly?'':'fill'}`}>{items}</div>
         : kind.kind==='holiday' ? <div className="empty"><CalendarDays size={22}/><p>{kind.name}</p><small>Праздник, пар нет</small></div>

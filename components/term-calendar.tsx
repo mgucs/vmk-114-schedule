@@ -2,11 +2,13 @@ import {memo, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react
 import {ChevronLeft, ChevronRight} from 'lucide-react';
 import {holidayOn, weekOf} from '../lib/term.mjs';
 import {periodOn, yearPlan} from '../lib/academic-year.mjs';
+import {eventsOf} from '../lib/events.mjs';
 import type {Session} from './session';
 
 type Term = {start:string; end:string; odd:boolean}[] | null;
 type Mark = {kind:'exam'|'credit'; time:string; subject:string; room:string};
 type Period = {kind:'classes'|'session'|'break'; name:string; start:string; end:string; estimated:boolean};
+type Announced = {date:string; kind:'test'|'colloquium'; title:string; subject:string};
 
 // Date formatters are made once: making one (toLocaleDateString makes one each call) is slow, and a year of months
 // names a few hundred days.
@@ -41,9 +43,10 @@ function marksOf(sessions:Session[], group:string) {
   return out;
 }
 
-function Legend({past, weeks}:{past:boolean; weeks:boolean}) {
+function Legend({past, weeks, events}:{past:boolean; weeks:boolean; events:boolean}) {
   return <div className="term-legend">
     {!past && <span><i className="l-classes"/>пары</span>}
+    {events && <span><i className="l-event"/>КР, коллоквиум</span>}
     <span><i className="l-credit"/>зачёт</span><span><i className="l-exam"/>экзамен</span>
     <span><i className="l-session"/>сессия</span><span><i className="l-vacation"/>каникулы</span>
     <span><b className="l-holiday">7</b>праздник</span>
@@ -57,8 +60,8 @@ type Nav = {turn:(i:number)=>void; today:()=>void};
 // weeks, so every card has the same height; days of the neighbouring months fill the corners, faint. The look of a
 // day is worked out once (look keeps it until the year or the timetable changes); a month redraws only when the
 // chosen day comes into it or leaves it.
-const Month = memo(function Month({month, i, count, look, weeks, past, term, selected, away, nav, onPick}:{month:string; i:number; count:number; look:(date:string)=>[string,string];
-  weeks:boolean; past:boolean; term:Term; selected:string; away:boolean; nav:Nav; onPick:(date:string)=>void}) {
+const Month = memo(function Month({month, i, count, look, weeks, past, events, term, selected, away, nav, onPick}:{month:string; i:number; count:number; look:(date:string)=>[string,string];
+  weeks:boolean; past:boolean; events:boolean; term:Term; selected:string; away:boolean; nav:Nav; onPick:(date:string)=>void}) {
   const start = plus(month, -weekday(month));
   return <section className="term-page" aria-label={`${monthOnly(month)} ${month.slice(0,4)}`}><div className="term-cal">
     <div className="term-top">
@@ -81,7 +84,7 @@ const Month = memo(function Month({month, i, count, look, weeks, past, term, sel
           })];
       })}
     </div>
-    <Legend past={past} weeks={weeks}/>
+    <Legend past={past} weeks={weeks} events={events}/>
   </div></section>;
 });
 
@@ -100,7 +103,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
   const lessons = (date:string) => past ? 0 : classesOn(date);
   const hasLastYear = sessions.some(s => s.year===academicYear-1);
 
-  const {own, plan, marks, months, first, last, look} = useMemo(() => {
+  const {own, plan, marks, announced, months, first, last, look} = useMemo(() => {
     const own = sessions.filter(s => s.year===year);
     const plan = yearPlan(year, {term:past ? null : term, sessions:own}) as Period[];
     const marks = marksOf(own, group);
@@ -109,6 +112,10 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
     const first = `${year}-09-01`, last = past ? `${year+1}-08-31` : (winterBreak?.end || `${year+1}-02-28`);
     const months:string[] = [];
     for (let m = first; m <= last; m = plus(m, 32).slice(0,8)+'01') months.push(m.slice(0,8)+'01');
+    // Control works and colloquia the group was told of (lib/events.mjs), within the months shown.
+    const end = plus(months.at(-1)!, 32).slice(0,8)+'01';
+    const announced = new Map<string, Announced[]>();
+    for (const e of eventsOf(group) as Announced[]) if (e.date >= first && e.date < end) announced.set(e.date, [...(announced.get(e.date) || []), e]);
     // Each day: its band (session or vacation), its dot and the colour of its number — worked out when its month is
     // first drawn, then kept.
     const autumn = plan[0];
@@ -121,13 +128,13 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
         band && `band ${band}`,
         band && (col===0 || date.endsWith('-01') || bandOf(plus(date,-1))!==band) && 'b-start',
         band && (col===6 || plus(date,1).slice(0,7)!==date.slice(0,7) || bandOf(plus(date,1))!==band) && 'b-end',
-        list.some(m => m.kind==='exam') ? 'exam' : list.length ? 'credit' : !holiday && n ? 'classes' : '',
+        list.some(m => m.kind==='exam') ? 'exam' : list.length ? 'credit' : announced.has(date) ? 'event' : !holiday && n ? 'classes' : '',
         holiday && 'holiday',
         !past && !holiday && !n && !list.length && period?.kind==='classes' && date >= autumn.start && date <= autumn.end && 'off',
         date===today && 'today'].filter(Boolean).join(' ');
       const out:[string,string] = [cls, dayLong(date)]; cache.set(date, out); return out;
     };
-    return {own, plan, marks, months, first, last, look};
+    return {own, plan, marks, announced, months, first, last, look};
   }, [year, group, today, dataKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const autumn = plan[0], classesEnd = autumn.end;
@@ -165,6 +172,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
     const lines:string[] = [];
     if (holiday) lines.push(`${holiday} — выходной`);
     for (const m of list) lines.push(`${m.kind==='exam' ? 'Экзамен' : 'Зачёт'}: ${m.subject}${m.time ? `, ${m.time}` : ''}${m.room ? `, ауд. ${m.room}` : ''}`);
+    for (const e of announced.get(date) || []) lines.push(e.title);
     if (!holiday && n) lines.push(`${n} ${plural(n,['пара','пары','пар'])}${fiit && weekOf(term, date) ? ` · ${weekOf(term, date)!.odd ? 'нечётная' : 'чётная'} неделя` : ''}`);
     if (!past && date === classesEnd) lines.push('Последний день занятий');
     if (period && (period.kind!=='classes' || past) && !list.length) lines.push(`${period.name}, ${span(period.start, period.end)}${period.estimated ? ' (примерно)' : ''}`);
@@ -175,6 +183,9 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
   }
 
   const upcoming = past ? undefined : [...marks.entries()].filter(([d]) => d >= today).sort()[0];
+  // The nearest thing to prepare for: an exam or a credit, or a control work or a colloquium.
+  const soon = past ? undefined : [...[...marks].flatMap(([d, list]) => list.map(m => ({d, what:`${m.kind==='exam' ? 'экзамен' : 'зачёт'}: ${m.subject}`}))),
+    ...[...announced].flatMap(([d, list]) => list.map(e => ({d, what:e.title[0].toLowerCase()+e.title.slice(1)})))].filter(x => x.d >= today).sort((a,b) => a.d.localeCompare(b.d))[0];
   const weeksLeft = !past && today <= classesEnd ? Math.ceil(days(today, classesEnd)/7) : 0;
   const nextBreak = plan.find(p => p.kind==='break' && p.end >= today);
   const winterSession = plan.find(p => p.name==='Зимняя сессия');
@@ -188,6 +199,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
     rows.push(d.endsWith('-01-01') ? {d, title:'Новогодние праздники', note:'1–8 янв', kind:'holiday'} : {d, title:name, note:'', kind:'holiday'});
   }
   for (const [d, list] of marks) for (const m of list) rows.push({d, title:`${m.kind==='exam' ? 'Экзамен' : 'Зачёт'}: ${m.subject}`, note:m.time, kind:m.kind});
+  for (const [d, list] of announced) for (const e of list) rows.push({d, title:e.title, note:'', kind:'event'});
   rows.sort((a,b) => a.d.localeCompare(b.d));
 
   return <section className="term">
@@ -202,7 +214,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
 
     <div className="term-pager" ref={pager} key={year} aria-label="Месяцы">
       {months.map((month, i) => whole || Math.abs(i-monthIndex(focus))<=1
-        ? <Month key={month} month={month} i={i} count={months.length} look={look} weeks={weeks} past={past} term={term}
+        ? <Month key={month} month={month} i={i} count={months.length} look={look} weeks={weeks} past={past} events={announced.size>0} term={term}
             selected={focus.slice(0,7)===month.slice(0,7) ? focus : ''} away={!past && (month.slice(0,7)!==today.slice(0,7) || focus!==today)} nav={nav} onPick={setSelected}/>
         : <section key={month} className="term-page" aria-hidden="true"><div className="term-cal"/></section>)}
     </div>
@@ -217,10 +229,12 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
         <div><b>Сессии</b><span>{plan.filter(p=>p.kind==='session').map(p=>spanAbbr(p.start,p.end)).join(' и ')}</span></div>
         <div><b>Каникулы</b><span>{plan.filter(p=>p.kind==='break').map(p=>spanAbbr(p.start,p.end)).join(' и ')}</span></div>
       </> : <>
-        {weeksLeft > 0 && <div><b>{weeksLeft} {plural(weeksLeft,['неделя','недели','недель'])}</b><span>занятия до {dayAbbr(classesEnd)}</span></div>}
-        {upcoming ? <div><b>{days(today, upcoming[0]) === 0 ? 'Сегодня' : `Через ${days(today, upcoming[0])} ${plural(days(today, upcoming[0]),['день','дня','дней'])}`}</b><span>{upcoming[1][0].kind==='exam' ? 'экзамен' : 'зачёт'}: {upcoming[1][0].subject}</span></div>
-          : <div><b>Сессия</b><span>{own.some(s=>s.season==='winter') ? 'впереди ничего нет' : winterSession ? approx(winterSession)+spanAbbr(winterSession.start, winterSession.end) : 'конец декабря – январь'}</span></div>}
-        {nextBreak && <div><b>Каникулы</b><span>{approx(nextBreak)}{spanAbbr(nextBreak.start, nextBreak.end)}</span></div>}
+        {/* Three tiles at most: weeks of classes left, the nearest thing to prepare for, then the session (until its
+            dates are known) or the break. */}
+        {[weeksLeft > 0 && <div key="weeks"><b>{weeksLeft} {plural(weeksLeft,['неделя','недели','недель'])}</b><span>занятия до {dayAbbr(classesEnd)}</span></div>,
+          soon && <div key="soon"><b>{days(today, soon.d) === 0 ? 'Сегодня' : `Через ${days(today, soon.d)} ${plural(days(today, soon.d),['день','дня','дней'])}`}</b><span>{soon.what}</span></div>,
+          !upcoming && <div key="session"><b>Сессия</b><span>{own.some(s=>s.season==='winter') ? 'впереди ничего нет' : winterSession ? approx(winterSession)+spanAbbr(winterSession.start, winterSession.end) : 'конец декабря – январь'}</span></div>,
+          nextBreak && <div key="break"><b>Каникулы</b><span>{approx(nextBreak)}{spanAbbr(nextBreak.start, nextBreak.end)}</span></div>].filter(Boolean).slice(0, 3)}
       </>}
     </div>
 

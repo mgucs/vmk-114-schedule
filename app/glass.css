@@ -120,6 +120,8 @@ html[data-style=glass] { background:var(--background); }
 /* Сейчас и дальше */
 [data-style=glass] .glance-line { margin:0 0 12px; padding:12px 16px; border-radius:22px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 20%,transparent),#0000 70%); }
 [data-style=glass] .glance-line b { font-size:15px; font-weight:750; }
+[data-style=glass] .event-line { padding:11px 16px; border-radius:22px; background:linear-gradient(100deg,color-mix(in srgb,var(--event) 24%,transparent),#0000 72%), var(--c-fill); box-shadow:var(--c-shadow); }
+[data-style=glass] .week-day .event-line { padding:8px 14px; border-radius:18px; font-size:13.5px; }
 [data-style=glass] .now-bar { order:0; margin:0 0 2px; padding:11px 15px 15px; border-radius:20px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 8%,transparent),#0000 75%); }
 [data-style=glass] .now-bar i { left:16px; bottom:8px; width:calc(var(--p,0) * (100% - 32px)); height:3px; border-radius:3px;
   background:linear-gradient(90deg,color-mix(in srgb,var(--now) 50%,#fff),var(--now)); box-shadow:0 0 10px color-mix(in srgb,var(--now) 70%,transparent); }
@@ -678,3 +680,13 @@ html[data-style=glass] { background:var(--background); }
   background:none; color:var(--muted-foreground); font-size:14px; }
 /* Оникс — чёрно-белый снимок (слой обоев статичный, рисуется один раз). */
 [data-style=glass][data-theme=onyx] .wallpaper::after { content:''; position:absolute; inset:0; background:#808080; mix-blend-mode:color; pointer-events:none; }
+
+/* ═══ Плавность листания ═══
+   Палец, который начинает свайп, сперва «нажимает» то, на что лёг: карточка пары или кнопка аудитории сжимались
+   и тут же отскакивали, когда начиналась прокрутка, — вздрагивание и перерисовка в первом кадре жеста. Как в iOS
+   (UIScrollView откладывает касание), нажатие в листаемом видно, только если палец задержался на 0,1 с.
+   Полоса недели меняется прямо во время свайпа дней: без переходов цвета, иначе цифры перекрашивались каждый кадр. */
+[data-style=glass] .list .lesson:active, [data-style=glass] .pager :is(button.room,button.changed-note,.homework-button):active { transition-delay:.1s; }
+[data-style=glass] :is(.day-button span,.day-button strong) { transition:none; }
+/* Фото — свой слой видеокарты: перерисовка страницы (новый день, новый месяц) не трогает снимок. */
+[data-style=glass] .wallpaper { will-change:transform; }
