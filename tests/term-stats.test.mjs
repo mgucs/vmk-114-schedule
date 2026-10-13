@@ -7,6 +7,23 @@ import {countLessons, courseCounts, differs, termDates, usual, weekDates} from '
 const source = JSON.parse(await readFile(new URL('./fixtures/stats-30.09.json', import.meta.url), 'utf8'));
 const table = source.schedule, term = source.term;
 
+test('cached subject order follows term changes and a replacement timetable', () => {
+  const first = courseCounts(table, term, weekDates('2026-10-05'));
+  const later = courseCounts(table, structuredClone(term), weekDates('2026-10-12'));
+  assert.strictEqual(first.subjects, later.subjects);
+  assert.notDeepEqual(first.counts, later.counts);
+  const changedTerm = [{start:'2026-09-01', end:'2026-09-01', odd:true}];
+  const changed = courseCounts(table, changedTerm, ['2026-09-01']);
+  const weight = {};
+  for (const group of Object.keys(table.groups))
+    for (const [subject, row] of Object.entries(countLessons(table, changedTerm, group, termDates(table, changedTerm))))
+      weight[subject] = (weight[subject] || 0) + row.total;
+  assert.deepEqual(changed.subjects, Object.keys(weight).sort((a,b) => weight[b]-weight[a] || a.localeCompare(b,'ru')));
+  const replacement = structuredClone(table);
+  for (const group of Object.values(replacement.groups)) group.lessons = [];
+  assert.deepEqual(courseCounts(replacement, term, []).subjects, []);
+});
+
 test('subjects: one clean name per subject for every group', () => {
   const {subjects} = courseCounts(table, term, weekDates('2026-10-05'));
   for (const s of subjects) assert.doesNotMatch(s, /[А-ЯЁ]\.|П-\d|\d{3}|госуд\.$|\.$|^Конс/, s);

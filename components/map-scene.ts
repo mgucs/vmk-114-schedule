@@ -18,17 +18,8 @@ const px = (x:number) => x-CX, pz = (y:number) => y-CZ;
 // The model takes its colours from the current theme.
 function palette() {
   const css = getComputedStyle(document.documentElement), v = (name:string) => css.getPropertyValue(name).trim() || '#888';
-  const dark = document.documentElement.dataset.scheme === 'dark';
-  const col = (x:string) => new THREE.Color(x);
-  // Rooms stand out clearly from the floor slab; each kind keeps a recognisable hue.
-  const room = dark ? col(v('--card')).lerp(col(v('--foreground')), .13) : col(v('--card'));
-  const tint = (hue:string, amount:number) => col(hue).lerp(room, 1-amount).getHex();
-  return {slab:(dark ? col(v('--background')).lerp(col(v('--foreground')), .1) : col(v('--muted'))).getHex(), room:room.getHex(),
-    lecture:tint(v('--lecture'), dark ? .55 : .45), machine:tint('#34c27a', .42), wc:tint('#7f9bd6', .4), food:tint('#ff9f43', .45),
-    place:tint('#a58bff', .45), lift:tint('#8fa3b8', .5), stair:tint(v('--now'), .6), edge:col(v('--foreground')).lerp(room, dark ? .45 : .6).getHex(),
-    text:v('--foreground'), textSoft:v('--muted-foreground'), ghost:col(v('--border')).getHex(), now:col(v('--now')).getHex()};
+  return {text:v('--foreground'), now:new THREE.Color(v('--now')).getHex()};
 }
-const kindOf = (id:string) => /^П-/.test(id) ? 'lecture' : /^МЗ-/.test(id) ? 'machine' : 'room';
 
 export class MapScene {
   private renderer:THREE.WebGLRenderer; private scene = new THREE.Scene();
@@ -38,7 +29,7 @@ export class MapScene {
   private dynamic = new THREE.Group(); private walker:THREE.Mesh|null = null; private walkPath:THREE.CurvePath<THREE.Vector3>|null = null;
   private mode:Mode = 'schema'; private active = 6; private frame = 0; private disposed = false; private down:{x:number; y:number}|null = null;
   private manualView = false;
-  private colors = palette(); private anim:{from:THREE.Vector3; to:THREE.Vector3; t:number}|null = null;
+  private colors = palette();
   private labelCanvas:HTMLCanvasElement; private labelContext:CanvasRenderingContext2D; private marks:Mark[] = [];
   private observer:ResizeObserver;
   private loader = new GLTFLoader();
@@ -215,7 +206,7 @@ export class MapScene {
 
   setRoute(legs:Leg[], marks:Mark[]) {
     this.marks = marks;
-    for (const o of [...this.dynamic.children]) { this.dynamic.remove(o); (o as THREE.Mesh).geometry?.dispose(); }
+    disposeTree(this.dynamic); this.dynamic.clear();
     this.walker = null; this.walkPath = null;
     const hl = (m:Mark) => {
       const r = m;
@@ -416,13 +407,4 @@ function disposeTree(root:THREE.Object3D) {
 function bounds(f:FloorData):Box {
   const xs = f.footprint.flatMap(b => [b[0], b[2]]), ys = f.footprint.flatMap(b => [b[1], b[3]]);
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-}
-
-function floorTag(floor:number, x:number, z:number, color:string) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 96;
-  const ctx = c.getContext('2d')!; ctx.font = '800 64px system-ui, sans-serif'; ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  ctx.fillText(`${floor}`, 240, 48);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthTest:false}));
-  s.scale.set(80, 30, 1); s.position.set(x-30, 10, z);
-  return s;
 }

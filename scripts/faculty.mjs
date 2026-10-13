@@ -1,7 +1,7 @@
 // Everything else a first-year student looks up on cs.msu.ru: week parity, notices on the timetable page,
 // the course office, and the exam session. Each part is independent: if one fails, the previous value stays.
 import {parseParity} from '../lib/term.mjs';
-import {parseExamList, parseGrid} from './session-parser.mjs';
+import {parseExamList, parseGrid, textLines} from './session-parser.mjs';
 
 export const SCHEDULE_PAGE = 'https://cs.msu.ru/studies/schedule';
 export const EXAMS_PAGE = 'https://cs.msu.ru/studies/exams';
@@ -70,7 +70,6 @@ export function readSessionPage(html) {
   };
 }
 
-const programOf = group => Number(group) >= 140 ? 'fiit' : 'pmi';
 const norm = s => s.toLowerCase().replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/g, '');
 // Exam grids write "АиГ" or "Алгебра и аналитич.геометрия"; the exam list has both the short and the full name.
 // Abbreviations used by the grids: initials ("АиГ", "АиАЯ", "МА") or three-letter stems ("ИстРос").
@@ -114,10 +113,7 @@ export async function collectFaculty({previous = {}, download, pdfjs, now = () =
   };
   const page = (await download(SCHEDULE_PAGE)).toString('utf8');
   await attempt('notices', async () => readNotices(page));
-  await attempt('term', async () => {
-    const {textLines} = await import('./session-parser.mjs');
-    return parseParity(await textLines(pdfjs, await download(parityUrl(page))));
-  });
+  await attempt('term', async () => parseParity(await textLines(pdfjs, await download(parityUrl(page)))));
   await attempt('contacts', async () => readContacts((await download(CONTACTS_PAGE)).toString('utf8')));
   await attempt('session', async () => readSession(readSessionPage((await download(EXAMS_PAGE)).toString('utf8')), {download, pdfjs}));
   // A replaced session goes to the archive, so the next one can be compared with it.

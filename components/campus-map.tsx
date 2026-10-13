@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode} from 'react';
+import {useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
 import {ArrowDownUp, LocateFixed, Maximize2, Minus, Plus, Search, Utensils, X} from 'lucide-react';
 import {MapScene, type Mark, type Mode} from '@/components/map-scene';
 import {FLOORS, WING, POINTS, nearest, pointByKey, route, search} from '@/lib/map-route.mjs';

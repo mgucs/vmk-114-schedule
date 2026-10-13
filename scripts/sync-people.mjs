@@ -2,7 +2,7 @@
 // Heavier than the timetable check, so it refreshes at most once a week (pass --force to run anyway).
 import {readFile, writeFile} from 'node:fs/promises';
 import {personKey} from '../lib/search.mjs';
-import {teacherRows} from '../lib/schedule-model.mjs';
+import {wantedPeople} from './wanted-people.mjs';
 import {download} from './source-check.mjs';
 
 const root = new URL('../public/', import.meta.url);
@@ -19,10 +19,7 @@ const pause = () => new Promise(r => setTimeout(r, 300));
 
 // Everyone who appears in the timetable or the exam lists, as "Фамилия И.О.".
 const source = JSON.parse(await readFile(new URL('source.json', root), 'utf8'));
-const wanted = new Set();
-for (const {lessons} of Object.values(source.schedule.groups)) for (const l of lessons) for (const row of teacherRows(l.detail)) { const n = personKey(row.teacher); if (/\.$/.test(n)) wanted.add(n); }
-for (const list of Object.values(source.faculty?.session?.lists || {})) for (const e of list) wanted.add(personKey(e.lecturer));
-for (const list of Object.values(source.faculty?.session?.credits || {})) for (const e of list) for (const t of e.teachers) wanted.add(personKey(t));
+const wanted = wantedPeople(source);
 
 const letters = [...new Set([...wanted].map(n => n[0]))];
 const directory = new Map();

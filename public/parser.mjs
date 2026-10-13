@@ -52,7 +52,12 @@ const MONTH='(января|февраля|марта|апреля|мая|июн�
 const monthOf=name=>MONTHS.indexOf(name.toLowerCase())+1;
 const hhmm=(h,m)=>`${String(h).padStart(2,'0')}:${m}`;
 export function readQualifiers(text,year,start,end){
-  const iso=(d,m)=>{d=Number(d);m=Number(m);if(!(m>=1&&m<=12&&d>=1&&d<=31))return null;return `${m<8?year+1:year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;};
+  const iso=(d,m)=>{
+    d=Number(d);m=Number(m);
+    const y=m<8?year+1:year,dt=new Date(Date.UTC(y,m-1,d));
+    if(!(m>=1&&m<=12&&d>=1&&d<=31&&dt.getUTCFullYear()===y&&dt.getUTCMonth()===m-1&&dt.getUTCDate()===d))return null;
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  };
   // A number pair is a time when it cannot be a date: minutes 00 or above 12, or written with a colon.
   const isTime=(h,m,sep=':')=>Number(h)>=8&&Number(h)<=21&&Number(m)<60&&(sep===':'||m==='00'||Number(m)>12);
   let title=text,from=null,until=null,dates=null,startAt=null;
