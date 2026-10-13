@@ -3,6 +3,12 @@ import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {courseTeachers, diskMentions, lecturersOf, surnamePattern} from '../lib/useful-teachers.mjs';
 
+test('double surnames remain available in useful materials', () => {
+  const table = {groups:{'114':{lessons:[{title:'Алгебра', type:'lecture', detail:'Иванов-Петров А.Б.'}]}}};
+  const teachers = courseTeachers(table, () => '2');
+  assert.deepEqual(lecturersOf(teachers, /Алгебра/, '2'), ['Иванов-Петров А.Б.']);
+});
+
 test('surnames in their usual cases, as whole words', () => {
   for (const [word, surname] of [['Руднева', 'Руднев'], ['Садовничей', 'Садовничая'], ['Кима', 'Ким'], ['Хорошиловой', 'Хорошилова'], ['Падарян', 'Падарян']])
     assert.ok(surnamePattern(surname).test(word), `${word} ← ${surname}`);

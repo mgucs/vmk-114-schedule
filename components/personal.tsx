@@ -69,7 +69,7 @@ export function ThemeButton() {
   // MSU is the default look; anyone can switch.
   const [choice,setChoice]=useState(()=>{try{return legacy(localStorage.getItem(themeKey))||'msu';}catch{return 'msu';}});
   const [style,pickStyle]=useStyleChoice();
-  const [open,setOpen]=useState(false),[section,setSection]=useState<'style'|'theme'>('style');
+  const [open,setOpen]=useState(false);
   useEffect(()=>{
     applyTheme(choice,style);
     if(choice!=='auto')return;

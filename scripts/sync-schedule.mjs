@@ -38,5 +38,5 @@ console.log(snapshot.status === 'ok'
   : `Проверка не удалась; сохранена предыдущая версия: ${snapshot.error}`);
 // GitHub shows these as warnings on the run: the timetable was published, but these places should be checked against the PDF.
 const days = ['Пн','Вт','Ср','Чт','Пт','Сб'];
-for (const w of snapshot.parseWarnings || []) console.log(`::warning title=Проверь разбор PDF::${w.group}, ${days[w.day]} ${w.start} «${w.title}»: ${w.text}`);
+for (const w of snapshot.parseWarnings || []) console.log(`::warning title=Проверь разбор PDF::${w.group}${w.day >= 0 && w.day < days.length ? `, ${days[w.day]}${w.start ? ` ${w.start}` : ''}` : ''} «${w.title}»: ${w.text}`);
 if (snapshot.faculty?.errors) console.log('Дополнительные данные ВМК:', JSON.stringify(snapshot.faculty.errors));

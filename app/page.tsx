@@ -1,7 +1,7 @@
-import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties} from 'react';
-import {ArrowUpRight, CalendarClock, Ellipsis, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, Map as MapIcon, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
+import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
+import {ArrowUpRight, Ellipsis, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
-import {DEFAULT_GROUP, cleanTitle, groupSchedule, isDisplayedLesson, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
+import {DEFAULT_GROUP, cleanTitle, groupSchedule, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
 import {ThemeButton,HomeworkButton,HomeworkEditor,useCalendarExport,useHomework,useIconPicker,type Task} from '@/components/personal';
 import {useSearch} from '@/components/search';
 import {useSubgroups} from '@/components/subgroups';
@@ -211,7 +211,8 @@ export default function Home() {
   const [onboarding,setOnboarding] = useState(needsOnboarding);
   const [group,setGroupState] = useState(loadGroup), [groupsOpen,setGroupsOpen] = useState(onboarding);
   const table = saved.snapshot.schedule;
-  const faculty = readFaculty(saved.snapshot);
+  const faculty = useMemo(() => readFaculty(saved.snapshot), [saved.snapshot]);
+  const streamList = useMemo(() => streams(table), [table]);
   const data = {...groupSchedule(table,group), term:faculty.term} as Schedule & {term:Faculty['term']|null};
   const groupName = String(data.group);
   const history = saved.snapshot.history;
@@ -248,7 +249,7 @@ export default function Home() {
   const [statsOpen,setStatsOpen] = useState(false), [moreOpen,setMoreOpen] = useState(false);
   const [contactsOpen,setContactsOpen] = useState(false), [shared,setShared] = useState('');
   // Lecturer of each subject this term, by the first letters of its name.
-  const lecturers = Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];}));
+  const lecturers = useMemo(() => Object.fromEntries(data.lessons.filter(l=>l.type==='lecture').flatMap(l=>{const t=(teacherRows(l.detail) as {teacher:string}[])[0]?.teacher;return t?[[cleanTitle(l).toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0,12),t]]:[];})), [data.lessons]);
   const teacherCard = useTeacherCard({table, session:isCurrent(faculty.session,data.year) ? faculty.session : null, dates:searchWeek, term:faculty.term, room:(name,day,start)=><LessonAt.Provider value={{date:searchWeek[day],start}}><Room room={name}/></LessonAt.Provider>});
   const status = verification(saved.snapshot);
   // Places of this group's timetable the server could not read with confidence.
@@ -256,10 +257,10 @@ export default function Home() {
   // «Мой день сейчас» lives on the page of today (and of the nearest teaching day): it moves with that page instead of
   // appearing and disappearing above the pager, which pushed everything below it up and down on every turn.
   const glance = dayGlance(data,today,clock,subgroups.selected);
-  const glanceLine = glance && glance.kind!=='done' && glance.kind!=='now' ? <section className={`glance-line ${glance.kind}`} aria-label="Мой день сейчас">
+  const glanceLine = glance && (glance.kind==='before' || glance.kind==='break') ? <section className={`glance-line ${glance.kind}`} aria-label="Мой день сейчас">
     <b>{glance.left!=null && (glance.left<60 ? `${glance.left} мин` : `${Math.floor(glance.left/60)}:${String(glance.left%60).padStart(2,'0')}`)}</b>
-    <strong>{{now:'до конца пары',before:'до первой пары',break:'до следующей пары'}[glance.kind as 'now']}</strong>
-    <span>{glance.kind==='now' ? (glance.detail.split('дальше ')[1] ? `· дальше ${glance.detail.split('дальше ')[1].split(' · ')[0]}` : '· последняя') : `· ${glance.detail.split(' · ')[0]}`}</span>
+    <strong>{glance.kind==='before' ? 'до первой пары' : 'до следующей пары'}</strong>
+    <span>{`· ${glance.detail.split(' · ')[0]}`}</span>
   </section> : null;
   function dismissNotices(){const next=[...readNotices,...freshNotices].slice(-30);setReadNotices(next);try{localStorage.setItem(noticeKey,JSON.stringify(next));}catch{}}
   async function shareGroup(){
@@ -393,12 +394,14 @@ export default function Home() {
 
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
-      if (event.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (tab!=='schedule' || document.querySelector('[role="dialog"]')) return;
+      if (event.target instanceof HTMLElement && (event.target.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName))) return;
       // preventDefault: with a day button focused, the arrow would also scroll the week strip by itself.
       if (event.key==='ArrowLeft') { event.preventDefault(); shift(-1); } else if (event.key==='ArrowRight') { event.preventDefault(); shift(1); }
     };
     window.addEventListener('keydown',onKey); return()=>window.removeEventListener('keydown',onKey);
-  });
+  },[tab, view, focus]);
 
   useEffect(()=>{document.title = ongoing ? `ещё ${duration(ongoingLeft)} · ${cleanTitle(ongoing)}` : 'Расписание ВМК';},[ongoing?.id,ongoingLeft]);
   useEffect(()=>{
@@ -433,14 +436,18 @@ export default function Home() {
   const pageDate = (id:string) => id.slice(id.indexOf(':')+1);
   // Drawn pages are reused while nothing they show has changed: turning a day used to redraw the current day and
   // both neighbours (twice, with the deferred neighbours), which froze the day lens for a moment on every turn.
-  const pageDeps = [data.hash, groupName, faculty.term?.[0]?.start, today, focus, clock, nextId, JSON.stringify(glance), JSON.stringify(subgroups.selected), JSON.stringify(homework.tasks),
-    homework.editing, homework.error, recent.map(c=>c.id).join(), faculty.notices.join('|'), checks.map(w=>w.id+w.text).join()].join('§');
+  const baseDeps = [data.hash, groupName, JSON.stringify(faculty.term), today, focus, JSON.stringify(subgroups.selected), JSON.stringify(homework.tasks),
+    homework.editing, homework.error, JSON.stringify(recent), faculty.notices.join('|'), checks.map(w=>w.id+w.text).join()].join('§');
+  const liveDeps = `${baseDeps}§${clock}§${nextId}§${JSON.stringify(glance)}`;
   const pageCache = useRef(new Map<string,{deps:string; node:React.ReactNode}>());
   const renderPage = (id:string) => {
+    const d = pageDate(id);
+    const isLive = id.startsWith('day:') ? d===today || d===focus : today>=d && today<=addDays(d,6);
+    const deps = isLive ? liveDeps : baseDeps;
     const hit = pageCache.current.get(id);
-    if (hit && hit.deps===pageDeps) return hit.node;
-    const node = id.startsWith('day:') ? renderDay(pageDate(id)) : Array.from({length:7},(_,i)=>renderDay(addDays(pageDate(id),i),true));
-    pageCache.current.set(id, {deps:pageDeps, node});
+    if (hit && hit.deps===deps) return hit.node;
+    const node = id.startsWith('day:') ? renderDay(d) : Array.from({length:7},(_,i)=>renderDay(addDays(d,i),true));
+    pageCache.current.set(id, {deps, node});
     if (pageCache.current.size > 16) pageCache.current.delete(pageCache.current.keys().next().value!);
     return node;
   };
@@ -498,7 +505,7 @@ export default function Home() {
         classesOn={date=>lessonsOn(data,date).length} dataKey={saved.snapshot.attemptedAt+groupName} openDay={date=>{setView('day');go(date);setTab('schedule');scrollTo({top:0});}}/>
       <button className="changes-button stats-open" onClick={()=>setStatsOpen(true)}><CalendarRange size={17}/><span><b>Сколько пар</b><small>по предметам и в сравнении с другими группами</small></span><ChevronRight size={18}/></button>
     </main> : tab==='info' ? <main className="session-main pane" key="info">
-      <UsefulView table={table} group={groupName} streams={streams(table).map(s=>({title:s.title, groups:s.groups}))}/>
+      <UsefulView table={table} group={groupName} streams={streamList.map(s=>({title:s.title, groups:s.groups}))}/>
     </main> : tab==='session' ? <main className="session-main pane" key="session">
       <SessionView session={faculty.session} archive={faculty.archive} lecturers={lecturers} subjects={[...new Set(data.lessons.map(l=>cleanTitle(l)))]} group={groupName} today={today} academicYear={data.year} classesEnd={termEnd(faculty.term)}
         room={(name,date,start)=><LessonAt.Provider value={{date,start}}><Room room={name}/></LessonAt.Provider>} teacher={name=><TeacherName name={name}/>}/>
@@ -597,7 +604,7 @@ export default function Home() {
       <div className="source-links"><a href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer">Сайт ВМК<ArrowUpRight size={14}/></a><a href={`https://github.com/${import.meta.env.VITE_REPO || 'mgucs/vmk-schedule'}/actions/workflows/pages.yml`} target="_blank" rel="noreferrer">История проверок<ArrowUpRight size={14}/></a></div>
     </DialogContent></Dialog>
     <StatsDialog open={statsOpen} onOpenChange={setStatsOpen} table={table} term={faculty.term} group={groupName} today={today} clock={clock}
-      streams={streams(table).map(s=>({title:s.title, groups:s.groups}))}/>
+      streams={streamList.map(s=>({title:s.title, groups:s.groups}))}/>
     {pdfOpen && pdfUrl && <PdfViewer url={pdfUrl} onClose={closePdf}/>}
     {homework.dialogs}
     {subgroups.dialog}
@@ -647,8 +654,8 @@ export default function Home() {
     <Dialog open={groupsOpen} onOpenChange={open=>{if(open || !onboarding)setGroupsOpen(open);}}><DialogContent className="changes-dialog groups-sheet" showCloseButton={!onboarding} onOpenAutoFocus={e=>{if(onboarding)e.preventDefault();}}>
       {onboarding ? <><DialogTitle>Какая у тебя группа?</DialogTitle><DialogDescription>Расписание первого курса ВМК. Сменить группу можно в любой момент — нажми на её номер вверху.</DialogDescription></>
         : <><DialogTitle>Группа</DialogTitle><DialogDescription>Первый курс ВМК. Расписание всех групп сохранено и без интернета.</DialogDescription></>}
-      {(()=>{const mine=!onboarding && streams(table).find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}<br/>группы {mine.range}</span></div>;})()}
-      <GroupPicker list={streams(table)} current={onboarding ? '' : groupName} onPick={setGroup}/>
+      {(()=>{const mine=!onboarding && streamList.find(st=>st.groups.includes(groupName));return mine && <div className="groups-current glass-only"><b>{groupName}</b><span>{mine.title}<br/>группы {mine.range}</span></div>;})()}
+      <GroupPicker list={streamList} current={onboarding ? '' : groupName} onPick={setGroup}/>
       {!onboarding && <button className="share-group" onClick={shareGroup}><Share2 size={16}/> Поделиться ссылкой на группу {groupName}</button>}
       {shared && <p className="personal-hint share-result">{shared}</p>}
     </DialogContent></Dialog>

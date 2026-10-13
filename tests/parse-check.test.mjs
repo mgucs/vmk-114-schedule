@@ -8,6 +8,15 @@ import {ruleActive} from '../lib/schedule-model.mjs';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../public/vendor/pdf.worker.mjs', import.meta.url).href;
 
+test('qualifier dates exist in the calendar, including the next academic-year February', () => {
+  const q = (text, year=2026) => readQualifiers(text, year, '10:30', '12:05').rule;
+  for (const text of ['с 31 сентября Алгебра', 'до 31.02 Алгебра', 'только 31.09 Алгебра', 'с 29 февраля Алгебра'])
+    assert.equal(q(text), null, text);
+  assert.deepEqual(q('с 29 февраля Алгебра', 2027), {from:'2028-02-29'});
+  assert.deepEqual(q('до 30.09 Алгебра'), {until:'2026-09-30'});
+  assert.equal(q('только 31.09, 30.09 Алгебра'), null, 'a malformed list is not partially accepted');
+});
+
 test('dates and times written into a subject line', () => {
   const q = (text, start='10:30', end='12:05') => readQualifiers(text, 2026, start, end);
   const cases = [

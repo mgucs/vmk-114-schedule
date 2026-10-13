@@ -120,7 +120,7 @@ function withTimes(items) {
     // "10.00" printed with a stray raised "00" next to it.
     if (/^\d{1,2}[.:]\d{2}$/.test(hour.str.trim())) { const extra = items.find(m => raised(hour, m)); if (extra) used.add(extra); continue; }
     if (used.has(hour) || !/^\d{1,2}$/.test(hour.str.trim())) continue;
-    const min = items.find(m => !used.has(m) && m !== hour && /^\d{2}$/.test(m.str.trim()) && m.x > hour.x && m.x-(hour.x+hour.width) < 6 && hour.y-m.y > 2 && hour.y-m.y < 10);
+    const min = items.find(m => raised(hour, m));
     if (!min) continue;
     used.add(hour); used.add(min);
     out.push({...hour, str:hour.str.trim()+":"+min.str.trim(), width:min.x+min.width-hour.x});
@@ -157,7 +157,7 @@ export async function parseGrid(pdfjs, data) {
         // A wide header may cover sub-cells (time and room | subject and teacher): read them together.
         const inner = page.vertical.filter(v => v.y0 <= y && v.y1 >= y && v.x0 > col.left+2 && v.x0 < col.right-2).map(v => v.x0).sort((p,q) => p-q);
         const edges = [col.left]; for (const x of inner) if (x-edges.at(-1) > 3) edges.push(x); edges.push(col.right);
-        const boxes = edges.slice(1).map((x,k) => boxAt(page, (edges[k]+x)/2, y)).filter(bx => bx && bx.right-bx.left <= 700);
+        const boxes = edges.slice(1).map((x,i) => boxAt(page, (edges[i]+x)/2, y)).filter(bx => bx && bx.right-bx.left <= 700);
         if (!boxes.length) continue;
         const key = boxes.map(bx => [bx.left, bx.top].map(Math.round).join(":")).join("|");
         if (seen.has(key)) continue;

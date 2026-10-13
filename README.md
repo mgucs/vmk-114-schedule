@@ -28,6 +28,13 @@ npm run build
 PLAYWRIGHT_MODULE=<путь к playwright/index.mjs> BROWSER_CHANNEL=chromium node tests/browser.mjs
 ```
 
+Проверка исправлений клавиатуры и живого кэша использует установленный Edge и `playwright-core` из зависимостей проекта. После сборки с `VITE_BASE=/vmk-schedule/`:
+
+```sh
+node tests/regressions-browser.mjs
+# Для Chrome: BROWSER_CHANNEL=chrome node tests/regressions-browser.mjs
+```
+
 ## Устройство
 
 | Файл | Что делает |
