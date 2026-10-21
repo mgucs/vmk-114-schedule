@@ -1,6 +1,10 @@
-import {readdir,readFile,writeFile} from 'node:fs/promises';
+import {mkdir,readdir,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import path from 'node:path';
+import {calendarFile} from '../lib/calendar.mjs';
+import {eventsOf} from '../lib/events.mjs';
+import {groupSchedule,validTable} from '../lib/schedule-model.mjs';
+import {validTerm} from '../lib/term.mjs';
 const root=path.resolve('dist');
 const base=process.env.VITE_BASE||'/';
 // manifest.webmanifest (the default icon) and manifest-<icon>.webmanifest for each icon the user can choose (index.html).
@@ -11,10 +15,19 @@ for(const name of (await readdir(root)).filter(n=>/^manifest(-[a-z]+)?\.webmanif
   for(const icon of manifest.icons)icon.src=base+icon.src.replace(/^\//,'');
   await writeFile(manifestPath,JSON.stringify(manifest));
 }
+// calendar/<group>.ics: the phone's calendar subscribes to it (webcal://) and re-reads it, so VMK's changes reach the
+// calendar and its lock-screen widget by themselves. Built from the same source.json the site shows.
+const source=JSON.parse(await readFile(path.join(root,'source.json'),'utf8'));
+if(validTable(source.schedule)){
+  await mkdir(path.join(root,'calendar'),{recursive:true});
+  const term=validTerm(source.faculty?.term)?source.faculty.term:null;
+  for(const group of Object.keys(source.schedule.groups))
+    await writeFile(path.join(root,'calendar',group+'.ics'),calendarFile({...groupSchedule(source.schedule,group),term},{},new Date(),{events:eventsOf(group),feed:true}));
+}
 async function walk(dir){const found=[];for(const item of await readdir(dir,{withFileTypes:true})){const name=path.join(dir,item.name);if(item.isDirectory())found.push(...await walk(name));else found.push(path.relative(root,name).replaceAll('\\','/'));}return found;}
 // PDF parsing runs on GitHub; pdf.js is cached only for the in-app PDF viewer. App icons are read only when the site
 // is added to the home screen (online), so the offline copy leaves them out.
-const paths=(await walk(root)).filter(p=>!['sw.js','precache.json','latest.pdf','source.json','parser.mjs'].includes(p)&&!p.startsWith('icons/')&&!p.startsWith('archive/')&&!(p.startsWith('vendor/')&&!/^vendor\/pdf(\.worker)?\.mjs$/.test(p))).sort();
+const paths=(await walk(root)).filter(p=>!['sw.js','precache.json','latest.pdf','source.json','parser.mjs'].includes(p)&&!p.startsWith('icons/')&&!p.startsWith('calendar/')&&!p.startsWith('archive/')&&!(p.startsWith('vendor/')&&!/^vendor\/pdf(\.worker)?\.mjs$/.test(p))).sort();
 const sw=await readFile(path.join(root,'sw.js'),'utf8');
 const hash=createHash('sha256').update(sw);
 // Each file with a hash of its content: the service worker keeps files that did not change from the previous version.

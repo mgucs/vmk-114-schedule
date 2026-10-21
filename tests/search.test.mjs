@@ -52,3 +52,12 @@ test('calendar file follows the weeks of classes, skips holidays, alternates Ф�
   const fiit = calendarFile({...groupSchedule(snapshot.schedule,'141'), term}, {}, new Date('2026-09-26T10:00:00Z'));
   assert.match(fiit, /RRULE:FREQ=WEEKLY;INTERVAL=2;/);
 });
+
+test('subscription feed refreshes, lists every subgroup room and adds announced events as all-day', () => {
+  const schedule = groupSchedule(snapshot.schedule,'114');
+  const ics = calendarFile(schedule, {}, new Date('2026-09-26T10:00:00Z'), {events:[{date:'2026-10-28', kind:'colloquium', title:'Коллоквиум по линейной алгебре'}], feed:true});
+  assert.match(ics, /REFRESH-INTERVAL;VALUE=DURATION:PT1H/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20261028\r\nDTEND;VALUE=DATE:20261029\r\nSUMMARY:Коллоквиум по линейной алгебре/);
+  assert.ok(ics.split('\r\n').every(line=>new TextEncoder().encode(line).length<=75));
+  assert.ok(!/REFRESH-INTERVAL/.test(calendarFile(schedule, {}, new Date('2026-09-26T10:00:00Z'))));
+});

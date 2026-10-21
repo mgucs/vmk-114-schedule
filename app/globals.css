@@ -335,6 +335,8 @@ textarea { font:inherit; }
 .style-preview.cards i:nth-of-type(3) { display:none; }
 .calendar-notes { margin:4px 0 16px; padding-left:18px; font-size:13.5px; line-height:1.45; }
 .calendar-notes li+li { margin-top:6px; }
+a.save-task { text-decoration:none; }
+.calendar-file { display:block; width:100%; margin-top:6px; padding:10px; background:none; border:0; color:var(--muted-foreground); font-size:13.5px; }
 
 /* ——— Calm palettes: cool and neutral, low glare. Light ones keep an accent dark enough to read as text. ——— */
 [data-theme=snow] {

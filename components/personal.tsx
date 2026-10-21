@@ -2,6 +2,7 @@ import React,{useEffect,useLayoutEffect,useMemo,useRef,useState,type ReactNode} 
 import {Palette,NotebookPen,Check,CalendarPlus} from 'lucide-react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {calendarFile} from '../lib/calendar.mjs';
+import {eventsOf} from '../lib/events.mjs';
 import {LIQUID_DEFAULT,applyLiquid,loadLiquid} from '../lib/liquid.mjs';
 
 // name, label, scheme, swatch colours (background, lecture, now)
@@ -170,25 +171,30 @@ function Dial({items,value,onPick,className,label}:{items:{key:string;title:stri
   </div>;
 }
 
-// All classes of the group as an .ics file: the phone's calendar imports them with weekly repeats.
+// All classes of the group in the phone's calendar. The subscription (calendar/<group>.ics, scripts/after-build.mjs)
+// updates itself, and the calendar's lock-screen widget shows the next class; the file keeps the chosen subgroup.
 export function useCalendarExport(schedule:{group:number;year:number;lessons:unknown[];term?:{end:string}[]|null},subgroups:Record<string,string>){
   const end=useMemo(()=>new Date((schedule.term?.at(-1)?.end||`${schedule.year}-12-31`)+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'long',timeZone:'UTC'}),[schedule.term,schedule.year]);
   const [open,setOpen]=useState(false),[done,setDone]=useState(false);
+  const feed=`webcal://${location.host}${import.meta.env.BASE_URL}calendar/${schedule.group}.ics`;
+  // Android has no webcal handler: Google Calendar adds a subscription by its address.
+  const android=/Android/i.test(navigator.userAgent);
+  const subscribe=android?`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(feed)}`:feed;
   function download(){
-    const url=URL.createObjectURL(new Blob([calendarFile(schedule,subgroups)],{type:'text/calendar;charset=utf-8'}));
+    const url=URL.createObjectURL(new Blob([calendarFile(schedule,subgroups,new Date(),{events:eventsOf(String(schedule.group))})],{type:'text/calendar;charset=utf-8'}));
     const link=Object.assign(document.createElement('a'),{href:url,download:`vmk-${schedule.group}.ics`});
     document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);setDone(true);
   }
   const chosen=Object.values(subgroups).filter(Boolean).length;
   return {button:<button onClick={()=>{setDone(false);setOpen(true);}}>В календарь</button>,
     dialog:<Dialog open={open} onOpenChange={setOpen}><DialogContent className="changes-dialog"><DialogTitle>В календарь телефона</DialogTitle>
-      <DialogDescription>Все пары группы {schedule.group} до {end}, когда кончаются занятия, — с аудиториями и преподавателями, без праздников. Повторяются каждую неделю.</DialogDescription>
+      <DialogDescription>Все пары группы {schedule.group} до {end} — с аудиториями и преподавателями, без праздников; контрольные и коллоквиумы — на весь день.</DialogDescription>
       <ul className="calendar-notes">
-        <li>{chosen?`Учтена твоя подгруппа (${chosen} ${chosen===1?'предмет':chosen<5?'предмета':'предметов'}).`:'Подгруппа не выбрана — в парах будут все преподаватели.'}</li>
-        <li>iPhone: открой файл и нажми «Добавить все». Android: открой файл в Google Календаре.</li>
-        <li>Если ВМК поменяет расписание, скачай файл заново — старые события обновятся.</li>
+        <li>Подписка обновляется сама, когда ВМК меняет расписание. {android?'Откроется Google Календарь — нажми «Добавить».':'Виджет «Календарь» на экране блокировки покажет следующую пару.'}</li>
+        <li>В подписке все подгруппы. {chosen?'Файл учитывает твою подгруппу, но сам не обновляется.':'Файл — разовая копия, сам не обновляется.'}</li>
       </ul>
-      <button className="save-task" onClick={download}><CalendarPlus size={16}/> {done?'Скачать ещё раз':'Скачать .ics'}</button>
+      <a className="save-task" href={subscribe} target={android?'_blank':undefined} rel="noreferrer"><CalendarPlus size={16}/> Подписаться</a>
+      <button className="calendar-file" onClick={download}>{done?'Скачать файл ещё раз':'Скачать файл .ics'}</button>
     </DialogContent></Dialog>};
 }
 
