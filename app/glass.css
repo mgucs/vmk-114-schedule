@@ -121,7 +121,7 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .glance-line { margin:0 0 12px; padding:12px 16px; border-radius:22px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 20%,transparent),#0000 70%); }
 [data-style=glass] .glance-line b { font-size:15px; font-weight:750; }
 [data-style=glass] .event-line { padding:11px 16px; border-radius:22px; background:linear-gradient(100deg,color-mix(in srgb,var(--event) 24%,transparent),#0000 72%), var(--c-fill); box-shadow:var(--c-shadow); }
-[data-style=glass] .week-day .event-line { padding:8px 14px; border-radius:18px; font-size:13.5px; }
+[data-style=glass] .week-day .event-line { padding:7px 12px; border-radius:14px; font-size:13px; box-shadow:none; }
 [data-style=glass] .now-bar { order:0; margin:0 0 2px; padding:11px 15px 15px; border-radius:20px; --g-tint:linear-gradient(100deg,color-mix(in srgb,var(--now) 8%,transparent),#0000 75%); }
 [data-style=glass] .now-bar i { left:16px; bottom:8px; width:calc(var(--p,0) * (100% - 32px)); height:3px; border-radius:3px;
   background:linear-gradient(90deg,color-mix(in srgb,var(--now) 50%,#fff),var(--now)); box-shadow:0 0 10px color-mix(in srgb,var(--now) 70%,transparent); }
@@ -172,15 +172,9 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .empty { padding:44px 24px 40px; border-radius:30px; }
 [data-style=glass] .empty svg { width:48px; height:48px; padding:12px; border-radius:50%; background:var(--g-chip); color:var(--foreground); opacity:1; box-shadow:inset 0 1px 0 #ffffff2e; }
 [data-style=glass] .empty p { margin-top:14px; color:var(--foreground); font-size:19px; font-weight:700; letter-spacing:-.02em; }
-[data-style=glass] .week-day { margin-bottom:26px; }
-[data-style=glass] .day-title { margin:0 4px 10px; }
-[data-style=glass] .day-title h2 { font-size:21px; font-weight:750; letter-spacing:-.03em; }
-[data-style=glass] .week-day .list .lesson { padding:12px 16px 14px; border-radius:22px; }
-[data-style=glass] .week-day .list .lesson.current { padding-bottom:22px; }
-[data-style=glass] .week-day .lesson h3 { margin-top:5px; font-size:17px; }
-[data-style=glass] .week-day .empty { padding:22px; border-radius:22px; }
-[data-style=glass] .week-day .empty svg { display:none; }
-[data-style=glass] .week-day .empty p { margin:0; font-size:15px; font-weight:600; }
+[data-style=glass] .week-day { border-radius:24px; }
+[data-style=glass] .week-day.today .week-head b { color:var(--g-accent); }
+[data-style=glass] .week-head b { font-size:18px; font-weight:750; letter-spacing:-.03em; }
 [data-style=glass] .notices, [data-style=glass] .message, [data-style=glass] .changes-banner { border-radius:22px; --g-tint:linear-gradient(120deg,color-mix(in srgb,var(--warn-fg) 18%,transparent),#0000 70%); }
 [data-style=glass] .footer-links { gap:8px; margin:0 -4px; padding:4px 4px 10px; }
 [data-style=glass] .footer-links button { padding:8px 15px; border-radius:999px; color:var(--foreground); font-size:13.5px; font-weight:550; }
@@ -392,11 +386,11 @@ html[data-style=glass] { background:var(--background); }
 }
 
 /* Слой контента: карточки без стеклянной кромки, на подложке, которая держит текст. */
-[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates) {
+[data-style=glass] :is(.lesson,.week-day,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates) {
   background:var(--g-tint, linear-gradient(#0000,#0000)), var(--c-fill);
   -webkit-backdrop-filter:blur(var(--c-blur-px)) saturate(1.3); backdrop-filter:blur(var(--c-blur-px)) saturate(1.3);
   box-shadow:var(--c-shadow); }
-[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates)::before { display:none; }
+[data-style=glass] :is(.lesson,.week-day,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates)::before { display:none; }
 [data-style=glass] .lesson.past { background:var(--c-past); }
 [data-style=glass] .lesson.current, [data-style=glass] .lesson.lecture.current { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--now) 45%,transparent), var(--c-shadow); }
 [data-style=glass] .gap { background:var(--c-fill); -webkit-backdrop-filter:blur(var(--c-blur-px)); backdrop-filter:blur(var(--c-blur-px)); box-shadow:var(--c-shadow); }
@@ -465,7 +459,7 @@ html[data-style=glass] { background:var(--background); }
   --c-fill:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-fill-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 24%);
   --c-past:color-mix(in srgb,color-mix(in srgb,color-mix(in srgb,var(--card) 72%,#000) var(--c-past-d),transparent),color-mix(in srgb,var(--card) 72%,#000) 18%);
 }
-:root[data-style=glass] :is(.lesson,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
+:root[data-style=glass] :is(.lesson,.week-day,.now-bar,.glance-line,.notices,.message,.empty,.term-facts div,.term-cal,.term-day,.session-item,.session-next,.session-empty,.session-what,.term-dates,.gap,.footer-links button,.changes-banner) {
   -webkit-backdrop-filter:none; backdrop-filter:none; }
 /* balanced и lite: ни одного размытия. */
 :root[data-style=glass]:not([data-glass=full]) * { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }

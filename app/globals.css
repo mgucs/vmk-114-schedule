@@ -530,13 +530,31 @@ button.room:hover { text-decoration:underline; text-underline-offset:3px; text-d
 .list.roomy .room { font-size:17px; }
 
 /* Week view, empty days, notices, footer */
-.week-day { margin-bottom:24px; }
-/* Days of the week view off screen are not laid out or painted until scrolled near (all styles). */
-.week-day { content-visibility:auto; contain-intrinsic-size:auto 420px; }
-.day-title { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 2px 8px; }
-.day-title h2 { margin:0; font-size:20px; font-weight:700; letter-spacing:-.02em; }
-.day-title h2 span { font-weight:500; color:var(--muted-foreground); }
-.day-title>span { color:var(--muted-foreground); font-size:13px; white-space:nowrap; }
+/* Week view (page.tsx, renderWeekDay): a day is one card, a class one line — start, a dot (lectures in colour, the
+   rest white, as in the strip), subject, room. A tap on the card opens the day. */
+.week-list { display:flex; flex-direction:column; gap:10px; }
+.week-day { position:relative; padding:0 0 8px; border-radius:20px; background:var(--card); box-shadow:var(--shadow); cursor:pointer;
+  content-visibility:auto; contain-intrinsic-size:auto 190px; }
+.week-day.off { padding-bottom:0; }
+.week-head { display:flex; align-items:baseline; gap:7px; width:100%; padding:12px 16px 6px; border:0; background:none; color:var(--foreground); font:inherit; text-align:left; }
+.week-day.off .week-head { padding-bottom:12px; }
+.week-head b { font-size:17px; font-weight:700; letter-spacing:-.02em; }
+.week-head span { color:var(--muted-foreground); font-size:14px; font-weight:500; }
+.week-head small { margin-left:auto; color:var(--muted-foreground); font-size:12.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.week-day.today .week-head b { color:var(--now); }
+.week-day .event-line { margin:2px 12px 6px; padding:7px 12px; font-size:13px; box-shadow:none; }
+.week-rows { margin:0; padding:0 16px; list-style:none; }
+.week-rows li { display:grid; grid-template-columns:42px 6px minmax(0,1fr) auto; align-items:center; column-gap:9px; padding:6px 0; font-size:14.5px; line-height:1.25; }
+.week-rows li + li { border-top:1px solid var(--hair); }
+.week-rows time { color:var(--muted-foreground); font-size:13.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+.week-rows i { width:6px; height:6px; border-radius:50%; background:var(--foreground); }
+.week-rows li.lecture i { background:var(--lecture); }
+.week-rows span { min-width:0; font-weight:560; overflow-wrap:anywhere; }
+.week-rows small { color:var(--muted-foreground); font-size:13px; font-variant-numeric:tabular-nums; text-align:right; }
+.week-rows li.done :is(span,i) { opacity:.55; }
+.week-rows li.now :is(time,span) { color:var(--now); }
+.week-tag { margin-left:6px; padding:1px 5px; border-radius:6px; background:var(--hair); color:var(--muted-foreground); font-size:10.5px; font-style:normal; font-weight:700; vertical-align:1px; }
+.week-tag.changed { color:var(--foreground); }
 .empty { padding:56px 20px; color:var(--muted-foreground); text-align:center; }
 .empty svg { margin:auto; opacity:.5; }
 .empty p { margin:10px 0 0; font-size:15px; font-weight:500; }
@@ -608,12 +626,7 @@ h1 .h-month { display:none; }
 [data-style=atelier] .lesson.past { opacity:.45; }
 [data-style=atelier] .changed-note { padding:0 0 0 10px; border-left:2px solid var(--warn-fg); border-radius:0; background:none; }
 [data-style=atelier] .gap { padding:9px 0 9px 76px; border-bottom:1px solid var(--hair); }
-[data-style=atelier] .week-day .list .lesson { padding:12px 0; }
-[data-style=atelier] .week-day .range { font-size:20px; }
-[data-style=atelier] .week-day .gap { padding:6px 0 6px 76px; }
-[data-style=atelier] .day-title { margin:0; padding-bottom:6px; border-bottom:1px solid var(--hair-strong); }
-[data-style=atelier] .day-title h2 { font-family:var(--serif); font-size:26px; font-weight:600; letter-spacing:0; }
-[data-style=atelier] .day-title h2 span { font-family:var(--font-sans); font-size:14px; }
+[data-style=atelier] .week-head b { font-family:var(--serif); font-size:21px; font-weight:600; letter-spacing:0; }
 [data-style=atelier] .empty p { font-family:var(--serif); font-size:26px; font-weight:500; }
 [data-style=atelier] .empty svg { display:none; }
 [data-style=atelier] .message { border-radius:4px; }
@@ -660,9 +673,6 @@ h1 .h-month { display:none; }
 [data-style=minimal] .changed-note { padding:0; background:none; }
 [data-style=minimal] .gap { padding:0 0 0 72px; font-size:13px; }
 [data-style=minimal] .gap small { display:none; }
-[data-style=minimal] .week-day .list .lesson { padding:10px 0; }
-[data-style=minimal] .day-title { margin:0 0 2px; }
-[data-style=minimal] .day-title h2 { font-size:15px; font-weight:650; }
 [data-style=minimal] .empty svg { display:none; }
 [data-style=minimal] .message { border-radius:10px; }
 
@@ -708,7 +718,6 @@ h1 .h-month { display:none; }
 [data-style=timeline] .lesson.past { opacity:.5; }
 [data-style=timeline] .progress { left:16px; right:16px; bottom:7px; height:2px; border-radius:2px; overflow:hidden; }
 [data-style=timeline] .gap { margin-left:var(--rail); padding:0 4px; }
-[data-style=timeline] .day-title h2 { font-size:18px; }
 @media (max-width:360px) { :root[data-style=timeline] { --rail:58px; } }
 
 /* ——— Class in progress: one line under the header on every tab ——— */

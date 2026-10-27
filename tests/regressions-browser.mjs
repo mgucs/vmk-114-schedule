@@ -87,7 +87,7 @@ try {
   assert.equal(await page.locator('.pager .slide.current .lesson.past').count(),1);
   await page.getByRole('button',{name:'Вся неделя',exact:true}).click();
   await page.clock.runFor(60_000);
-  assert.equal(await page.locator('.pager .slide.current .week-day[aria-label="25 сентября"] .lesson.past').count(),1);
+  assert.equal(await page.locator('.pager .slide.current .week-day[aria-label="25 сентября"] .week-rows li.done').count(),1);
   assert.deepEqual(errors,[]);
   console.log('PASS editable fields, modified keys, live clock and week cache; no browser exceptions');
 } finally {

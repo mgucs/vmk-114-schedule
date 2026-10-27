@@ -1,4 +1,4 @@
-import React, {Suspense, createContext, lazy, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
+import React, {Suspense, createContext, lazy, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
 import {ArrowUpRight, Ellipsis, CalendarDays, CalendarRange, ChevronDown, GraduationCap, History, ChevronLeft, ChevronRight, RefreshCw, Share2, WifiOff, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {DEFAULT_GROUP, cleanTitle, groupSchedule, teacherRows, validSnapshot, verification} from '@/lib/schedule-model.mjs';
@@ -148,6 +148,18 @@ function MsuDecor() {
   </>;
 }
 
+// One week of the strip. It is drawn again only when what it shows changes: during a swipe of the days, only the week
+// the marked day leaves and the one it enters (all the weeks drawn ahead redrew on every day passing under the finger).
+const StripWeek = memo(function StripWeek({start, data, today, pressed, onPick}:{start:string; data:Schedule; today:string; pressed:string; onPick:(date:string)=>void}) {
+  return <div className="days">{Array.from({length:7},(_,k)=>{
+    const date=addDays(start,k), list=lessonsOn(data,date) as Lesson[], taken:string[]=Array(6).fill('');
+    for (const l of list) for (const p of pairsOf(l)) taken[p] ||= l.type;
+    return <button key={k} data-date={date} className={`day-button ${date===today?'today':''} ${date<today?'past':''} ${list.length?'':'off'}`} aria-pressed={date===pressed} onClick={()=>onPick(date)} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(list.length).toLowerCase()}`}>
+      <span>{shortDays[k]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[k]}</em>
+      <i className="pairs" aria-hidden="true">{taken.map((t,j)=><b key={j} className={t}/>)}</i>
+    </button>;})}</div>;
+});
+
 // Tapping a room opens it on the campus map.
 const OpenRoom = createContext<(room:string,date?:string,start?:string)=>void>(()=>{});
 const LessonAt = createContext<{date?:string; start?:string}>({});
@@ -213,7 +225,8 @@ export default function Home() {
   const table = saved.snapshot.schedule;
   const faculty = useMemo(() => readFaculty(saved.snapshot), [saved.snapshot]);
   const streamList = useMemo(() => streams(table), [table]);
-  const data = {...groupSchedule(table,group), term:faculty.term} as Schedule & {term:Faculty['term']|null};
+  // One object while nothing in it changes: the days it gives (lessonsOn) are kept per object.
+  const data = useMemo(() => ({...groupSchedule(table,group), term:faculty.term}) as Schedule & {term:Faculty['term']|null}, [table, group, faculty.term]);
   const groupName = String(data.group);
   const history = saved.snapshot.history;
   // Latest version of every class changed by a VMK update within the last week.
@@ -295,6 +308,8 @@ export default function Home() {
   // From the latest target day, so two quick key presses move two days even before a re-render.
   function shift(direction:number) { go(addDays(target.current,direction*(view==='week'?7:1))); }
   const settleOn = go;
+  const pickRef = useRef<(date:string)=>void>(()=>{}); pickRef.current = date => { setView('day'); go(date); };
+  const pickDay = useCallback((date:string) => pickRef.current(date), []);
   // While a swipe of the days goes on, the strip follows at once, without waiting for React: the day more than half in
   // view is marked, and the strip slides to its week. React's drawing after the swipe then finds it all in place.
   const strip = useRef<PagerHandle|null>(null);
@@ -446,12 +461,12 @@ export default function Home() {
     const deps = isLive ? liveDeps : baseDeps;
     const hit = pageCache.current.get(id);
     if (hit && hit.deps===deps) return hit.node;
-    const node = id.startsWith('day:') ? renderDay(d) : Array.from({length:7},(_,i)=>renderDay(addDays(d,i),true));
+    const node = id.startsWith('day:') ? renderDay(d) : <div className="week-list">{Array.from({length:7},(_,i)=>renderWeekDay(addDays(d,i)))}</div>;
     pageCache.current.set(id, {deps, node});
     if (pageCache.current.size > 16) pageCache.current.delete(pageCache.current.keys().next().value!);
     return node;
   };
-  function renderDay(date:string,weekly=false) {
+  function renderDay(date:string) {
     const list=lessonsOn(data,date) as Lesson[];
     const kind=dayKind(faculty.term,date);
     const items:React.ReactNode[]=[];
@@ -465,19 +480,40 @@ export default function Home() {
       items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={!isStacked(l,data.lessons) ? '' : fiit && weekOf(faculty.term,date) ? (/-\d$/.test(l.id)?'even':'odd') : list.filter(o=>o.id.replace(/-\d$/,'')===l.id.replace(/-\d$/,'')).length>1 ? 'both' : ''} notice={noticeFor(faculty.notices,l,date)} check={checks.filter(w=>w.id===l.id).map(w=>w.text)}/>);
       if (l.end>until) until=l.end;
     }
-    const density = weekly ? 'compact' : list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
-    return <section className={weekly?'week-day':'day'} key={date} aria-label={formatDate(date)}>
-      {!weekly && (date===today || date===focus) && glanceLine}
+    const density = list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
+    return <section className="day" key={date} aria-label={formatDate(date)}>
+      {(date===today || date===focus) && glanceLine}
       {/* A control work or a colloquium announced for the group (lib/events.mjs): the day, not a class — no time was said. */}
       {eventsOn(groupName,date).map(e=><p key={e.title} className={`event-line ${e.kind}`}>{e.title}</p>)}
-      {weekly && <div className="day-title"><h2>{dayNames[weekday(date)]}<span> · {formatDate(date,{day:'numeric',month:'short'})}</span></h2><span>{lessonCount(list.length)}</span></div>}
-      {list.length ? <div className={`list ${density} ${weekly?'':'fill'}`}>{items}</div>
+      {list.length ? <div className={`list ${density} fill`}>{items}</div>
         : kind.kind==='holiday' ? <div className="empty"><CalendarDays size={22}/><p>{kind.name}</p><small>Праздник, пар нет</small></div>
         : kind.kind==='after' ? <div className="empty"><GraduationCap size={22}/><p>Занятия закончились {formatDate(kind.end)}</p><small>Дальше — зачёты и экзамены.</small><button className="text-button" onClick={()=>setTab('session')}>Открыть сессию</button></div>
         : kind.kind==='before' ? <div className="empty"><CalendarDays size={22}/><p>Занятия начнутся {formatDate(kind.start)}</p></div>
         : <div className="empty"><CalendarDays size={22}/><p>Пар нет — отдыхай</p></div>}
     </section>;
+  }  // The week at a glance: a day is one card, a class one line — its start, subject and room. The whole of a class
+  // (teachers, homework, notes) is on its day; a tap on the card opens it.
+  function renderWeekDay(date:string) {
+    const list=lessonsOn(data,date) as Lesson[], kind=dayKind(faculty.term,date), events=eventsOn(groupName,date);
+    const first=list[0]?.start, last=list.reduce((e,l)=>l.end>e?l.end:e,'');
+    const open=()=>{setView('day');go(date);scrollTo({top:0});};
+    const rooms=(l:Lesson)=>roomFor(l,subgroups.selected) || [...new Set((teacherRows(l.detail) as {room:string}[]).map(r=>r.room).filter(Boolean))].join(', ');
+    const off=!list.length && (kind.kind==='holiday' ? kind.name : 'Без пар');
+    return <section key={date} className={`week-day ${date===today?'today':''} ${date<today?'past':''} ${off?'off':''}`} aria-label={formatDate(date)} onClick={open}>
+      <button className="week-head" onClick={e=>{e.stopPropagation();open();}} aria-label={`${dayNames[weekday(date)]}, ${formatDate(date)}: открыть день`}>
+        <b>{date===today ? 'Сегодня' : dayNames[weekday(date)]}</b><span>{formatDate(date,{day:'numeric',month:'short'})}</span>
+        <small>{off || `${lessonCount(list.length)} · ${first}–${last}`}</small>
+      </button>
+      {events.map(e=><p key={e.title} className={`event-line ${e.kind}`}>{e.title}</p>)}
+      {list.length>0 && <ol className="week-rows">{list.map(l=>{
+        const now=date===today && !!clock && clock>=l.start && clock<l.end, past=date<today || (date===today && !!clock && clock>=l.end);
+        const task=homework.tasks.find(t=>t.id===date+':'+l.id);
+        return <li key={l.id} className={`${l.type} ${now?'now':''} ${past?'done':''}`}>
+          <time>{l.start}</time><i aria-hidden="true"/><span>{cleanTitle(l)}{changeFor(l.id) && <em className="week-tag changed">изм.</em>}{task && !task.done && <em className="week-tag">ДЗ</em>}</span><small>{rooms(l)}</small>
+        </li>;})}</ol>}
+    </section>;
   }
+
 
   return <OpenRoom.Provider value={openRoom}><OpenTeacher.Provider value={teacherCard.open}><Wallpaper/><div className="shell" data-pane={paneDir}>
     <MsuDecor/>
@@ -533,13 +569,8 @@ export default function Home() {
       <button className="icon-button" aria-label={view==='day'?'Предыдущий день':'Предыдущая неделя'} onClick={()=>shift(-1)}><ChevronLeft/></button>
       <SnapPager key={'strip'+rangeStart} className="week-strip" count={weekTotal} index={weekIndex} keep={Math.floor(span(rangeStart,focus)/7)} label="Недели" handle={strip}
         onSettle={i=>settleOn(addDays(rangeStart,7*i+weekday(selected)))}
-        render={i=>{const start=addDays(rangeStart,7*i); return <LiveDay selected={selected}>{d=><div className="days">{Array.from({length:7},(_,k)=>{
-          const date=addDays(start,k), list=lessonsOn(data,date) as Lesson[], taken:string[]=Array(6).fill('');
-          for (const l of list) for (const p of pairsOf(l)) taken[p] ||= l.type;
-          return <button key={k} data-date={date} className={`day-button ${date===today?'today':''} ${date<today?'past':''} ${list.length?'':'off'}`} aria-pressed={view==='day' && date===d} onClick={()=>{setView('day');go(date);}} aria-label={`${dayNames[k]}, ${formatDate(date)}, ${lessonCount(list.length).toLowerCase()}`}>
-            <span>{shortDays[k]}</span><strong>{Number(date.slice(-2))}</strong><em>{dayNames[k]}</em>
-            <i className="pairs" aria-hidden="true">{taken.map((t,j)=><b key={j} className={t}/>)}</i>
-          </button>;})}</div>}</LiveDay>;}}/>
+        render={i=>{const start=addDays(rangeStart,7*i), end=addDays(start,6); return <LiveDay selected={selected}>{d=>
+          <StripWeek start={start} data={data} today={today} pressed={view==='day' && d>=start && d<=end ? d : ''} onPick={pickDay}/>}</LiveDay>;}}/>
       <button className="icon-button" aria-label={view==='day'?'Следующий день':'Следующая неделя'} onClick={()=>shift(1)}><ChevronRight/></button>
     </nav>
     {/* Стекло: under the strip, the chosen day in large type — it is what the page is about — and one quiet line under
