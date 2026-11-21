@@ -58,6 +58,8 @@ test('the self-check catches what a misread PDF looks like', () => {
   assert.match(lessonWarnings(l({title:'актикум на ЭВМ'}), '110').join(), /маленькой буквы/);
   assert.deepEqual(lessonWarnings(l({id:'5-08:45-2'}), '141'), [], 'ФИИТ alternates by weeks');
   assert.match(lessonWarnings(l({rule:{from:'2026-15-12'}}), '110').join(), /несуществующая дата/);
+  assert.deepEqual(lessonWarnings(l({title:'Русский язык 142 /1'}), '142'), []);
+  assert.match(lessonWarnings(l({title:'Русский язык 142 /1'}), '141').join(), /цифры/);
   const overlap = checkTable({'101':{page:1, lessons:[l({}), l({id:'5-09:00', start:'09:00', title:'Матанализ'})]}});
   assert.match(overlap[0].text, /пересекается/);
 });

@@ -1,5 +1,6 @@
 import {useState, type ReactNode} from 'react';
 import {ArrowUpRight} from 'lucide-react';
+import {announcedCredits, announcedTime, announcedType} from '../lib/announced-credits.mjs';
 
 export type Exam = {date:string; time:string; room:string; subject:string; lecturer:string};
 export type Credit = {date:string; time:string; room:string; subject:string; teachers:string[]};
@@ -27,10 +28,32 @@ type Props = {session:Session|null; archive:Session[]; lecturers?:Record<string,
 // Subject names differ slightly between files ("Математический анализ I"); compare by the first letters.
 const key = (s:string) => s.toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/g,'').slice(0, 12);
 
+function GroupCreditSchedule({entries,today}:{entries:ReturnType<typeof announcedCredits>;today:string}) {
+  if (!entries.length) return null;
+  return <section aria-label="По объявлению группы">
+    <div className="session-empty">
+      <h2>{entries.some(e=>!e.retake) ? 'Зачёты группы 114' : 'Дополнительно для группы 114'}</h2>
+      <p className="session-muted">По объявлению группы.</p>
+    </div>
+    {[...new Set(entries.map(entry=>entry.date))].map(date=><section className="session-day" key={date}>
+      <h2>{cap(longDate(date))}</h2>
+      {entries.filter(entry=>entry.date===date).map(entry=><article key={entry.time} className={`session-item group-credit ${date<today ? 'past' : ''}`}>
+        <span className="session-time">{announcedTime(entry)}</span>
+        <div className="session-body">
+          <span className="session-kind">{announcedType(entry)}</span>
+          <h3>{entry.subject}</h3>
+          {entry.note && <p>{entry.note}</p>}
+        </div>
+      </article>)}
+    </section>)}
+  </section>;
+}
+
 export function SessionView({session, archive, lecturers = {}, subjects = [], group, today, academicYear, classesEnd, room, teacher}:Props) {
   const current = isCurrent(session, academicYear) ? session : null;
   // Past sessions, the one of the coming season first: in autumn last winter is the closest comparison.
   const coming = Number(today.slice(5,7)) >= 8 || Number(today.slice(5,7)) === 1 ? 'winter' : 'spring';
+  const groupCredits = (current?.season || coming)==='winter' ? announcedCredits(group, academicYear, current?.credits[group]) : [];
   const past = [...(current || !session ? [] : [session]), ...archive].filter((s, i, all) => all.findIndex(o => o.title===s.title)===i)
     .sort((a, b) => Number(b.season===coming)-Number(a.season===coming) || b.year-a.year);
   const [shown, setShown] = useState('');
@@ -58,10 +81,11 @@ export function SessionView({session, archive, lecturers = {}, subjects = [], gr
     <h1 className="session-title">Сессия</h1>
     {compare}
     <div className="session-empty">
-      <p>ВМК ещё не опубликовал расписание зимней сессии. Обычно оно появляется в конце декабря — в прошлом году 25 декабря.</p>
+      <p>ВМК ещё не опубликовал официальное расписание зимней сессии.</p>
       <p>Приложение проверяет сайт каждые 15 минут и покажет здесь все зачёты и экзамены твоей группы, как только они появятся.</p>
       {classesEnd && <p className="session-muted">Занятия идут до {new Date(classesEnd+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric', month:'long', timeZone:'UTC'})}.</p>}
     </div>
+    <GroupCreditSchedule entries={groupCredits} today={today}/>
     {planned}
   </section>;
 
@@ -108,6 +132,7 @@ export function SessionView({session, archive, lecturers = {}, subjects = [], gr
         {i.room && <span className="session-room">{room(i.room, date, i.time)}</span>}
       </article>)}
     </section>)}
+    {live && <GroupCreditSchedule entries={groupCredits} today={today}/>}
     {(list.length > 0 || creditSubjects.length > 0) && <section className="session-what">
       <h2>Что сдаём</h2>
       <ul>

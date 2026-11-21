@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {EVENTS, eventsOf, eventsOn} from '../lib/events.mjs';
+import {announcedCredits, announcedTime} from '../lib/announced-credits.mjs';
 
 test('announced events: a real date, a known kind, a group and a title each', () => {
   for (const e of EVENTS) {
@@ -19,4 +20,13 @@ test('events belong to their group only, in date order', () => {
     for (const e of list) assert.ok(eventsOn(group, e.date).includes(e));
   }
   assert.equal(eventsOf('000').length, 0);
+});
+
+test('group 114 December announcement is scoped to this year and yields to the official credits', () => {
+  const entries = announcedCredits('114',2026);
+  assert.equal(entries.length,9);
+  assert.deepEqual(entries.filter(e=>e.date==='2026-12-26').map(announcedTime),['10:00–12:00','14:00']);
+  assert.deepEqual(announcedCredits('114',2026,[{date:'2026-12-21'}]),entries.filter(e=>e.retake));
+  assert.deepEqual(announcedCredits('113',2026),[]);
+  assert.deepEqual(announcedCredits('114',2025),[]);
 });

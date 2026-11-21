@@ -17,6 +17,8 @@ import {UsefulView} from '@/components/useful';
 import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/components/changes';
 import {weekDates} from '@/lib/term-stats.mjs';
 import {eventsOn} from '@/lib/events.mjs';
+import {announcedCredits, announcedTime, announcedType} from '@/lib/announced-credits.mjs';
+import {AbsenceButton, absenceId, useAbsences} from '@/components/attendance';
 import {SnapPager, type PagerHandle} from '@/components/snap-pager';
 import {LiveDay, setLiveDay} from '@/components/live-day';
 import {Wallpaper} from '@/components/wallpaper';
@@ -170,7 +172,7 @@ function Room({room,note=''}:{room:string; note?:string}) {
     : <span className="room" aria-label={`Аудитория ${room}${note?', '+note:''}`}>{content}</span>;
 }
 type Editor = {task?:Task; editing:boolean; open:()=>void; editor:React.ReactNode};
-function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,stacked,notice,check}:{check?:string[]; lesson:Lesson;date:string;today:string;clock:string;change?:Change;next:boolean;hw:Editor;preferredTeacher?:string;stacked:''|'odd'|'even'|'both';notice?:string}) {
+function LessonCard({lesson,date,today,clock,change,next,hw,absence,preferredTeacher,stacked,notice,check}:{check?:string[]; lesson:Lesson;date:string;today:string;clock:string;change?:Change;next:boolean;hw:Editor;absence:React.ReactNode;preferredTeacher?:string;stacked:''|'odd'|'even'|'both';notice?:string}) {
   const now = date===today && !!clock && clock>=lesson.start && clock<lesson.end;
   const past = date<today || (date===today && !!clock && clock>=lesson.end);
   const left = clock ? minutes(now?lesson.end:lesson.start)-minutes(clock) : 0;
@@ -187,7 +189,7 @@ function LessonCard({lesson,date,today,clock,change,next,hw,preferredTeacher,sta
       <span className="range">{lesson.start}<span><i> – </i>{lesson.end}</span></span>
       {typeNames[lesson.type] && <span className={`tag ${lesson.type}`}>{typeNames[lesson.type]}</span>}
       {label && <span className={`live ${now?'on':'next'}`}>{label}</span>}
-      <HomeworkButton task={hw.task} onClick={hw.open}/>
+      <div className="lesson-actions"><HomeworkButton task={hw.task} onClick={hw.open}/>{absence}</div>
     </div>
     <h3>{cleanTitle(lesson)}</h3>
       {rows.map((row,i)=><div className="teacher-row" key={i}><span>{row.teacher ? <TeacherName name={row.teacher}/> : null}</span>{(row.room || (i===0 && lesson.room)) && <Room room={row.room || lesson.room} note={row.note}/>}</div>)}
@@ -228,6 +230,9 @@ export default function Home() {
   // One object while nothing in it changes: the days it gives (lessonsOn) are kept per object.
   const data = useMemo(() => ({...groupSchedule(table,group), term:faculty.term}) as Schedule & {term:Faculty['term']|null}, [table, group, faculty.term]);
   const groupName = String(data.group);
+  const absences = useAbsences();
+  const officialWinter = [faculty.session,...faculty.archive].find(s=>isCurrent(s,data.year) && s?.season==='winter');
+  const groupCredits = announcedCredits(groupName,data.year,officialWinter?.credits[groupName]);
   const history = saved.snapshot.history;
   // Latest version of every class changed by a VMK update within the last week.
   const [seen,setSeen] = useState(loadSeen);
@@ -451,7 +456,7 @@ export default function Home() {
   const pageDate = (id:string) => id.slice(id.indexOf(':')+1);
   // Drawn pages are reused while nothing they show has changed: turning a day used to redraw the current day and
   // both neighbours (twice, with the deferred neighbours), which froze the day lens for a moment on every turn.
-  const baseDeps = [data.hash, groupName, JSON.stringify(faculty.term), today, focus, JSON.stringify(subgroups.selected), JSON.stringify(homework.tasks),
+  const baseDeps = [data.hash, groupName, JSON.stringify(faculty.term), today, focus, JSON.stringify(subgroups.selected), JSON.stringify(homework.tasks), JSON.stringify([...absences.marked]), JSON.stringify(groupCredits),
     homework.editing, homework.error, JSON.stringify(recent), faculty.notices.join('|'), checks.map(w=>w.id+w.text).join()].join('§');
   const liveDeps = `${baseDeps}§${clock}§${nextId}§${JSON.stringify(glance)}`;
   const pageCache = useRef(new Map<string,{deps:string; node:React.ReactNode}>());
@@ -466,9 +471,22 @@ export default function Home() {
     if (pageCache.current.size > 16) pageCache.current.delete(pageCache.current.keys().next().value!);
     return node;
   };
+  function absenceButton(date:string, lesson:Lesson) {
+    const id = absenceId(groupName,date,lesson);
+    return <AbsenceButton subject={cleanTitle(lesson)} pressed={absences.marked.has(id)} onToggle={()=>absences.toggle(id)}/>;
+  }
+  function eventLines(date:string) {
+    return [
+      ...eventsOn(groupName,date).map(e=><p key={e.title} className={`event-line ${e.kind}`}>{e.title}</p>),
+      ...groupCredits.filter(e=>e.date===date).map(e=><p key={e.time} className={`event-line ${e.retake ? 'colloquium' : 'credit'}`}>
+        <span>{announcedTime(e)} · {announcedType(e)} · {e.subject}{e.note && ` (${e.note})`}<small>По объявлению группы</small></span>
+      </p>),
+    ];
+  }
   function renderDay(date:string) {
     const list=lessonsOn(data,date) as Lesson[];
     const kind=dayKind(faculty.term,date);
+    const events=eventLines(date);
     const items:React.ReactNode[]=[];
     let until='';
     for (const l of list) {
@@ -477,16 +495,15 @@ export default function Home() {
         const now=date===today && !!clock && clock>=until && clock<l.start;
         items.push(<div key={'gap'+l.id} className={`gap ${now?'now':''}`}><span className="gap-label"><span>Окно</span><b>{now?`ещё ${duration(minutes(l.start)-minutes(clock))}`:duration(gap)}</b><small>{until}–{l.start}</small></span></div>);
       }
-      items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={!isStacked(l,data.lessons) ? '' : fiit && weekOf(faculty.term,date) ? (/-\d$/.test(l.id)?'even':'odd') : list.filter(o=>o.id.replace(/-\d$/,'')===l.id.replace(/-\d$/,'')).length>1 ? 'both' : ''} notice={noticeFor(faculty.notices,l,date)} check={checks.filter(w=>w.id===l.id).map(w=>w.text)}/>);
+      items.push(<LessonCard key={l.id} lesson={l} date={date} today={today} clock={clock} change={changeFor(l.id)} next={date===today && l.id===nextId} hw={editorFor(date,l)} absence={absenceButton(date,l)} preferredTeacher={subgroups.selected[cleanTitle(l)]} stacked={!isStacked(l,data.lessons) ? '' : fiit && weekOf(faculty.term,date) ? (/-\d$/.test(l.id)?'even':'odd') : list.filter(o=>o.id.replace(/-\d$/,'')===l.id.replace(/-\d$/,'')).length>1 ? 'both' : ''} notice={noticeFor(faculty.notices,l,date)} check={checks.filter(w=>w.id===l.id).map(w=>w.text)}/>);
       if (l.end>until) until=l.end;
     }
     const density = list.length<=2 ? 'roomy' : list.length===3 ? 'comfy' : 'compact';
     return <section className="day" key={date} aria-label={formatDate(date)}>
       {(date===today || date===focus) && glanceLine}
-      {/* A control work or a colloquium announced for the group (lib/events.mjs): the day, not a class — no time was said. */}
-      {eventsOn(groupName,date).map(e=><p key={e.title} className={`event-line ${e.kind}`}>{e.title}</p>)}
+      {events}
       {list.length ? <div className={`list ${density} fill`}>{items}</div>
-        : kind.kind==='holiday' ? <div className="empty"><CalendarDays size={22}/><p>{kind.name}</p><small>Праздник, пар нет</small></div>
+        : events.length ? null : kind.kind==='holiday' ? <div className="empty"><CalendarDays size={22}/><p>{kind.name}</p><small>Праздник, пар нет</small></div>
         : kind.kind==='after' ? <div className="empty"><GraduationCap size={22}/><p>Занятия закончились {formatDate(kind.end)}</p><small>Дальше — зачёты и экзамены.</small><button className="text-button" onClick={()=>setTab('session')}>Открыть сессию</button></div>
         : kind.kind==='before' ? <div className="empty"><CalendarDays size={22}/><p>Занятия начнутся {formatDate(kind.start)}</p></div>
         : <div className="empty"><CalendarDays size={22}/><p>Пар нет — отдыхай</p></div>}
@@ -494,7 +511,7 @@ export default function Home() {
   }  // The week at a glance: a day is one card, a class one line — its start, subject and room. The whole of a class
   // (teachers, homework, notes) is on its day; a tap on the card opens it.
   function renderWeekDay(date:string) {
-    const list=lessonsOn(data,date) as Lesson[], kind=dayKind(faculty.term,date), events=eventsOn(groupName,date);
+    const list=lessonsOn(data,date) as Lesson[], kind=dayKind(faculty.term,date), events=eventLines(date);
     const first=list[0]?.start, last=list.reduce((e,l)=>l.end>e?l.end:e,'');
     const open=()=>{setView('day');go(date);scrollTo({top:0});};
     const rooms=(l:Lesson)=>roomFor(l,subgroups.selected) || [...new Set((teacherRows(l.detail) as {room:string}[]).map(r=>r.room).filter(Boolean))].join(', ');
@@ -504,12 +521,12 @@ export default function Home() {
         <b>{date===today ? 'Сегодня' : dayNames[weekday(date)]}</b><span>{formatDate(date,{day:'numeric',month:'short'})}</span>
         <small>{off || `${lessonCount(list.length)} · ${first}–${last}`}</small>
       </button>
-      {events.map(e=><p key={e.title} className={`event-line ${e.kind}`}>{e.title}</p>)}
+      {events}
       {list.length>0 && <ol className="week-rows">{list.map(l=>{
         const now=date===today && !!clock && clock>=l.start && clock<l.end, past=date<today || (date===today && !!clock && clock>=l.end);
         const task=homework.tasks.find(t=>t.id===date+':'+l.id);
         return <li key={l.id} className={`${l.type} ${now?'now':''} ${past?'done':''}`}>
-          <time>{l.start}</time><i aria-hidden="true"/><span>{cleanTitle(l)}{changeFor(l.id) && <em className="week-tag changed">изм.</em>}{task && !task.done && <em className="week-tag">ДЗ</em>}</span><small>{rooms(l)}</small>
+          <time>{l.start}</time><i aria-hidden="true"/><span>{cleanTitle(l)}{changeFor(l.id) && <em className="week-tag changed">изм.</em>}{task && !task.done && <em className="week-tag">ДЗ</em>}</span><small>{rooms(l)}</small>{absenceButton(date,l)}
         </li>;})}</ol>}
     </section>;
   }
