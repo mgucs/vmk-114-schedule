@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {isDisplayedLesson} from '../lib/schedule-model.mjs';
+
+test('a finished course in a previously saved timetable is not shown as a recurring class', () => {
+  assert.equal(isDisplayedLesson({title:'закончили Основы российской государственности'}), false);
+  assert.equal(isDisplayedLesson({title:'Основы российской государственности'}), true);
+});
 import {readFile} from 'node:fs/promises';
 import {dayGlance,focusDate,lessonsOn,roomFor} from '../lib/day-glance.mjs';
 import {groupSchedule} from '../lib/schedule-model.mjs';

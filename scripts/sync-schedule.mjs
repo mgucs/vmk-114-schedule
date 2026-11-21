@@ -31,6 +31,7 @@ await writeFile(new URL('source.json',root),JSON.stringify(snapshot)+'\n');
 // Commit only real changes (plus one heartbeat a day); every run still deploys the fresh source.json.
 const facts = faculty => JSON.stringify({...(faculty || {}), checkedAt:undefined, errors:undefined});
 const commit = previous.schema !== snapshot.schema || previous.date !== snapshot.date || previous.hash !== snapshot.hash || previous.status !== snapshot.status || previous.error !== snapshot.error
+  || previous.schedule.parserVersion !== snapshot.schedule.parserVersion
   || previous.attemptedAt?.slice(0,10) !== snapshot.attemptedAt.slice(0,10) || facts(previous.faculty) !== facts(snapshot.faculty);
 if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT,`commit=${commit}\n`);
 console.log(snapshot.status === 'ok'

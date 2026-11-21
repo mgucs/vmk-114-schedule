@@ -1,4 +1,5 @@
 // Local, deterministic extraction: the column is selected by actual PDF cell borders.
+import {isFinishedLesson} from '../lib/schedule-model.mjs';
 export const DAYS = ['понедельник','вторник','среда','четверг','пятница','суббота'];
 const clean = s => s.replace(/\s+/g,' ').replace(/\s+([,.])/g,'$1').trim();
 const transformPoint = (m,x,y) => [m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
@@ -98,6 +99,7 @@ function lesson(day,rowId,start,end,cell,shared,year,suffix){
   const titleParts=[];let split=0;
   for(const l of cell){if(titleParts.length&&(/(?:[А-ЯЁ]\.\s*){2}/.test(l.text)||/^(доцент|профессор|академик)\s/i.test(l.text)))break;titleParts.push(l.text);split++;}
   let title=TYPOS.reduce((t,[from,to])=>t.replace(from,to),titleParts.join(' ').replace(/^\.?\s*/,''));
+  title=title.replace(/\b(1\d\d)\s*\/\s*([1-9])\b/g,'$1/$2');
   let rule;
   ({title,start,end,rule}=readQualifiers(title,year,start,end));
   let room=title.match(ROOM)?.[1]?.replace(/\s/g,'').replace('–','-')||'';
@@ -169,6 +171,7 @@ export async function parseAll(pdfjs,data) {
               if(!Number.isFinite(right))throw Error('Не найдена правая граница ячейки.');
               const cell=linesOf(items.filter(i=>i.x+i.width/2>left+1&&i.x+i.width/2<right-1&&i.y>a+2&&i.y<b));
               if(!cell.length)continue;
+              if(isFinishedLesson(cell.map(l=>l.text).join(' ')))continue;
               const shared=cols.filter(c=>c.x>left&&c.x<right).length>1;
               const list=(groups[col.group]||={page:pageNo,lessons:[]}).lessons;
               // A part holding only a teacher (and a room) belongs to the class above it: VMK sometimes fills

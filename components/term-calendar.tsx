@@ -4,10 +4,11 @@ import {SnapPager} from './snap-pager';
 import {holidayOn, weekOf} from '../lib/term.mjs';
 import {periodOn, yearPlan} from '../lib/academic-year.mjs';
 import {eventsOf} from '../lib/events.mjs';
+import {announcedCredits, announcedTime, announcedType} from '../lib/announced-credits.mjs';
 import type {Session} from './session';
 
 type Term = {start:string; end:string; odd:boolean}[] | null;
-type Mark = {kind:'exam'|'credit'; time:string; subject:string; room:string};
+type Mark = {kind:'exam'|'credit'|'event'; time:string; subject:string; room:string; label?:string; note?:string};
 type Period = {kind:'classes'|'session'|'break'; name:string; start:string; end:string; estimated:boolean};
 type Announced = {date:string; kind:'test'|'colloquium'; title:string; subject:string};
 
@@ -104,10 +105,15 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
   const lessons = (date:string) => past ? 0 : classesOn(date);
   const hasLastYear = sessions.some(s => s.year===academicYear-1);
 
-  const {own, plan, marks, announced, months, first, last, look} = useMemo(() => {
+  const {own, plan, marks, announced, groupCredits, months, first, last, look} = useMemo(() => {
     const own = sessions.filter(s => s.year===year);
     const plan = yearPlan(year, {term:past ? null : term, sessions:own}) as Period[];
     const marks = marksOf(own, group);
+    const groupCredits = announcedCredits(group, year, own.find(s=>s.season==='winter')?.credits[group]);
+    for (const e of groupCredits) {
+      const mark:Mark = {kind:e.retake ? 'event' : 'credit', time:announcedTime(e), subject:e.subject, room:'', label:announcedType(e), note:[e.note,'по объявлению группы'].filter(Boolean).join(' · ')};
+      marks.set(e.date, [...(marks.get(e.date) || []), mark].sort((a,b)=>a.time.localeCompare(b.time)));
+    }
     // The current year runs to the end of the winter break; a past year is shown whole.
     const winterBreak = plan.find(p => p.name==='Зимние каникулы');
     const first = `${year}-09-01`, last = past ? `${year+1}-08-31` : (winterBreak?.end || `${year+1}-02-28`);
@@ -129,13 +135,13 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
         band && `band ${band}`,
         band && (col===0 || date.endsWith('-01') || bandOf(plus(date,-1))!==band) && 'b-start',
         band && (col===6 || plus(date,1).slice(0,7)!==date.slice(0,7) || bandOf(plus(date,1))!==band) && 'b-end',
-        list.some(m => m.kind==='exam') ? 'exam' : list.length ? 'credit' : announced.has(date) ? 'event' : !holiday && n ? 'classes' : '',
+        list.some(m => m.kind==='exam') ? 'exam' : list.some(m=>m.kind==='credit') ? 'credit' : list.length || announced.has(date) ? 'event' : !holiday && n ? 'classes' : '',
         holiday && 'holiday',
         !past && !holiday && !n && !list.length && period?.kind==='classes' && date >= autumn.start && date <= autumn.end && 'off',
         date===today && 'today'].filter(Boolean).join(' ');
       const out:[string,string] = [cls, dayLong(date)]; cache.set(date, out); return out;
     };
-    return {own, plan, marks, announced, months, first, last, look};
+    return {own, plan, marks, announced, groupCredits, months, first, last, look};
   }, [year, group, today, dataKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const autumn = plan[0], classesEnd = autumn.end;
@@ -158,7 +164,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
     const holiday = holidayOn(date), list = marks.get(date) || [], n = lessons(date), period = periodOn(plan, date);
     const lines:string[] = [];
     if (holiday) lines.push(`${holiday} — выходной`);
-    for (const m of list) lines.push(`${m.kind==='exam' ? 'Экзамен' : 'Зачёт'}: ${m.subject}${m.time ? `, ${m.time}` : ''}${m.room ? `, ауд. ${m.room}` : ''}`);
+    for (const m of list) lines.push(`${m.label || (m.kind==='exam' ? 'Экзамен' : 'Зачёт')}: ${m.subject}${m.time ? `, ${m.time}` : ''}${m.room ? `, ауд. ${m.room}` : ''}${m.note ? ` · ${m.note}` : ''}`);
     for (const e of announced.get(date) || []) lines.push(e.title);
     if (!holiday && n) lines.push(`${n} ${plural(n,['пара','пары','пар'])}${fiit && weekOf(term, date) ? ` · ${weekOf(term, date)!.odd ? 'нечётная' : 'чётная'} неделя` : ''}`);
     if (!past && date === classesEnd) lines.push('Последний день занятий');
@@ -171,7 +177,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
 
   const upcoming = past ? undefined : [...marks.entries()].filter(([d]) => d >= today).sort()[0];
   // The nearest thing to prepare for: an exam or a credit, or a control work or a colloquium.
-  const soon = past ? undefined : [...[...marks].flatMap(([d, list]) => list.map(m => ({d, what:`${m.kind==='exam' ? 'экзамен' : 'зачёт'}: ${m.subject}`}))),
+  const soon = past ? undefined : [...[...marks].flatMap(([d, list]) => list.map(m => ({d, what:`${m.label?.toLowerCase() || (m.kind==='exam' ? 'экзамен' : 'зачёт')}: ${m.subject}`}))),
     ...[...announced].flatMap(([d, list]) => list.map(e => ({d, what:e.title[0].toLowerCase()+e.title.slice(1)})))].filter(x => x.d >= today).sort((a,b) => a.d.localeCompare(b.d))[0];
   const weeksLeft = !past && today <= classesEnd ? Math.ceil(days(today, classesEnd)/7) : 0;
   const nextBreak = plan.find(p => p.kind==='break' && p.end >= today);
@@ -185,7 +191,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
     if (!name || /-01-0[2-8]$/.test(d)) continue;
     rows.push(d.endsWith('-01-01') ? {d, title:'Новогодние праздники', note:'1–8 янв', kind:'holiday'} : {d, title:name, note:'', kind:'holiday'});
   }
-  for (const [d, list] of marks) for (const m of list) rows.push({d, title:`${m.kind==='exam' ? 'Экзамен' : 'Зачёт'}: ${m.subject}`, note:m.time, kind:m.kind});
+  for (const [d, list] of marks) for (const m of list) rows.push({d, title:`${m.label || (m.kind==='exam' ? 'Экзамен' : 'Зачёт')}: ${m.subject}`, note:[m.time,m.note].filter(Boolean).join(' · '), kind:m.kind});
   for (const [d, list] of announced) for (const e of list) rows.push({d, title:e.title, note:'', kind:'event'});
   rows.sort((a,b) => a.d.localeCompare(b.d));
 
@@ -205,7 +211,7 @@ export function TermCalendar({term, sessions, group, today, academicYear, classe
 
     <div className="term-day" aria-live="polite">
       <div><strong>{cap(dayLong(focus))}</strong>{describe(focus).map(l => <p key={l}>{l}</p>)}</div>
-      {lessons(focus) > 0 && !holidayOn(focus) && <button className="term-open" onClick={()=>openDay(focus)}>Открыть</button>}
+      {!past && ((lessons(focus)>0 && !holidayOn(focus)) || groupCredits.some(e=>e.date===focus) || announced.has(focus)) && <button className="term-open" onClick={()=>openDay(focus)}>Открыть</button>}
     </div>
 
     <div className="term-facts">
