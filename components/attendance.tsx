@@ -12,13 +12,9 @@ function loadAbsences(raw:string|null):Set<string> {
   } catch { return new Set(); }
 }
 
-function toggleMarks(previous:Set<string>, ids:string[]) {
+function toggleMark(previous:Set<string>, id:string) {
   const next = new Set(previous);
-  const clear = ids.every(id=>next.has(id));
-  for (const id of ids) {
-    if (clear) next.delete(id);
-    else next.add(id);
-  }
+  if (!next.delete(id)) next.add(id);
   return next;
 }
 
@@ -34,13 +30,13 @@ export function useAbsences() {
     window.addEventListener('storage',sync);
     return () => window.removeEventListener('storage',sync);
   }, []);
-  const toggle = useCallback((ids:string[]) => {
+  const toggle = useCallback((id:string) => {
     try {
-      const next = toggleMarks(loadAbsences(localStorage.getItem(storageKey)),ids);
+      const next = toggleMark(loadAbsences(localStorage.getItem(storageKey)),id);
       localStorage.setItem(storageKey, JSON.stringify([...next]));
       setMarked(next);
     } catch {
-      setMarked(previous=>toggleMarks(previous,ids));
+      setMarked(previous=>toggleMark(previous,id));
     }
   }, []);
   return {marked,toggle};
@@ -68,17 +64,11 @@ export function absenceDays(marked:Set<string>, group:string) {
   return [...days.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([date,lessons])=>({date,lessons:lessons.sort((a,b)=>a.time.localeCompare(b.time))}));
 }
 
-export function DayAbsenceButton({pressed, onToggle}:{pressed:boolean;onToggle:()=>void}) {
-  return <button type="button" className="absence-button absence-day" aria-pressed={pressed}
-    aria-label="Пропустил весь день" title={pressed ? 'Снять отметки за весь день' : 'Отметить все пары этого дня'}
-    onClick={event=>{event.stopPropagation();onToggle();}}>{pressed ? 'Весь день отмечен' : 'Пропустил весь день'}</button>;
-}
-
 export function AbsenceHistory({open,onOpenChange,days,label,onPick}:{open:boolean;onOpenChange:(open:boolean)=>void;
   days:ReturnType<typeof absenceDays>;label:(date:string)=>string;onPick:(date:string)=>void}) {
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="changes-dialog absence-history">
     <DialogTitle>Пропуски</DialogTitle>
-    <DialogDescription>{days.length ? 'Нажми на дату, чтобы открыть расписание дня.' : 'Пока нет отметок. Нажми «н» у пары или отметь весь день в расписании.'}</DialogDescription>
+    <DialogDescription>{days.length ? 'Нажми на дату, чтобы открыть расписание дня.' : 'Пока нет отметок. Нажми «н» у пары в расписании.'}</DialogDescription>
     {days.length>0 && <ul className="absence-list">{days.map(({date,lessons})=><li key={date}>
       <button type="button" onClick={()=>onPick(date)}><time dateTime={date}>{label(date)}</time><ChevronRight size={17} aria-hidden="true"/></button>
       <ul>{lessons.map(lesson=><li key={lesson.id}><span>{lesson.time}</span>{lesson.title}</li>)}</ul>

@@ -18,7 +18,7 @@ import {UpdateEntry, changeLabels, type Change, type HistoryEntry} from '@/compo
 import {weekDates} from '@/lib/term-stats.mjs';
 import {eventsOn} from '@/lib/events.mjs';
 import {announcedCredits, announcedTime, announcedType} from '@/lib/announced-credits.mjs';
-import {AbsenceButton, AbsenceHistory, DayAbsenceButton, absenceDays, absenceId, useAbsences} from '@/components/attendance';
+import {AbsenceButton, AbsenceHistory, absenceDays, absenceId, useAbsences} from '@/components/attendance';
 import {SnapPager, type PagerHandle} from '@/components/snap-pager';
 import {LiveDay, setLiveDay} from '@/components/live-day';
 import {Wallpaper} from '@/components/wallpaper';
@@ -475,12 +475,7 @@ export default function Home() {
   };
   function absenceButton(date:string, lesson:Lesson) {
     const id = absenceId(groupName,date,lesson);
-    return <AbsenceButton subject={cleanTitle(lesson)} pressed={absences.marked.has(id)} onToggle={()=>absences.toggle([id])}/>;
-  }
-  function dayAbsenceButton(date:string, lessons:Lesson[]) {
-    if (!lessons.length) return null;
-    const ids = lessons.map(lesson=>absenceId(groupName,date,lesson));
-    return <DayAbsenceButton pressed={ids.every(id=>absences.marked.has(id))} onToggle={()=>absences.toggle(ids)}/>;
+    return <AbsenceButton subject={cleanTitle(lesson)} pressed={absences.marked.has(id)} onToggle={()=>absences.toggle(id)}/>;
   }
   function eventLines(date:string) {
     return [
@@ -509,7 +504,6 @@ export default function Home() {
     return <section className="day" key={date} aria-label={formatDate(date)}>
       {(date===today || date===focus) && glanceLine}
       {events}
-      {list.length>0 && <div className="absence-day-row">{dayAbsenceButton(date,list)}</div>}
       {list.length ? <div className={`list ${density} fill`}>{items}</div>
         : events.length ? null : kind.kind==='holiday' ? <div className="empty"><CalendarDays size={22}/><p>{kind.name}</p><small>Праздник, пар нет</small></div>
         : kind.kind==='after' ? <div className="empty"><GraduationCap size={22}/><p>Занятия закончились {formatDate(kind.end)}</p><small>Дальше — зачёты и экзамены.</small><button className="text-button" onClick={()=>setTab('session')}>Открыть сессию</button></div>
@@ -536,7 +530,6 @@ export default function Home() {
         return <li key={l.id} className={`${l.type} ${now?'now':''} ${past?'done':''}`}>
           <time>{l.start}</time><i aria-hidden="true"/><span>{cleanTitle(l)}{changeFor(l.id) && <em className="week-tag changed">изм.</em>}{task && !task.done && <em className="week-tag">ДЗ</em>}</span><small>{rooms(l)}</small>{absenceButton(date,l)}
         </li>;})}</ol>}
-      {list.length>0 && <div className="absence-day-row">{dayAbsenceButton(date,list)}</div>}
     </section>;
   }
 
@@ -549,7 +542,7 @@ export default function Home() {
         <a className="vmk-link" href="https://cs.msu.ru/studies/schedule" target="_blank" rel="noreferrer" aria-label="Расписание на сайте ВМК">ВМК<ArrowUpRight size={13}/></a>
         {search.button}
         <ThemeButton/>
-        <button className="icon-button glass-only more-button" aria-label="Ещё: изменения, подгруппы, PDF, статус" onClick={()=>setMoreOpen(true)}><Ellipsis size={20}/></button>
+        <button className="icon-button more-button" aria-label="Ещё" aria-haspopup="dialog" onClick={()=>setMoreOpen(true)}><Ellipsis size={20}/></button>
       </div>
     </header>
 
@@ -612,7 +605,6 @@ export default function Home() {
     </div>;}}</LiveDay>
 
     <main ref={scheduleArea}>
-      <div className="absence-toolbar"><button type="button" className="absence-button" onClick={()=>setAbsencesOpen(true)}>Пропуски{missedDays.length>0 && <span>{missedDays.length}</span>}</button></div>
       {recent.length>0 && <section className="changes-banner" aria-label="Изменения расписания">
         <div><b>ВМК изменил расписание{unseen[0] ? ` · от ${unseen[0].date}` : ''}</b>
         <span>У группы {groupName}: {recent.length} {plural(recent.length,['изменение','изменения','изменений'])}. {[...new Set(recent.map(c=>shortDays[c.day]))].join(', ')} — отмечены в расписании.</span></div>
@@ -687,8 +679,9 @@ export default function Home() {
     {/* «Ещё»: everything that is not the day's classes, out of the way. A row closes the sheet and opens its own window. */}
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="changes-dialog more-sheet">
       <DialogTitle>Ещё</DialogTitle>
-      <DialogDescription className="sr-only">Изменения, подгруппы, учебная часть, PDF и статус расписания</DialogDescription>
+      <DialogDescription className="sr-only">Пропуски, изменения, подгруппы, учебная часть, PDF и статус расписания</DialogDescription>
       <div className="more-list" onClickCapture={e=>{if((e.target as HTMLElement).closest('button,a'))setMoreOpen(false);}}>
+        <button type="button" onClick={()=>setAbsencesOpen(true)}>Пропуски</button>
         {history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения расписания</button>}
         <button onClick={()=>setStatsOpen(true)}>Сколько пар · {weekCount} в неделю</button>
         {subgroups.button}
