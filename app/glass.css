@@ -582,7 +582,6 @@ html[data-style=glass] { background:var(--background); }
 [data-style=glass] .brand-status { display:inline-block; width:5px; height:5px; margin:0 0 1px 6px; border-radius:50%; background:var(--ok); vertical-align:middle; }
 [data-style=glass] .brand-status.warn { background:var(--warn-fg); }
 [data-style=glass] .brand-status.offline { background:var(--muted-foreground); }
-[data-style=glass] .more-button { position:relative; display:inline-flex; }
 
 /* День — главный заголовок; строка под ним тихая. Справа «К ближайшим» (только когда открыт другой день) и «Неделя». */
 [data-style=glass] .dayhead { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:2px 8px; height:62px; margin:10px 0 6px; padding:0 2px; }
@@ -605,18 +604,6 @@ html[data-style=glass] { background:var(--background); }
   --c-shadow:inset 0 0 0 1px rgb(255 255 255 / .07), inset 0 1px 0 rgb(255 255 255 / .05), 0 10px 24px -18px rgb(0 0 0 / .8); }
 [data-style=glass] .lesson.past h3 { color:color-mix(in srgb,var(--foreground) 72%,transparent); }
 
-/* «Ещё» — список строк. */
-[data-style=glass] .more-sheet { gap:0; }
-[data-style=glass] .more-list { display:flex; flex-direction:column; margin:12px -6px 8px; }
-[data-style=glass] .more-list > :is(button,a) { display:flex; align-items:center; gap:8px; width:100%; min-height:48px; padding:0 8px; border:0; border-bottom:1px solid color-mix(in srgb,var(--foreground) 8%,transparent);
-  border-radius:0; background:none; color:var(--foreground); font-size:15.5px; font-weight:550; text-align:left; text-decoration:none; }
-[data-style=glass] .more-list > :is(button,a):last-child { border-bottom:0; }
-[data-style=glass] .more-list > button::after { content:'›'; margin-left:auto; color:var(--muted-foreground); font-size:20px; font-weight:400; }
-[data-style=glass] .more-list > a svg { margin-left:auto; color:var(--muted-foreground); }
-[data-style=glass] .more-list > .more-with-thumb::after { margin-left:0; }
-[data-style=glass] .more-list > .fresh-changes::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--now); }
-[data-style=glass] .more-status { display:flex; align-items:center; gap:8px; margin:4px 2px 2px; padding:0; border:0; background:none; color:var(--muted-foreground); font-size:13px; text-align:left; }
-[data-style=glass] .more-sheet .app-version { margin:4px 2px 0; font-size:12px; opacity:.75; }
 /* Окна без живого размытия — плотные, фон под ними темнее: в окне фокус на окне. */
 :root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-content] { background:color-mix(in srgb,var(--card) 82%,#000); }
 :root[data-style=glass]:not([data-glass=full]) [data-slot=dialog-overlay] { background:rgb(0 0 0 / .55); }

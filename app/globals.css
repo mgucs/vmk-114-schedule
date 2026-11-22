@@ -511,12 +511,17 @@ button.room:hover { text-decoration:underline; text-underline-offset:3px; text-d
 .absence-button:hover { color:var(--foreground); border-color:currentColor; }
 .absence-button[aria-pressed=true] { color:var(--warn-fg); background:var(--warn-bg); border-color:currentColor; }
 .absence-button:focus-visible { outline:2px solid var(--foreground); outline-offset:2px; }
-.absence-toolbar { display:flex; justify-content:flex-end; margin:0 0 8px; }
-.absence-toolbar .absence-button { display:inline-flex; align-items:center; gap:6px; padding:0 10px; min-height:34px; }
-.absence-toolbar span { padding:2px 5px; color:var(--warn-fg); background:var(--warn-bg); border-radius:999px; font-variant-numeric:tabular-nums; }
-.absence-day-row { display:flex; justify-content:flex-end; padding-bottom:6px; }
-.week-day .absence-day-row { padding:4px 16px 2px; }
-.absence-day { padding:0 9px; min-height:32px; font-size:12px; }
+.more-sheet { gap:0; }
+.more-list { display:flex; flex-direction:column; margin:12px -6px 8px; }
+.more-list > :is(button,a) { display:flex; align-items:center; gap:8px; width:100%; min-height:48px; padding:0 8px; border:0; border-bottom:1px solid var(--hair);
+  border-radius:0; background:none; color:var(--foreground); font-size:15.5px; font-weight:550; text-align:left; text-decoration:none; }
+.more-list > :is(button,a):last-child { border-bottom:0; }
+.more-list > button::after { content:'›'; margin-left:auto; color:var(--muted-foreground); font-size:20px; font-weight:400; }
+.more-list > a svg { margin-left:auto; color:var(--muted-foreground); }
+.more-list > .more-with-thumb::after { margin-left:0; }
+.more-list > .fresh-changes::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--now); }
+.more-status { display:flex; align-items:center; gap:8px; margin:4px 2px 2px; padding:0; border:0; background:none; color:var(--muted-foreground); font-size:13px; text-align:left; }
+.more-sheet .app-version { margin:4px 2px 0; font-size:12px; opacity:.75; }
 .absence-list, .absence-list ul { list-style:none; margin:0; padding:0; }
 .absence-list { display:grid; gap:10px; }
 .absence-list>li { padding:0 12px 10px; border:1px solid var(--hair-strong); border-radius:12px; }
