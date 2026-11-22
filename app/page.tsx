@@ -681,7 +681,7 @@ export default function Home() {
       <DialogTitle>Ещё</DialogTitle>
       <DialogDescription className="sr-only">Пропуски, изменения, подгруппы, учебная часть, PDF и статус расписания</DialogDescription>
       <div className="more-list" onClickCapture={e=>{if((e.target as HTMLElement).closest('button,a'))setMoreOpen(false);}}>
-        <button type="button" onClick={()=>setAbsencesOpen(true)}>Пропуски</button>
+        <button type="button" aria-label="Пропуски" onClick={()=>setAbsencesOpen(true)}>Пропуски</button>
         {history.length>0 && <button className={Date.now()-Date.parse(history[0].detectedAt)<RECENT?'fresh-changes':''} onClick={()=>setChangesOpen(true)}>Изменения расписания</button>}
         <button onClick={()=>setStatsOpen(true)}>Сколько пар · {weekCount} в неделю</button>
         {subgroups.button}
