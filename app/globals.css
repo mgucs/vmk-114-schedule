@@ -511,6 +511,18 @@ button.room:hover { text-decoration:underline; text-underline-offset:3px; text-d
 .absence-button:hover { color:var(--foreground); border-color:currentColor; }
 .absence-button[aria-pressed=true] { color:var(--warn-fg); background:var(--warn-bg); border-color:currentColor; }
 .absence-button:focus-visible { outline:2px solid var(--foreground); outline-offset:2px; }
+.absence-toolbar { display:flex; justify-content:flex-end; margin:0 0 8px; }
+.absence-toolbar .absence-button { display:inline-flex; align-items:center; gap:6px; padding:0 10px; min-height:34px; }
+.absence-toolbar span { padding:2px 5px; color:var(--warn-fg); background:var(--warn-bg); border-radius:999px; font-variant-numeric:tabular-nums; }
+.absence-day-row { display:flex; justify-content:flex-end; padding-bottom:6px; }
+.week-day .absence-day-row { padding:4px 16px 2px; }
+.absence-day { padding:0 9px; min-height:32px; font-size:12px; }
+.absence-list, .absence-list ul { list-style:none; margin:0; padding:0; }
+.absence-list { display:grid; gap:10px; }
+.absence-list>li { padding:0 12px 10px; border:1px solid var(--hair-strong); border-radius:12px; }
+.absence-list button { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:40px; padding:0; border:0; background:none; color:var(--foreground); font:inherit; font-weight:650; text-align:left; }
+.absence-list li li { display:grid; grid-template-columns:3.1em minmax(0,1fr); gap:8px; padding-top:5px; font-size:13px; }
+.absence-list li li span { color:var(--muted-foreground); font-variant-numeric:tabular-nums; }
 .homework-button { display:none; align-items:center; gap:4px; flex-shrink:0; height:24px; padding:0 9px; border:1px solid var(--hair-strong); border-radius:999px; background:transparent; color:var(--muted-foreground); font-size:12.5px; font-weight:550; }
 .homework-button.has-task, .lesson.current .homework-button { display:inline-flex; }
 @media (hover:hover) { .lesson:hover .homework-button { display:inline-flex; } }
@@ -779,8 +791,24 @@ h1 .h-month { display:none; }
 .session-day h2 { margin:0 0 6px; font-size:17px; font-weight:700; letter-spacing:-.02em; }
 .session-day h2 span { color:var(--muted-foreground); font-weight:500; }
 .session-item { display:grid; grid-template-columns:52px minmax(0,1fr) auto; align-items:start; gap:12px; margin-bottom:8px; padding:12px 16px; border-radius:16px; background:var(--card); box-shadow:var(--shadow); }
-.session-item.group-credit { grid-template-columns:max-content minmax(0,1fr); }
-.group-credit .session-time { font:650 13px/1.4 var(--font-sans); white-space:nowrap; }
+.credit-week { margin:14px 0 22px; }
+.credit-week-header { margin-bottom:12px; }
+.credit-week-header h2 { margin:0; font-size:clamp(21px,4.7vw,30px); line-height:1.2; letter-spacing:-.025em; }
+.credit-week-header p { margin:4px 0 0; color:var(--muted-foreground); font-size:13px; }
+.credit-week-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+@media (min-width:600px) { .credit-week-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; } }
+.credit-day { min-width:0; padding:10px; border:1px solid var(--hair-strong); border-radius:14px; background:var(--card); }
+.credit-day[aria-current=date] { border-color:var(--now); }
+.credit-day h3 { margin:0 0 8px; font-size:13px; line-height:1.25; font-weight:700; }
+.credit-day ul { display:grid; gap:5px; margin:0; padding:0; list-style:none; }
+.credit-day li { --credit-color:#5187df; display:grid; gap:2px; min-width:0; padding:6px 7px; border-inline-start:3px solid var(--credit-color); border-radius:6px; background:color-mix(in srgb,var(--credit-color) 13%,transparent); line-height:1.25; }
+.credit-day li[data-subject=algebra] { --credit-color:#d87569; }
+.credit-day li[data-subject=analysis] { --credit-color:#43a784; }
+.credit-day li[data-subject=safety] { --credit-color:#ad76ca; }
+.credit-day li[data-subject=retake] { --credit-color:#d99837; }
+.credit-day strong { font-size:13px; font-weight:650; overflow-wrap:anywhere; }
+.credit-time, .credit-day small { color:var(--muted-foreground); font-size:11px; font-weight:600; }
+.credit-time { font-variant-numeric:tabular-nums; white-space:nowrap; }
 .session-item.past { opacity:.5; }
 .session-time { padding-top:18px; font-size:15px; font-weight:650; font-variant-numeric:tabular-nums; }
 .session-body { min-width:0; }
