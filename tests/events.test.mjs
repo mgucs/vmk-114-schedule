@@ -22,6 +22,11 @@ test('events belong to their group only, in date order', () => {
   assert.equal(eventsOf('000').length, 0);
 });
 
+test('the algorithms colloquium appears for group 114 on 1 December', () => {
+  assert.ok(eventsOn('114','2026-12-01').some(event=>event.kind==='colloquium' && event.subject==='Алгоритмы и алгоритмические языки'));
+  assert.deepEqual(eventsOn('113','2026-12-01'),[]);
+});
+
 test('group 114 December announcement is scoped to this year and yields to the official credits', () => {
   const entries = announcedCredits('114',2026);
   assert.equal(entries.length,9);

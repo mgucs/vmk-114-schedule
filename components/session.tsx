@@ -30,22 +30,22 @@ const key = (s:string) => s.toLowerCase().replace(/ё/g,'е').replace(/[^а-я]/
 
 function GroupCreditSchedule({entries,today}:{entries:ReturnType<typeof announcedCredits>;today:string}) {
   if (!entries.length) return null;
-  return <section aria-label="По объявлению группы">
-    <div className="session-empty">
-      <h2>{entries.some(e=>!e.retake) ? 'Зачёты группы 114' : 'Дополнительно для группы 114'}</h2>
-      <p className="session-muted">По объявлению группы.</p>
-    </div>
-    {[...new Set(entries.map(entry=>entry.date))].map(date=><section className="session-day" key={date}>
-      <h2>{cap(longDate(date))}</h2>
-      {entries.filter(entry=>entry.date===date).map(entry=><article key={entry.time} className={`session-item group-credit ${date<today ? 'past' : ''}`}>
-        <span className="session-time">{announcedTime(entry)}</span>
-        <div className="session-body">
-          <span className="session-kind">{announcedType(entry)}</span>
-          <h3>{entry.subject}</h3>
-          {entry.note && <p>{entry.note}</p>}
-        </div>
-      </article>)}
-    </section>)}
+  const days = [...new Set(entries.map(entry=>entry.date))];
+  const week = entries.some(entry=>!entry.retake);
+  const colors:Record<string,string> = {'Линейная алгебра':'algebra','ЭВМ':'computing','Математический анализ':'analysis','БЖД':'safety'};
+  return <section className="credit-week" aria-label="По объявлению группы">
+    <header className="credit-week-header">
+      <h2>{week ? 'Зачётная неделя' : 'Дополнительно для группы 114'}</h2>
+      <p>{week ? '21–26 декабря · ' : ''}По объявлению группы 114</p>
+    </header>
+    <div className="credit-week-grid">{days.map(date=><section className="credit-day" key={date} aria-current={date===today ? 'date' : undefined}>
+      <h3><time dateTime={date}>{cap(longDate(date))}</time></h3>
+      <ul>{entries.filter(entry=>entry.date===date).map(entry=><li key={entry.time} data-subject={entry.retake ? 'retake' : colors[entry.subject]}>
+        <span className="credit-time">{announcedTime(entry)}</span>
+        <strong>{entry.subject}</strong>
+        {(entry.retake || entry.note) && <small>{entry.retake ? announcedType(entry) : entry.note}</small>}
+      </li>)}</ul>
+    </section>)}</div>
   </section>;
 }
 
@@ -79,13 +79,13 @@ export function SessionView({session, archive, lecturers = {}, subjects = [], gr
 
   if (!view) return <section className="session">
     <h1 className="session-title">Сессия</h1>
+    <GroupCreditSchedule entries={groupCredits} today={today}/>
     {compare}
     <div className="session-empty">
       <p>ВМК ещё не опубликовал официальное расписание зимней сессии.</p>
       <p>Приложение проверяет сайт каждые 15 минут и покажет здесь все зачёты и экзамены твоей группы, как только они появятся.</p>
       {classesEnd && <p className="session-muted">Занятия идут до {new Date(classesEnd+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric', month:'long', timeZone:'UTC'})}.</p>}
     </div>
-    <GroupCreditSchedule entries={groupCredits} today={today}/>
     {planned}
   </section>;
 
@@ -104,6 +104,7 @@ export function SessionView({session, archive, lecturers = {}, subjects = [], gr
 
   return <section className={`session ${live ? '' : 'archived'}`}>
     <h1 className="session-title">{seasons[view.season] || 'Сессия'} {years(view)}</h1>
+    {live && <GroupCreditSchedule entries={groupCredits} today={today}/>}
     {!live && <p className="session-note">Прошлая сессия — чтобы представить, как пройдёт следующая: сколько зачётов, какие перерывы между экзаменами.{current ? '' : ' Расписание новой появится здесь само.'}</p>}
     {compare}
     {next && <div className="session-next">
@@ -132,7 +133,6 @@ export function SessionView({session, archive, lecturers = {}, subjects = [], gr
         {i.room && <span className="session-room">{room(i.room, date, i.time)}</span>}
       </article>)}
     </section>)}
-    {live && <GroupCreditSchedule entries={groupCredits} today={today}/>}
     {(list.length > 0 || creditSubjects.length > 0) && <section className="session-what">
       <h2>Что сдаём</h2>
       <ul>
